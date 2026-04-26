@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-jakarta, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-serif: var(--font-fraunces, "Fraunces", Georgia, serif);
+}
+
+/* Ethereal Sage (default) */
+[data-vibe="sage"],
+:root {
+  --color-background: #F5F2EC;
+  --color-card: #FFFFFF;
+  --color-border: #E0D8CF;
+  --color-primary: #7C9A7E;
+  --color-primary-foreground: #FFFFFF;
+  --color-ink: #2C3528;
+  --color-foreground: #2C3528;
+  --color-muted-foreground: #6B7566;
+  --color-muted: #EDE8DF;
+  --color-accent: #C4A882;
+  --color-danger: #C4714A;
+  --color-profit: #7C9A7E;
+  --color-tax: #C4A882;
+  --color-ops: #4E6E52;
+}
+
+/* Midnight Orchid */
+[data-vibe="midnight"] {
+  --color-background: #1E1E26;
+  --color-card: #2A2A36;
+  --color-border: #3A3A48;
+  --color-primary: #B09FCC;
+  --color-primary-foreground: #1E1E26;
+  --color-ink: #EEEEF4;
+  --color-foreground: #EEEEF4;
+  --color-muted-foreground: #9090A0;
+  --color-muted: #252530;
+  --color-accent: #C8C8D0;
+  --color-danger: #E07070;
+  --color-profit: #B09FCC;
+  --color-tax: #C8C8D0;
+  --color-ops: #8A7AAA;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+.font-serif {
+  font-family: var(--font-serif) !important;
+}
+
+/* Confetti animation */
+@keyframes confettiPop {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--r)); opacity: 0; }
+}
+
+/* Fade-up entrance (used by Reservoir) */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.45s ease-out forwards;
+}
+
+/* Liquid wave (used by Reservoir) */
+@keyframes liquidWave {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.liquid-wave {
+  animation: liquidWave 2s linear infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    var(--color-border) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
