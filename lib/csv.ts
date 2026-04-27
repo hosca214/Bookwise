@@ -32,7 +32,7 @@ export function generateCPAExport(
   const businessTxns = transactions.filter((t) => !t.is_personal)
 
   const header = [
-    `Bookwise Export — ${practiceName} — ${dateRange}`,
+    `Bookwise Export - ${practiceName} - ${dateRange}`,
     'Always review with a licensed CPA before filing.',
     '',
   ].join('\n')

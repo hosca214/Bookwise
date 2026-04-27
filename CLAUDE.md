@@ -17,6 +17,10 @@
 8. Exclude `is_personal=true` from all financial calculations.
 9. "accounting" never appears in UI except the Reports language toggle label.
 10. Test all three industries before marking any phase done.
+11. Every async operation must have explicit error handling. API routes always return a typed Response — never throw unhandled exceptions.
+12. Code must be written so it cannot silently break: no unguarded `.data[0]`, no optional chaining that swallows missing state, no assumptions about external availability.
+13. Write minimal, readable code. Name things clearly. No redundant state, no duplicate logic, no commented-out code. A human must be able to read and modify any file without prior context.
+14. Before committing any file: remove all `console.log`, dead imports, and unused variables.
 
 ---
 

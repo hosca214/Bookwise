@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { useVibe, VIBES } from '@/context/VibeContext'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { TapKeypad } from '@/components/ui/TapKeypad'
 import { Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Service } from '@/lib/supabase'
@@ -31,10 +31,12 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 export default function SettingsPage() {
   const supabase = createClient()
+  const router = useRouter()
   const { setIndustry } = useIQ()
   const { vibe, setVibe } = useVibe()
 
   const [userId, setUserId] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [services, setServices] = useState<Service[]>([])
   const [loadingServices, setLoadingServices] = useState(true)
 
@@ -96,6 +98,18 @@ export default function SettingsPage() {
     } finally {
       setSavingVibe(false)
     }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  async function handleResetOnboarding() {
+    if (!userId) return
+    if (!confirmReset) { setConfirmReset(true); return }
+    await supabase.from('profiles').update({ onboarding_complete: false }).eq('id', userId)
+    router.push('/onboarding')
   }
 
   async function addService() {
@@ -244,7 +258,25 @@ export default function SettingsPage() {
                       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         Price
                       </label>
-                      <TapKeypad value={svcPrice} onChange={setSvcPrice} />
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={svcPrice}
+                        onChange={(e) => setSvcPrice(e.target.value)}
+                        placeholder="0.00"
+                        style={{
+                          width: '100%',
+                          minHeight: 48,
+                          padding: '12px 14px',
+                          fontSize: 16,
+                          borderRadius: 8,
+                          border: '1.5px solid var(--color-border)',
+                          background: 'var(--color-card)',
+                          color: 'var(--color-foreground)',
+                          fontFamily: 'var(--font-sans)',
+                          boxSizing: 'border-box',
+                        }}
+                      />
                     </div>
 
                     <div>
@@ -397,6 +429,48 @@ export default function SettingsPage() {
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
               Bookwise organizes and presents your financial data. Sage shares observations, not advice. Work with a licensed CPA before filing.
             </p>
+          </div>
+        </section>
+
+        {/* ── Account ──────────────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader>Account</SectionHeader>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                minHeight: 48,
+                borderRadius: 10,
+                border: '1.5px solid var(--color-border)',
+                background: 'transparent',
+                color: 'var(--color-foreground)',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              Log Out
+            </button>
+            <button
+              onClick={handleResetOnboarding}
+              style={{
+                width: '100%',
+                minHeight: 48,
+                borderRadius: 10,
+                border: '1.5px solid var(--color-border)',
+                background: 'transparent',
+                color: confirmReset ? 'var(--color-danger)' : 'var(--color-muted-foreground)',
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+                transition: 'color 0.15s',
+              }}
+            >
+              {confirmReset ? 'Tap again to confirm reset' : 'Reset Onboarding'}
+            </button>
           </div>
         </section>
 

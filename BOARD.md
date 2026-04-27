@@ -230,6 +230,81 @@ Read every piece of copy out loud. Anywhere you hear the word "should,"
 
 ---
 
+### April Dunford
+**Role: Positioning and Category Design Advisor**
+*Author of Obviously Awesome. Positioning strategist for B2B and consumer SaaS.*
+
+April's framework: positioning is not a tagline. It is the foundation every
+feature decision, pricing decision, and channel decision is built on.
+A product that is not clearly positioned either creates its own category
+or gets compared to the wrong alternatives and loses.
+
+Bookwise is not competing with QuickBooks. It is not a bookkeeping app.
+It is a practice intelligence layer for wellness practitioners who were
+never served by accounting software. That is the category. Defend it.
+
+**What April guides in Bookwise:**
+- The IQ Engine is the positioning moat. It is not a feature. It is
+  the entire reason this product exists for this audience.
+- Never say "simple bookkeeping." Say "built for your practice."
+  Simple implies amateur. Built for your practice implies expertise.
+- The onboarding industry picker is a positioning moment. It signals
+  to the user: this was made for me. Protect that feeling everywhere.
+- Any feature that could appear in QuickBooks should be framed in
+  practitioner language, not financial language.
+- The competitive alternative is a notebook and a shoebox, not Xero.
+  Price against that comparison, not software subscriptions.
+
+**Her question Bookwise must answer:**
+"What does this app do that no other app can do for this specific person?"
+Answer: it speaks their language natively. The IQ Engine is not a
+translation layer. It is the native tongue.
+
+**How to apply her lens:**
+Before writing any feature name or description, ask: does this sound
+like it belongs in a wellness practice, or does it sound like it belongs
+in an office? If it sounds like an office, rewrite it.
+
+---
+
+### Tara McMullin
+**Role: Audience and Messaging Advisor**
+*Founder of Quiet Power Strategy. Business strategist for small business owners
+and service providers. Author and podcast host focused on the human side of
+running a business.*
+
+Tara's framework: small service businesses do not fail because of bad
+bookkeeping. They fail because the owner could not see clearly enough
+to make good decisions about their time, their prices, and their capacity.
+Bookwise is not a financial tool. It is a clarity tool.
+
+**What Tara guides in Bookwise:**
+- The Daily Pulse is not a data entry form. It is a check-in ritual.
+  Frame it that way. "How did today feel?" is more powerful than
+  "Enter your session count."
+- The Reservoir buckets are not percentages. They are a picture of
+  whether the business is working for the owner, or the other way around.
+- Sage should sound like a thoughtful colleague, not a dashboard.
+  Observations should acknowledge effort, not just report numbers.
+- The words "profit" and "tax" carry anxiety for this audience.
+  "Growth Fund" and "Tax Set-Aside" are the right substitutes because
+  they reframe money as intention, not obligation.
+- The practitioner's relationship to money is often complicated by
+  imposter syndrome, underpricing, and guilt around charging for care.
+  Every screen should quietly reinforce: your work has value, and
+  keeping track of it is how you protect it.
+
+**Her question Bookwise must answer:**
+"Does this app help me feel less anxious about money, or more?"
+If any screen, label, or interaction increases money anxiety instead
+of reducing it, it is not working. Redesign it.
+
+**How to apply her lens:**
+Read every empty state, every error message, every notification out loud.
+Does it sound supportive or clinical? Clinical is a failure state.
+
+---
+
 ## Board Decision Framework
 
 When a product decision is unclear, run it through this sequence:
@@ -240,8 +315,10 @@ When a product decision is unclear, run it through this sequence:
 4. **Tobias:** Does this look like it was made by a person who cares about design?
 5. **Maya:** Would a bodyworker between clients actually use this?
 6. **Jordan:** Is any word in this copy a legal risk?
+7. **April:** Is this positioned for our specific audience, or does it sound like it belongs in a different product?
+8. **Tara:** Does this screen reduce money anxiety or increase it?
 
-If the answer to all six is yes, ship it.
+If the answer to all eight is yes, ship it.
 If any answer is no, fix that thing first.
 
 ---

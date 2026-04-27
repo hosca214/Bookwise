@@ -7,6 +7,8 @@ export function createClient() {
   )
 }
 
+export const BUCKET_ALLOC = { profit: 0.1, tax: 0.25, ops: 0.65 } as const
+
 export type Profile = {
   id: string
   practice_name: string | null
@@ -15,11 +17,10 @@ export type Profile = {
   daily_pulse_time: string
   google_drive_folder_id: string | null
   tax_rate: number
-  profit_allocation: number
-  tax_allocation: number
-  ops_allocation: number
   onboarding_complete: boolean
   created_at: string
+  profit_pct: number | null
+  tax_pct: number | null
 }
 
 export type Transaction = {

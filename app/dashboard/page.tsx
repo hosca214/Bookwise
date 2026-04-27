@@ -9,7 +9,8 @@ import { Reservoir } from '@/components/dashboard/Reservoir'
 import { Confetti } from '@/components/ui/Confetti'
 import { BottomNav } from '@/components/ui/BottomNav'
 import toast from 'react-hot-toast'
-import { RefreshCw, ChevronUp, ChevronDown } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { PulseCalendar } from '@/components/dashboard/PulseCalendar'
 import type { Profile, Bucket } from '@/lib/supabase'
 
 function getNextTaxDeadline(now: Date) {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [monthIncome, setMonthIncome] = useState(0)
   const [monthExpenses, setMonthExpenses] = useState(0)
@@ -60,18 +62,24 @@ export default function DashboardPage() {
   const [milesToday, setMilesToday] = useState(0)
   const [pulseId, setPulseId] = useState<string | null>(null)
   const [savingPulse, setSavingPulse] = useState(false)
+  const [pulseLog, setPulseLog] = useState<Record<string, boolean>>({})
+  const [selectedDate, setSelectedDate] = useState(today)
 
   const [insight, setInsight] = useState<string | null>(null)
   const [loadingSage, setLoadingSage] = useState(false)
   const [tipIndex, setTipIndex] = useState(0)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const loadSage = useCallback(async (p: Profile, income: number, expenses: number, b: Bucket | null) => {
     setLoadingSage(true)
     setInsight(null)
     try {
-      const profitTarget = income * (p.profit_allocation ?? 0.1)
-      const taxTarget = income * (p.tax_allocation ?? 0.25)
-      const opsTarget = income * (p.ops_allocation ?? 0.65)
+      const profitFrac = (p.profit_pct ?? 10) / 100
+      const taxFrac = (p.tax_pct ?? 25) / 100
+      const opsFrac = 1 - profitFrac - taxFrac
+      const profitTarget = income * profitFrac
+      const taxTarget = income * taxFrac
+      const opsTarget = income * opsFrac
 
       const profitPct = profitTarget > 0 && b ? Math.round((b.profit_funded / profitTarget) * 100) : 0
       const taxPct = taxTarget > 0 && b ? Math.round((b.tax_funded / taxTarget) * 100) : 0
@@ -103,6 +111,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboard() {
+      try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
 
@@ -135,12 +144,12 @@ export default function DashboardPage() {
       setMonthIncome(income)
       setMonthExpenses(expenses)
 
-      const profitAlloc = profileData.profit_allocation ?? 0.1
-      const taxAlloc = profileData.tax_allocation ?? 0.25
-      const opsAlloc = profileData.ops_allocation ?? 0.65
-      const profitTarget = income * profitAlloc
-      const taxTarget = income * taxAlloc
-      const opsTarget = income * opsAlloc
+      const profitFrac = (profileData.profit_pct ?? 10) / 100
+      const taxFrac = (profileData.tax_pct ?? 25) / 100
+      const opsFrac = 1 - profitFrac - taxFrac
+      const profitTarget = income * profitFrac
+      const taxTarget = income * taxFrac
+      const opsTarget = income * opsFrac
 
       const { data: existingBucket } = await supabase
         .from('buckets')
@@ -190,21 +199,47 @@ export default function DashboardPage() {
         setMilesToday(Number(pulseData.miles_driven) ?? 0)
       }
 
+      const { data: monthPulse } = await supabase
+        .from('daily_pulse')
+        .select('date')
+        .eq('user_id', user.id)
+        .gte('date', currentMonth)
+        .lte('date', today)
+      const log: Record<string, boolean> = {}
+      for (const row of monthPulse ?? []) {
+        log[row.date] = true
+      }
+      setPulseLog(log)
+
       setLoading(false)
       loadSage(profileData, income, expenses, bucketRecord)
+      } catch {
+        setLoadError(true)
+        setLoading(false)
+      }
     }
 
     loadDashboard()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') setRefreshKey(k => k + 1)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   async function handleSecurePay() {
     if (!profile || !bucket) return
     setSecuring(true)
 
-    const profitTarget = monthIncome * (profile.profit_allocation ?? 0.1)
-    const taxTarget = monthIncome * (profile.tax_allocation ?? 0.25)
-    const opsTarget = monthIncome * (profile.ops_allocation ?? 0.65)
+    const pFrac = (profile.profit_pct ?? 10) / 100
+    const tFrac = (profile.tax_pct ?? 25) / 100
+    const oFrac = 1 - pFrac - tFrac
+    const profitTarget = monthIncome * pFrac
+    const taxTarget = monthIncome * tFrac
+    const opsTarget = monthIncome * oFrac
 
     const { error } = await supabase
       .from('buckets')
@@ -242,31 +277,59 @@ export default function DashboardPage() {
 
   async function savePulse() {
     setSavingPulse(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSavingPulse(false); return }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    if (pulseId) {
-      await supabase
-        .from('daily_pulse')
-        .update({ sessions_given: sessionsToday, hours_worked: hoursToday, miles_driven: milesToday })
-        .eq('id', pulseId)
-    } else {
+      if (pulseId) {
+        await supabase
+          .from('daily_pulse')
+          .update({ sessions_given: sessionsToday, hours_worked: hoursToday, miles_driven: milesToday })
+          .eq('id', pulseId)
+      } else {
+        const { data } = await supabase
+          .from('daily_pulse')
+          .insert({ user_id: user.id, date: selectedDate, sessions_given: sessionsToday, hours_worked: hoursToday, miles_driven: milesToday })
+          .select()
+          .single()
+        if (data) setPulseId(data.id)
+      }
+      toast.success('Pulse saved.')
+      setPulseLog(prev => ({ ...prev, [selectedDate]: true }))
+      setConfettiTrigger(n => n + 1)
+      setSelectedDate('')
+    } catch {
+      toast.error('Could not save pulse. Try again.')
+    } finally {
+      setSavingPulse(false)
+    }
+  }
+
+  async function onSelectDate(date: string) {
+    setSelectedDate(date)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
       const { data } = await supabase
         .from('daily_pulse')
-        .insert({
-          user_id: user.id,
-          date: today,
-          sessions_given: sessionsToday,
-          hours_worked: hoursToday,
-          miles_driven: milesToday,
-        })
-        .select()
-        .single()
-      if (data) setPulseId(data.id)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .maybeSingle()
+      if (data) {
+        setPulseId(data.id)
+        setSessionsToday(data.sessions_given ?? 0)
+        setHoursToday(Number(data.hours_worked) ?? 0)
+        setMilesToday(Number(data.miles_driven) ?? 0)
+      } else {
+        setPulseId(null)
+        setSessionsToday(0)
+        setHoursToday(0)
+        setMilesToday(0)
+      }
+    } catch {
+      toast.error('Could not load pulse for that date.')
     }
-
-    toast.success('Pulse saved.')
-    setSavingPulse(false)
   }
 
   const profitTarget = bucket?.profit_target ?? 0
@@ -275,6 +338,16 @@ export default function DashboardPage() {
   const profitFunded = bucket?.profit_funded ?? 0
   const taxFunded = bucket?.tax_funded ?? 0
   const opsFunded = bucket?.ops_funded ?? 0
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--color-background)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', textAlign: 'center' }}>
+          Could not load your data. Pull to refresh.
+        </p>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -455,48 +528,40 @@ export default function DashboardPage() {
             Today's Pulse
           </h2>
 
+          <div style={{ width: '100%', maxWidth: 380, marginBottom: 20 }}>
+            <PulseCalendar log={pulseLog} selected={selectedDate} onSelect={onSelectDate} startDate={profile?.created_at?.slice(0, 10)} />
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { label: t('Sessions Given'), value: sessionsToday, set: setSessionsToday, step: 1, format: (v: number) => String(v) },
-              { label: t('Hours Worked'),   value: hoursToday,    set: setHoursToday,    step: 0.5, format: (v: number) => v % 1 === 0 ? String(v) : v.toFixed(1) },
-              { label: t('Miles Driven'),   value: milesToday,    set: setMilesToday,    step: 1, format: (v: number) => String(v) },
-            ].map(({ label, value, set, step, format }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              { label: t('Sessions Given'), value: sessionsToday, set: setSessionsToday },
+              { label: t('Hours Worked'),   value: hoursToday,    set: setHoursToday },
+              { label: t('Miles Driven'),   value: milesToday,    set: setMilesToday },
+            ].map(({ label, value, set }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 <span style={{ fontSize: 16, color: 'var(--color-foreground)', fontWeight: 500 }}>{label}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <button
-                    onClick={() => set((v: number) => Math.max(0, Math.round((v - step) * 10) / 10))}
-                    style={{
-                      width: 40, height: 40, borderRadius: 10,
-                      border: '1.5px solid var(--color-border)',
-                      background: 'var(--color-background)',
-                      color: 'var(--color-foreground)',
-                      cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <ChevronDown size={16} />
-                  </button>
-                  <span className="font-serif" style={{
-                    fontSize: 28, fontWeight: 700, color: 'var(--color-ink)',
-                    minWidth: 48, textAlign: 'center',
-                  }}>
-                    {format(value)}
-                  </span>
-                  <button
-                    onClick={() => set((v: number) => Math.round((v + step) * 10) / 10)}
-                    style={{
-                      width: 40, height: 40, borderRadius: 10,
-                      border: '1.5px solid var(--color-border)',
-                      background: 'var(--color-background)',
-                      color: 'var(--color-foreground)',
-                      cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={value === 0 ? '' : String(value)}
+                  placeholder="0"
+                  onChange={e => {
+                    const raw = e.target.value
+                    if (raw === '' || raw === '.') { set(0); return }
+                    const n = parseFloat(raw)
+                    if (!isNaN(n) && n >= 0) set(n)
+                  }}
+                  style={{
+                    width: 88, minHeight: 48, textAlign: 'center',
+                    fontSize: 22, fontWeight: 700,
+                    fontFamily: 'var(--font-serif)',
+                    color: 'var(--color-ink)',
+                    background: 'var(--color-background)',
+                    border: '1.5px solid var(--color-border)',
+                    borderRadius: 8, padding: '0 12px',
+                    outline: 'none',
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -575,7 +640,7 @@ export default function DashboardPage() {
           boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
         }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
-            Worth remembering
+            Sage Wisdom
           </p>
           <p className="font-serif" style={{
             fontSize: 22, fontWeight: 600, color: 'var(--color-ink)',
@@ -631,9 +696,9 @@ export default function DashboardPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {[
-                { label: t('Profit Bucket'),     amount: monthIncome * (profile?.profit_allocation ?? 0.1), color: 'var(--color-profit)' },
-                { label: t('Tax Bucket'),         amount: monthIncome * (profile?.tax_allocation ?? 0.25),  color: 'var(--color-tax)' },
-                { label: t('Operations Bucket'), amount: monthIncome * (profile?.ops_allocation ?? 0.65),  color: 'var(--color-ops)' },
+                { label: t('Profit Bucket'),     amount: monthIncome * ((profile?.profit_pct ?? 10) / 100), color: 'var(--color-profit)' },
+                { label: t('Tax Bucket'),         amount: monthIncome * ((profile?.tax_pct ?? 25) / 100),   color: 'var(--color-tax)' },
+                { label: t('Operations Bucket'), amount: monthIncome * (1 - (profile?.profit_pct ?? 10) / 100 - (profile?.tax_pct ?? 25) / 100), color: 'var(--color-ops)' },
               ].map(({ label, amount, color }) => (
                 <div key={label} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',

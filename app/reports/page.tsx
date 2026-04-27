@@ -24,6 +24,19 @@ function monthEnd(start: string): string {
   return d.toISOString().slice(0, 10)
 }
 
+function yearStart(offset = 0): string {
+  const d = new Date()
+  return `${d.getFullYear() + offset}-01-01`
+}
+
+function yearEnd(offset = 0): string {
+  if (offset === 0) {
+    const today = new Date()
+    return today.toISOString().slice(0, 10)
+  }
+  return `${new Date().getFullYear() + offset}-12-31`
+}
+
 function formatMonthLabel(start: string): string {
   return new Date(start + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
@@ -239,6 +252,44 @@ export default function ReportsPage() {
             }}
           >
             Last Month
+          </button>
+          <button
+            onClick={() => {
+              setRangeStart(yearStart(0))
+              setRangeEnd(yearEnd(0))
+            }}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              border: `1.5px solid ${rangeStart === yearStart(0) ? 'var(--color-primary)' : 'var(--color-border)'}`,
+              background: rangeStart === yearStart(0) ? 'var(--color-primary)' : 'var(--color-card)',
+              color: rangeStart === yearStart(0) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            This Year
+          </button>
+          <button
+            onClick={() => {
+              setRangeStart(yearStart(-1))
+              setRangeEnd(yearEnd(-1))
+            }}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              border: `1.5px solid ${rangeStart === yearStart(-1) ? 'var(--color-primary)' : 'var(--color-border)'}`,
+              background: rangeStart === yearStart(-1) ? 'var(--color-primary)' : 'var(--color-card)',
+              color: rangeStart === yearStart(-1) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            Last Year
           </button>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input

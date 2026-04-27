@@ -43,13 +43,18 @@ Answer directly and specifically using the numbers provided.`,
   const prompt = prompts[type] ?? prompts.daily_insight
 
   const anthropic = new Anthropic()
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 350,
-    system,
-    messages: [{ role: 'user', content: prompt }],
-  })
 
-  const insight = message.content[0].type === 'text' ? message.content[0].text : ''
-  return Response.json({ insight })
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 350,
+      system,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const insight = message.content[0].type === 'text' ? message.content[0].text : ''
+    return Response.json({ insight })
+  } catch {
+    return new Response('Sage unavailable', { status: 503 })
+  }
 }

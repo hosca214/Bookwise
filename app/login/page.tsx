@@ -33,7 +33,6 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -57,7 +56,6 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         if (data.session) {
-          if (!rememberMe) sessionStorage.setItem('session_no_persist', '1')
           router.push('/onboarding')
           router.refresh()
         } else {
@@ -66,7 +64,6 @@ export default function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        if (!rememberMe) sessionStorage.setItem('session_no_persist', '1')
         router.push('/dashboard')
         router.refresh()
       }
@@ -159,19 +156,6 @@ export default function LoginPage() {
               style={inputStyle}
             />
           </div>
-
-          {/* Remember me */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={e => setRememberMe(e.target.checked)}
-              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-primary)' }}
-            />
-            <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>
-              Remember me
-            </span>
-          </label>
 
           <button
             type="submit"

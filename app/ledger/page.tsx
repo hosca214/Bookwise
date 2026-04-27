@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { TapKeypad } from '@/components/ui/TapKeypad'
 import { Camera, X, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction } from '@/lib/supabase'
@@ -540,7 +539,25 @@ export default function LedgerPage() {
                 <img src={receiptUrl} alt="Receipt" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
               </div>
             )}
-            <TapKeypad value={txAmount} onChange={setTxAmount} />
+            <input
+                type="text"
+                inputMode="decimal"
+                value={txAmount}
+                onChange={(e) => setTxAmount(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  minHeight: 48,
+                  padding: '12px 14px',
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-card)',
+                  color: 'var(--color-foreground)',
+                  fontFamily: 'var(--font-sans)',
+                  boxSizing: 'border-box',
+                }}
+              />
           </div>
 
           {/* Notes */}

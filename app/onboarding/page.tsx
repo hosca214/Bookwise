@@ -7,13 +7,11 @@ import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { useVibe, type Vibe, VIBES } from '@/context/VibeContext'
 import type { Industry } from '@/lib/iqMaps'
-import { Reservoir } from '@/components/dashboard/Reservoir'
 import { Confetti } from '@/components/ui/Confetti'
-import { Briefcase, Activity, Heart, ChevronUp, ChevronDown, ArrowLeft } from 'lucide-react'
+import { Briefcase, Activity, Heart, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const TOTAL_STEPS = 8
-const SAMPLE_INCOME = 5000
 
 const primaryBtn: React.CSSProperties = {
   width: '100%',
@@ -51,11 +49,11 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [dir, setDir] = useState(1)
   const [practiceName, setPracticeName] = useState('')
+  const [hasBizAccount, setHasBizAccount] = useState<boolean | null>(null)
   const [industryLocal, setIndustryLocal] = useState<Industry>('coach')
   const [vibeLocal, setVibeLocal] = useState<Vibe>('sage')
   const [profitPct, setProfitPct] = useState(10)
   const [taxPct, setTaxPct] = useState(25)
-  const [opsPct, setOpsPct] = useState(65)
   const [hour, setHour] = useState(17)
   const [minute, setMinute] = useState(0)
   const [demoConnected, setDemoConnected] = useState<Record<string, boolean>>({})
@@ -65,6 +63,10 @@ export default function OnboardingPage() {
   const router = useRouter()
   const { setIndustry, t } = useIQ()
   const { setVibe } = useVibe()
+
+  const opsPct = 100 - profitPct - taxPct
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayH = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
 
   function next() { setDir(1); setStep(s => s + 1) }
   function back() { setDir(-1); setStep(s => Math.max(1, s - 1)) }
@@ -80,6 +82,27 @@ export default function OnboardingPage() {
     setVibe(v)
   }
 
+  function handleProfitSlider(v: number) {
+    setProfitPct(v)
+    if (v + taxPct > 100) setTaxPct(100 - v)
+  }
+
+  function handleTaxSlider(v: number) {
+    setTaxPct(v)
+    if (profitPct + v > 100) setProfitPct(100 - v)
+  }
+
+  function handleHourInput(val: string) {
+    const n = parseInt(val.replace(/\D/g, ''))
+    if (isNaN(n) || n < 1 || n > 12) return
+    setHour(ampm === 'PM' ? (n === 12 ? 12 : n + 12) : (n === 12 ? 0 : n))
+  }
+
+  function handleAmPm(period: 'AM' | 'PM') {
+    if (period === 'AM' && hour >= 12) setHour(hour - 12)
+    if (period === 'PM' && hour < 12) setHour(hour + 12)
+  }
+
   async function handleComplete() {
     setLoading(true)
     try {
@@ -93,10 +116,9 @@ export default function OnboardingPage() {
         industry: industryLocal,
         vibe: vibeLocal,
         daily_pulse_time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-        profit_allocation: profitPct / 100,
-        tax_allocation: taxPct / 100,
-        ops_allocation: opsPct / 100,
         google_drive_folder_id: 'demo',
+        profit_pct: profitPct,
+        tax_pct: taxPct,
         onboarding_complete: true,
       })
 
@@ -112,16 +134,10 @@ export default function OnboardingPage() {
     }
   }
 
-  const totalPct = profitPct + taxPct + opsPct
-  const validSplit = totalPct === 100
-
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const displayH = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-  const displayM = minute.toString().padStart(2, '0')
-
   function renderStep() {
     switch (step) {
 
+      // ── Step 1: Welcome ───────────────────────────────────────────────────
       case 1:
         return (
           <div style={{ textAlign: 'center', paddingTop: 32 }}>
@@ -135,6 +151,7 @@ export default function OnboardingPage() {
           </div>
         )
 
+      // ── Step 2: Practice name + business account education ────────────────
       case 2:
         return (
           <div>
@@ -160,8 +177,62 @@ export default function OnboardingPage() {
                 outline: 'none',
                 marginBottom: 24,
                 fontFamily: 'var(--font-sans)',
+                boxSizing: 'border-box',
               }}
             />
+
+            <div style={{
+              background: 'var(--color-card)',
+              borderRadius: 12,
+              border: '1px solid var(--color-border)',
+              padding: '20px',
+              marginBottom: 24,
+            }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 8 }}>
+                One thing that makes a big difference
+              </p>
+              <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginBottom: 16 }}>
+                Keeping your business income and expenses in a dedicated account
+                makes your books clean, your tax prep easier, and your numbers
+                trustworthy. Mixing personal and business spending is the single
+                most common source of stress at tax time.
+              </p>
+              <p style={{
+                fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12,
+              }}>
+                Do you have a dedicated business account or card?
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {([{ val: true, label: 'Yes, I do' }, { val: false, label: 'Not yet' }] as const).map(({ val, label }) => (
+                  <button
+                    key={label}
+                    onClick={() => setHasBizAccount(val)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 0',
+                      borderRadius: 8,
+                      fontSize: 15,
+                      fontWeight: 600,
+                      border: `1.5px solid ${hasBizAccount === val ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                      background: hasBizAccount === val ? 'var(--color-primary)' : 'var(--color-card)',
+                      color: hasBizAccount === val ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {hasBizAccount === false && (
+                <p style={{ fontSize: 14, color: 'var(--color-accent)', marginTop: 12, lineHeight: 1.5, marginBottom: 0 }}>
+                  No worries. Opening a free business checking account takes about 10 minutes online. Many practitioners do it before logging their first transaction.
+                </p>
+              )}
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button onClick={next} style={primaryBtn}>Continue</button>
               <button onClick={next} style={ghostBtn}>Skip for now</button>
@@ -169,6 +240,7 @@ export default function OnboardingPage() {
           </div>
         )
 
+      // ── Step 3: Industry ──────────────────────────────────────────────────
       case 3: {
         const industries = [
           { id: 'coach' as Industry, Icon: Briefcase, label: 'Coach', desc: 'Life, business or wellness coaching' },
@@ -213,6 +285,7 @@ export default function OnboardingPage() {
         )
       }
 
+      // ── Step 4: Vibe ──────────────────────────────────────────────────────
       case 4:
         return (
           <div>
@@ -233,7 +306,7 @@ export default function OnboardingPage() {
                     height: 120,
                     borderRadius: 12,
                     border: `2px solid ${vibeLocal === v.id ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    background: 'var(--color-card)',
+                    background: v.bg,
                     cursor: 'pointer',
                     padding: 16,
                     display: 'flex',
@@ -259,138 +332,89 @@ export default function OnboardingPage() {
           </div>
         )
 
+      // ── Step 5: Bucket sliders ────────────────────────────────────────────
       case 5: {
         const buckets = [
           {
             key: 'Profit Bucket',
             pct: profitPct,
-            set: setProfitPct,
-            tone: 'profit' as const,
-            desc: 'This goes straight to your future. Touch it only for growth.',
+            maxPct: 100 - taxPct,
+            onSlider: handleProfitSlider,
+            color: 'var(--color-profit)',
+            headline: 'This is your future.',
+            desc: 'Reinvest in courses, new tools, or the next version of your practice. Touch it only with intention, not out of need.',
           },
           {
             key: 'Tax Bucket',
             pct: taxPct,
-            set: setTaxPct,
-            tone: 'tax' as const,
-            desc: '25% covers federal, self-employment, and most state taxes.',
+            maxPct: 100 - profitPct,
+            onSlider: handleTaxSlider,
+            color: 'var(--color-tax)',
+            headline: 'Set it aside now.',
+            desc: '25% is a widely used starting point for quarterly estimated taxes. Your actual rate may vary. Always confirm with your CPA.',
           },
           {
             key: 'Operations Bucket',
             pct: opsPct,
-            set: setOpsPct,
-            tone: 'ops' as const,
-            desc: 'Your day-to-day business costs live here.',
+            maxPct: 100,
+            onSlider: null,
+            color: 'var(--color-ops)',
+            headline: 'Everything it takes to show up.',
+            desc: 'Rent, supplies, software, insurance. This is your cost of doing business each month.',
           },
         ]
+
         return (
           <div>
             <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
               How do you want to split your income?
             </h2>
-            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 28 }}>
-              Adjust the percentages. They must add up to 100.
+            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 28, lineHeight: 1.5 }}>
+              Every dollar you earn gets a job. Adjust Growth and Tax. Operations covers what remains.
             </p>
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-              {buckets.map(({ key, pct, tone }) => (
-                <Reservoir
-                  key={key}
-                  label={t(key)}
-                  current={(pct / 100) * SAMPLE_INCOME}
-                  goal={SAMPLE_INCOME}
-                  tone={tone}
-                />
-              ))}
-            </div>
-            <p style={{
-              fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em',
-              color: 'var(--color-muted-foreground)', textAlign: 'center', marginBottom: 28,
-            }}>
-              Preview based on $5,000 monthly income
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
-              {buckets.map(({ key, pct, set, desc }) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+              {buckets.map(({ key, pct, maxPct, onSlider, color, headline, desc }) => (
                 <div key={key} style={{
                   background: 'var(--color-card)',
                   borderRadius: 12,
                   border: '1px solid var(--color-border)',
-                  padding: '16px 20px',
+                  padding: '18px 20px',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)' }}>{t(key)}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button
-                        onClick={() => set(Math.max(0, pct - 1))}
-                        style={{
-                          width: 40, height: 40, borderRadius: 8,
-                          border: '1.5px solid var(--color-border)',
-                          background: 'var(--color-background)',
-                          fontSize: 20, fontWeight: 700,
-                          cursor: 'pointer', color: 'var(--color-foreground)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: 'var(--font-sans)',
-                        }}
-                      >
-                        -
-                      </button>
-                      <span className="font-serif" style={{
-                        fontSize: 28, fontWeight: 700, color: 'var(--color-ink)',
-                        minWidth: 52, textAlign: 'center', display: 'block',
-                      }}>
-                        {pct}%
-                      </span>
-                      <button
-                        onClick={() => set(Math.min(100, pct + 1))}
-                        style={{
-                          width: 40, height: 40, borderRadius: 8,
-                          border: '1.5px solid var(--color-border)',
-                          background: 'var(--color-background)',
-                          fontSize: 20, fontWeight: 700,
-                          cursor: 'pointer', color: 'var(--color-foreground)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: 'var(--font-sans)',
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>{t(key)}</span>
+                    <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color }}>{pct}%</span>
                   </div>
-                  <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.5, margin: 0 }}>{desc}</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 4, lineHeight: 1.4 }}>
+                    {headline}
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.5, marginBottom: 12 }}>
+                    {desc}
+                  </p>
+                  {onSlider ? (
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxPct}
+                      value={pct}
+                      onChange={e => onSlider(Number(e.target.value))}
+                      style={{ width: '100%', accentColor: color, cursor: 'pointer', display: 'block', height: 4 }}
+                    />
+                  ) : (
+                    <div style={{ height: 4, borderRadius: 2, background: 'var(--color-muted)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 2, background: color, transition: 'width 0.2s' }} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <span className="font-serif" style={{
-                fontSize: 32, fontWeight: 700,
-                color: validSplit ? 'var(--color-primary)' : 'var(--color-destructive)',
-              }}>
-                {totalPct}%
-              </span>
-              <span style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginLeft: 8 }}>
-                {validSplit ? 'total' : totalPct > 100 ? 'over 100' : 'of 100'}
-              </span>
-            </div>
-
-            <button
-              onClick={next}
-              disabled={!validSplit}
-              style={{
-                ...primaryBtn,
-                opacity: validSplit ? 1 : 0.5,
-                cursor: validSplit ? 'pointer' : 'not-allowed',
-                background: validSplit ? 'var(--color-primary)' : 'var(--color-muted)',
-                color: validSplit ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
-              }}
-            >
-              {validSplit ? 'Continue' : 'Must equal 100%'}
-            </button>
+            <button onClick={next} style={primaryBtn}>Continue</button>
           </div>
         )
       }
 
+      // ── Step 6: Integrations ──────────────────────────────────────────────
       case 6: {
         const apps = [
           { id: 'Stripe', desc: 'Income from client payments' },
@@ -452,7 +476,22 @@ export default function OnboardingPage() {
         )
       }
 
-      case 7:
+      // ── Step 7: Pulse time ────────────────────────────────────────────────
+      case 7: {
+        const timeInputBase: React.CSSProperties = {
+          width: 76,
+          minHeight: 72,
+          fontSize: 40,
+          fontWeight: 700,
+          textAlign: 'center',
+          borderRadius: 10,
+          border: '1.5px solid var(--color-border)',
+          background: 'var(--color-card)',
+          color: 'var(--color-ink)',
+          outline: 'none',
+          fontFamily: 'var(--font-serif)',
+          padding: 0,
+        }
         return (
           <div>
             <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
@@ -463,54 +502,35 @@ export default function OnboardingPage() {
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 52 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                <button
-                  onClick={() => setHour((hour + 1) % 24)}
-                  style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ChevronUp size={20} />
-                </button>
-                <span className="font-serif" style={{ fontSize: 64, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1, minWidth: 72, textAlign: 'center' }}>
-                  {displayH}
-                </span>
-                <button
-                  onClick={() => setHour((hour - 1 + 24) % 24)}
-                  style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ChevronDown size={20} />
-                </button>
-              </div>
-
-              <span className="font-serif" style={{ fontSize: 64, fontWeight: 700, color: 'var(--color-muted-foreground)', lineHeight: 1, userSelect: 'none', marginBottom: 4 }}>:</span>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-                <button
-                  onClick={() => setMinute((minute + 15) % 60)}
-                  style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ChevronUp size={20} />
-                </button>
-                <span className="font-serif" style={{ fontSize: 64, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1, minWidth: 72, textAlign: 'center' }}>
-                  {displayM}
-                </span>
-                <button
-                  onClick={() => setMinute((minute - 15 + 60) % 60)}
-                  style={{ width: 48, height: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ChevronDown size={20} />
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginLeft: 12 }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={String(displayH)}
+                onChange={e => handleHourInput(e.target.value)}
+                style={timeInputBase}
+              />
+              <span className="font-serif" style={{
+                fontSize: 40, fontWeight: 700,
+                color: 'var(--color-muted-foreground)',
+                lineHeight: 1, userSelect: 'none',
+              }}>:</span>
+              <select
+                value={minute}
+                onChange={e => setMinute(Number(e.target.value))}
+                style={{ ...timeInputBase, cursor: 'pointer', fontSize: 36 }}
+              >
+                {[0, 15, 30, 45].map(m => (
+                  <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
+                ))}
+              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 8 }}>
                 {(['AM', 'PM'] as const).map(period => (
                   <button
                     key={period}
-                    onClick={() => {
-                      if (period === 'AM' && hour >= 12) setHour(hour - 12)
-                      if (period === 'PM' && hour < 12) setHour(hour + 12)
-                    }}
+                    onClick={() => handleAmPm(period)}
                     style={{
-                      padding: '10px 14px', borderRadius: 8, fontSize: 16, fontWeight: 700,
+                      padding: '12px 16px', borderRadius: 8, fontSize: 16, fontWeight: 700,
                       border: '1.5px solid var(--color-border)',
                       background: ampm === period ? 'var(--color-primary)' : 'var(--color-card)',
                       color: ampm === period ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
@@ -527,7 +547,9 @@ export default function OnboardingPage() {
             <button onClick={next} style={primaryBtn}>Continue</button>
           </div>
         )
+      }
 
+      // ── Step 8: Disclaimer ────────────────────────────────────────────────
       case 8:
         return (
           <div style={{ textAlign: 'center', paddingTop: 16 }}>

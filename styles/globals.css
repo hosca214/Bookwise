@@ -10,6 +10,7 @@
 :root {
   --color-background: #F5F2EC;
   --color-card: #FFFFFF;
+  --color-secondary: #E8E2D5;
   --color-border: #E0D8CF;
   --color-primary: #7C9A7E;
   --color-primary-foreground: #FFFFFF;
@@ -28,6 +29,7 @@
 [data-vibe="midnight"] {
   --color-background: #1E1E26;
   --color-card: #2A2A36;
+  --color-secondary: #222231;
   --color-border: #3A3A48;
   --color-primary: #B09FCC;
   --color-primary-foreground: #1E1E26;
@@ -40,6 +42,63 @@
   --color-profit: #B09FCC;
   --color-tax: #C8C8D0;
   --color-ops: #8A7AAA;
+}
+
+/* Desert Rose */
+[data-vibe="rose"] {
+  --color-background: #FAF0EE;
+  --color-card: #FFFFFF;
+  --color-secondary: #F0DDD9;
+  --color-border: #E8D0CA;
+  --color-primary: #C4816A;
+  --color-primary-foreground: #FFFFFF;
+  --color-ink: #3D2422;
+  --color-foreground: #3D2422;
+  --color-muted-foreground: #8A5E58;
+  --color-muted: #F5E8E4;
+  --color-accent: #E8C4B8;
+  --color-danger: #B85C5C;
+  --color-profit: #C4816A;
+  --color-tax: #E8C4B8;
+  --color-ops: #9A5A48;
+}
+
+/* Ocean Mist */
+[data-vibe="ocean"] {
+  --color-background: #EEF4F7;
+  --color-card: #FFFFFF;
+  --color-secondary: #D8EBF1;
+  --color-border: #C0D8E4;
+  --color-primary: #4A8FA8;
+  --color-primary-foreground: #FFFFFF;
+  --color-ink: #1A3540;
+  --color-foreground: #1A3540;
+  --color-muted-foreground: #5A7E8A;
+  --color-muted: #DFF0F5;
+  --color-accent: #A8C8D8;
+  --color-danger: #B05858;
+  --color-profit: #4A8FA8;
+  --color-tax: #A8C8D8;
+  --color-ops: #2E6E88;
+}
+
+/* Golden Hour */
+[data-vibe="golden"] {
+  --color-background: #FBF5E8;
+  --color-card: #FFFFFF;
+  --color-secondary: #F0E4C0;
+  --color-border: #E8D8A0;
+  --color-primary: #C4943A;
+  --color-primary-foreground: #FFFFFF;
+  --color-ink: #2E1F08;
+  --color-foreground: #2E1F08;
+  --color-muted-foreground: #8A6A30;
+  --color-muted: #F5EDD0;
+  --color-accent: #E8D090;
+  --color-danger: #C45A3A;
+  --color-profit: #C4943A;
+  --color-tax: #E8D090;
+  --color-ops: #9A6820;
 }
 
 *,
