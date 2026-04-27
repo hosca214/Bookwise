@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-
-const supabase = createClient()
 import { useIQ } from '@/context/IQContext'
 import { useVibe, type Vibe, VIBES } from '@/context/VibeContext'
 import type { Industry } from '@/lib/iqMaps'
 import { Confetti } from '@/components/ui/Confetti'
-import { Briefcase, Activity, Heart, ArrowLeft } from 'lucide-react'
+import { Briefcase, Activity, Heart, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+const supabase = createClient()
 
 const TOTAL_STEPS = 8
 
@@ -510,15 +510,25 @@ export default function OnboardingPage() {
                 color: 'var(--color-muted-foreground)',
                 lineHeight: 1, userSelect: 'none',
               }}>:</span>
-              <select
-                value={minute}
-                onChange={e => setMinute(Number(e.target.value))}
-                style={{ ...timeInputBase, cursor: 'pointer', fontSize: 36 }}
-              >
-                {[0, 15, 30, 45].map(m => (
-                  <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
-                ))}
-              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setMinute(m => { const s = [0, 15, 30, 45]; return s[(s.indexOf(m) + 1) % 4] })}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted-foreground)', padding: 0, display: 'flex' }}
+                >
+                  <ChevronUp size={22} />
+                </button>
+                <div style={{ ...timeInputBase, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {minute.toString().padStart(2, '0')}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMinute(m => { const s = [0, 15, 30, 45]; return s[(s.indexOf(m) + 3) % 4] })}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted-foreground)', padding: 0, display: 'flex' }}
+                >
+                  <ChevronDown size={22} />
+                </button>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 8 }}>
                 {(['AM', 'PM'] as const).map(period => (
                   <button

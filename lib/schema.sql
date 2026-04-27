@@ -11,6 +11,8 @@ create table profiles (
   daily_pulse_time time default '17:00',
   google_drive_folder_id text,
   tax_rate numeric default 0.25,
+  profit_pct numeric default 10,
+  tax_pct numeric default 25,
   onboarding_complete boolean default false,
   created_at timestamptz default now()
 );
@@ -62,6 +64,12 @@ create table buckets (
   ops_target numeric default 0,
   ops_funded numeric default 0,
   unique(user_id, month)
+);
+
+create table waitlist (
+  id uuid primary key default uuid_generate_v4(),
+  email text not null unique,
+  created_at timestamptz default now()
 );
 
 -- Row Level Security
