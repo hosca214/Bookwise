@@ -8,6 +8,11 @@ import { generateCPAExport, downloadCSV } from '@/lib/csv'
 import { SCHEDULE_C_MAP } from '@/lib/iqMaps'
 import type { Transaction } from '@/lib/supabase'
 
+// ── types ─────────────────────────────────────────────────────────────────────
+
+type TrendMonth = { month: string; label: string; income: number; expenses: number; takeHome: number }
+type WinRecord = { month: string; pay_funded: number; celebration_note: string | null }
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function monthStart(offset = 0): string {
@@ -123,6 +128,10 @@ export default function ReportsPage() {
   const [rangeStart, setRangeStart] = useState(THIS_MONTH)
   const [rangeEnd, setRangeEnd] = useState(monthEnd(THIS_MONTH))
 
+  const [trendData, setTrendData] = useState<TrendMonth[]>([])
+  const [wins, setWins] = useState<WinRecord[]>([])
+  const [payTargetForReports, setPayTargetForReports] = useState(0)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -130,15 +139,42 @@ export default function ReportsPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const [{ data: profile }, { data: txns, error: txErr }] = await Promise.all([
-          supabase.from('profiles').select('industry, practice_name').eq('id', user.id).single(),
+        const sixMonthsAgo = new Date()
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
+        const sixMonthStart = sixMonthsAgo.toISOString().slice(0, 8) + '01'
+
+        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }] = await Promise.all([
+          supabase.from('profiles').select('industry, practice_name, pay_target').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd).order('date', { ascending: true }),
+          supabase.from('transactions').select('date, amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', sixMonthStart).order('date', { ascending: true }),
+          supabase.from('buckets').select('month, pay_funded, celebration_note').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
         if (profile?.practice_name) setPracticeName(profile.practice_name)
+        if (profile?.pay_target != null) setPayTargetForReports(profile.pay_target)
         if (txErr) throw txErr
         setTransactions(txns ?? [])
+        setWins(winsData ?? [])
+
+        const monthMap: Record<string, { income: number; expenses: number }> = {}
+        for (const tx of trendTxns ?? []) {
+          const month = tx.date.slice(0, 7)
+          if (!monthMap[month]) monthMap[month] = { income: 0, expenses: 0 }
+          if (tx.type === 'income') monthMap[month].income += Number(tx.amount)
+          else monthMap[month].expenses += Number(tx.amount)
+        }
+        setTrendData(
+          Object.entries(monthMap)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, { income, expenses }]) => ({
+              month,
+              label: new Date(month + '-02').toLocaleString('default', { month: 'short' }),
+              income,
+              expenses,
+              takeHome: income - expenses,
+            }))
+        )
       } catch {
         setError(true)
       } finally {
@@ -355,6 +391,151 @@ export default function ReportsPage() {
             Export for My CPA
           </button>
         )}
+
+        {/* 6-Month Trend Chart */}
+        {trendData.length >= 2 && (() => {
+          const W = 320, H = 120, PAD = 12
+          const allVals = trendData.flatMap((m) => [m.income, m.expenses, m.takeHome])
+          const maxVal = Math.max(...allVals, 1)
+          const xStep = (W - PAD * 2) / Math.max(trendData.length - 1, 1)
+          const yScale = (v: number) => PAD + (1 - v / maxVal) * (H - PAD * 2)
+          const pts = (key: keyof TrendMonth) =>
+            trendData.map((m, i) => `${PAD + i * xStep},${yScale(Number(m[key]))}`).join(' ')
+          return (
+            <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)', marginBottom: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 14px', fontWeight: 600 }}>
+                6-Month Trend
+              </p>
+              <div style={{ overflowX: 'auto' }}>
+                <svg width={W} height={H} style={{ display: 'block', margin: '0 auto' }}>
+                  <polyline points={pts('income')}   fill="none" stroke="var(--color-profit)" strokeWidth={2} strokeLinejoin="round" />
+                  <polyline points={pts('expenses')} fill="none" stroke="var(--color-muted-foreground)" strokeWidth={2} strokeLinejoin="round" strokeDasharray="4 3" />
+                  <polyline points={pts('takeHome')} fill="none" stroke="var(--color-pay)" strokeWidth={2} strokeLinejoin="round" />
+                </svg>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: `0 ${PAD}px`, marginTop: 4 }}>
+                  {trendData.map((m) => (
+                    <span key={m.month} style={{ fontSize: 10, color: 'var(--color-muted-foreground)' }}>{m.label}</span>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Income',    color: 'var(--color-profit)',           dash: false },
+                    { label: 'Expenses',  color: 'var(--color-muted-foreground)', dash: true },
+                    { label: 'Take-Home', color: 'var(--color-pay)',              dash: false },
+                  ].map(({ label, color, dash }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <svg width={20} height={10}>
+                        <line x1={0} y1={5} x2={20} y2={5} stroke={color} strokeWidth={2} strokeDasharray={dash ? '4 3' : undefined} />
+                      </svg>
+                      <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Month vs Last Month Comparison */}
+        {trendData.length >= 2 && (() => {
+          const cur = trendData[trendData.length - 1]
+          const prev = trendData[trendData.length - 2]
+          const rows: { label: string; cur: number; prev: number; better: (c: number, p: number) => boolean }[] = [
+            { label: 'Income',    cur: cur.income,    prev: prev.income,    better: (c, p) => c >= p },
+            { label: 'Expenses',  cur: cur.expenses,  prev: prev.expenses,  better: (c, p) => c <= p },
+            { label: 'Take-Home', cur: cur.takeHome,  prev: prev.takeHome,  better: (c, p) => c >= p },
+          ]
+          return (
+            <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)', marginBottom: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 12px', fontWeight: 600 }}>
+                {cur.label} vs {prev.label}
+              </p>
+              {rows.map(({ label, cur: c, prev: p, better }) => {
+                const delta = c - p
+                const isGood = better(c, p)
+                return (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>{label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>${p.toFixed(0)}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isGood ? 'var(--color-profit)' : 'var(--color-danger)' }}>
+                        {delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}
+                      </span>
+                      <span className="font-serif" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)' }}>${c.toFixed(0)}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
+
+        {/* Wins Log */}
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 10px', fontWeight: 600 }}>
+            Your Wins
+          </p>
+
+          {wins.length >= 2 && (() => {
+            let streak = 1
+            for (let i = 1; i < wins.length; i++) {
+              const [ay, am] = wins[i - 1].month.slice(0, 7).split('-').map(Number)
+              const [by, bm] = wins[i].month.slice(0, 7).split('-').map(Number)
+              const prevDate = new Date(ay, am - 2)
+              if (prevDate.getFullYear() === by && prevDate.getMonth() + 1 === bm) streak++
+              else break
+            }
+            if (streak < 2) return null
+            const earliest = wins[streak - 1].month
+            const earliestLabel = new Date(earliest.slice(0, 7) + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--color-muted)', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+                <span style={{ fontSize: 22 }}>🔥</span>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)', margin: '0 0 1px' }}>
+                    {streak} months in a row
+                  </p>
+                  <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: 0 }}>
+                    You have paid yourself every month since {earliestLabel}.
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
+
+          {wins.length === 0 ? (
+            <div style={{ border: '1.5px dashed var(--color-border)', borderRadius: 12, padding: '24px 16px', textAlign: 'center' }}>
+              <p style={{ fontSize: 22, margin: '0 0 6px' }}>🏆</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 4px' }}>Your wins will appear here.</p>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.5 }}>
+                After your first Transfer Done, this log starts filling in.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {wins.map((win) => {
+                const isGoalReached = payTargetForReports > 0 && win.pay_funded >= payTargetForReports
+                const monthLabel = new Date(win.month.slice(0, 7) + '-02').toLocaleString('default', { month: 'long', year: 'numeric' })
+                return (
+                  <div key={win.month} style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '14px 16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', borderLeft: `3px solid ${isGoalReached ? 'var(--color-pay)' : 'var(--color-accent)'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <span className="font-serif" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)' }}>{monthLabel}</span>
+                      <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-pay)' }}>${win.pay_funded.toFixed(2)}</span>
+                    </div>
+                    {win.celebration_note && (
+                      <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontStyle: 'italic', margin: '0 0 8px', lineHeight: 1.4 }}>
+                        "{win.celebration_note}"
+                      </p>
+                    )}
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 999, background: isGoalReached ? 'var(--color-muted)' : 'var(--color-muted)', color: isGoalReached ? 'var(--color-primary)' : 'var(--color-accent)', border: '1px solid var(--color-border)' }}>
+                      {isGoalReached ? 'Goal reached' : 'Partial pay'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Disclaimer */}
         <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', textAlign: 'center', padding: '8px 0 16px', lineHeight: 1.5 }}>

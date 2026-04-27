@@ -50,6 +50,11 @@ export default function SettingsPage() {
   const [services, setServices] = useState<Service[]>([])
   const [loadingServices, setLoadingServices] = useState(true)
 
+  // pay and transfer settings
+  const [payTarget, setPayTarget] = useState('')
+  const [transferDay, setTransferDay] = useState('Monday')
+  const [savingPay, setSavingPay] = useState(false)
+
   // add service form
   const [addOpen, setAddOpen] = useState(false)
   const [svcName, setSvcName] = useState('')
@@ -69,7 +74,7 @@ export default function SettingsPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data: svcData }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
         ])
 
@@ -78,6 +83,8 @@ export default function SettingsPage() {
           setVibe(profile.vibe)
           setStagedVibe(profile.vibe as typeof vibe)
         }
+        if (profile?.pay_target != null) setPayTarget(String(profile.pay_target))
+        if (profile?.transfer_day) setTransferDay(profile.transfer_day)
         setServices(svcData ?? [])
       } catch {
         toast.error('Could not load settings. Try again.')
@@ -359,6 +366,77 @@ export default function SettingsPage() {
               {savingVibe ? 'Saving...' : 'Save Vibe'}
             </button>
           )}
+        </section>
+
+        {/* ── Pay and Transfer ─────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader>Pay and Transfer</SectionHeader>
+          <div style={{
+            background: 'var(--color-card)',
+            borderRadius: 12,
+            padding: '20px 16px',
+            border: '1px solid var(--color-border)',
+          }}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={fieldLabel}>Monthly Pay Goal</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-serif)' }}>$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={payTarget}
+                  onChange={(e) => setPayTarget(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  style={{ width: 120, minHeight: 48, fontSize: 24, fontWeight: 700, textAlign: 'center', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', outline: 'none', fontFamily: 'var(--font-serif)', padding: 0 }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>/ month</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ ...fieldLabel, marginBottom: 8 }}>Weekly Transfer Day</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => setTransferDay(day)}
+                    style={{
+                      minHeight: 40, padding: '0 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                      border: `1.5px solid ${transferDay === day ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                      background: transferDay === day ? 'var(--color-primary)' : 'var(--color-card)',
+                      color: transferDay === day ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
+                      cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              disabled={savingPay}
+              onClick={async () => {
+                if (!userId) return
+                setSavingPay(true)
+                try {
+                  await supabase.from('profiles').update({
+                    pay_target: parseFloat(payTarget) || 0,
+                    transfer_day: transferDay,
+                  }).eq('id', userId)
+                  toast.success('Pay settings saved.')
+                } catch {
+                  toast.error('Could not save. Try again.')
+                } finally {
+                  setSavingPay(false)
+                }
+              }}
+              style={{ minHeight: 48, padding: '0 24px', borderRadius: 10, fontSize: 15, fontWeight: 700, border: 'none', background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+            >
+              {savingPay ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </section>
 
         {/* ── Connected Apps ────────────────────────────────────────────────── */}

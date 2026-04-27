@@ -69,6 +69,16 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
+  const [payPeriod, setPayPeriod] = useState<'monthly' | 'weekly'>('monthly')
+  const [showOwnerPayInfo, setShowOwnerPayInfo] = useState(false)
+  const [showGrowthInfo, setShowGrowthInfo] = useState(false)
+  const [showTaxInfo, setShowTaxInfo] = useState(false)
+  const [showOpsInfo, setShowOpsInfo] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationNote, setCelebrationNote] = useState('')
+  const [savingCelebration, setSavingCelebration] = useState(false)
+
+  const CELEBRATION_CHIPS = ['A long bath', 'A nice meal out', 'A morning off', 'A new book']
 
   const [sessionsToday, setSessionsToday] = useState(0)
   const [hoursToday, setHoursToday] = useState(0)
@@ -281,8 +291,22 @@ export default function DashboardPage() {
 
     setShowPayModal(false)
     setConfettiTrigger(n => n + 1)
-    toast.success('Done. You paid yourself. That is worth celebrating.')
+    setCelebrationNote('')
+    setShowCelebration(true)
     setSecuring(false)
+  }
+
+  async function handleSaveCelebration(skip = false) {
+    if (!bucket) { setShowCelebration(false); return }
+    setSavingCelebration(true)
+    await supabase
+      .from('buckets')
+      .update({ celebration_note: skip ? null : celebrationNote })
+      .eq('id', bucket.id)
+    setBucket(prev => prev ? { ...prev, celebration_note: skip ? null : celebrationNote } : prev)
+    setSavingCelebration(false)
+    setShowCelebration(false)
+    toast.success('Done. You paid yourself this month. That is worth celebrating.')
   }
 
   async function savePulse() {
@@ -351,6 +375,10 @@ export default function DashboardPage() {
   const taxFrac = (profile?.tax_pct ?? 25) / 100
   const opsFrac = 1 - profitFrac - taxFrac
 
+  const payTarget = profile?.pay_target ?? 0
+  const payActual = Math.min(monthIncome, payTarget)
+  const payProgress = payTarget > 0 ? Math.min(100, (payActual / payTarget) * 100) : 0
+
   if (loadError) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--color-background)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -403,52 +431,145 @@ export default function DashboardPage() {
 
       <main style={{ padding: '32px 24px', maxWidth: 480, margin: '0 auto' }}>
 
+        {/* Owner's Pay */}
+        <section style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
+              {t('Take-Home')}
+            </span>
+            <div style={{ display: 'flex', background: 'var(--color-muted)', borderRadius: 999, padding: 2, gap: 2 }}>
+              {(['monthly', 'weekly'] as const).map(p => (
+                <button key={p} onClick={() => setPayPeriod(p)}
+                  style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', background: payPeriod === p ? 'var(--color-card)' : 'transparent', color: payPeriod === p ? 'var(--color-ink)' : 'var(--color-muted-foreground)', boxShadow: payPeriod === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s', fontFamily: 'var(--font-sans)' }}
+                >
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {payTarget > 0 ? (
+            <>
+              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-pay)', margin: '4px 0 10px', lineHeight: 1 }}>
+                ${(payPeriod === 'weekly' ? payActual / 4.33 : payActual).toFixed(2)}
+              </p>
+              <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+                <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
+                <span>${(payPeriod === 'weekly' ? payActual / 4.33 : payActual).toFixed(0)} so far</span>
+                <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${(payPeriod === 'weekly' ? payTarget / 4.33 : payTarget).toFixed(0)}{payPeriod === 'monthly' ? '/mo' : '/wk'}</strong></span>
+              </div>
+            </>
+          ) : (
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: '8px 0 0' }}>
+              Set a monthly pay goal to track your take-home.{' '}
+              <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Settings</a>
+            </p>
+          )}
+          <button onClick={() => setShowOwnerPayInfo(v => !v)}
+            style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: '8px 0 0', textDecoration: 'underline', fontFamily: 'var(--font-sans)' }}
+          >
+            {showOwnerPayInfo ? 'Hide' : "What is Owner's Pay?"}
+          </button>
+          {showOwnerPayInfo && (
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 6, lineHeight: 1.6 }}>
+              This is your monthly take-home target — the amount you want to move from your business account to your personal account. As income comes in, this card shows how close you are. Adjust your goal anytime in Settings.
+            </p>
+          )}
+        </section>
+
         {/* Reservoirs */}
-        <section style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <Reservoir
-              label={t('Profit Bucket')}
-              current={profitFunded}
-              goal={Math.max(1, profitTarget)}
-              tone="profit"
-            />
-            <Reservoir
-              label={t('Tax Bucket')}
-              current={taxFunded}
-              goal={Math.max(1, taxTarget)}
-              tone="tax"
-            />
-            <Reservoir
-              label={t('Operations Bucket')}
-              current={opsFunded}
-              goal={Math.max(1, opsTarget)}
-              tone="ops"
-            />
+        <section style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {([
+              { key: 'profit', label: t('Profit Bucket'), current: profitFunded, goal: Math.max(1, profitTarget), tone: 'profit' as const },
+              { key: 'tax',    label: t('Tax Bucket'),    current: taxFunded,    goal: Math.max(1, taxTarget),    tone: 'tax' as const },
+              { key: 'ops',    label: t('Operations Bucket'), current: opsFunded, goal: Math.max(1, opsTarget),  tone: 'ops' as const },
+            ]).map(({ key, label, current, goal, tone }) => (
+              <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <Reservoir label="" current={current} goal={goal} tone={tone} />
+                <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-muted-foreground)', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+                <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)', textAlign: 'center' }}>
+                  <strong style={{ color: 'var(--color-ink)' }}>${current.toFixed(0)}</strong> / ${goal.toFixed(0)}
+                </span>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* Tax Deadline Countdown */}
-        <section style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ textAlign: 'center', minWidth: 72 }}>
-            <span className="font-serif" style={{
-              fontSize: 52, fontWeight: 900, color: 'var(--color-primary)',
-              lineHeight: 1, display: 'block',
-            }}>
-              {taxDeadline.days}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              days
-            </span>
+        {/* Bucket explainer links */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 0, marginBottom: 8 }}>
+          {[
+            { key: 'growth', show: showGrowthInfo, toggle: () => setShowGrowthInfo(v => !v) },
+            { key: 'tax',    show: showTaxInfo,    toggle: () => setShowTaxInfo(v => !v) },
+            { key: 'ops',    show: showOpsInfo,    toggle: () => setShowOpsInfo(v => !v) },
+          ].map(({ key, show, toggle }) => (
+            <div key={key} style={{ flex: 1, textAlign: 'center' }}>
+              <button onClick={toggle} style={{ background: 'none', border: 'none', fontSize: 10, color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline', padding: '4px 0', fontFamily: 'var(--font-sans)' }}>
+                {show ? 'Hide' : 'What is this?'}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Growth + Ops explainer tiles */}
+        {(showGrowthInfo || showOpsInfo) && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            {showGrowthInfo && (
+              <div style={{ ...cardStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontWeight: 600 }}>{t('Profit Bucket')}</p>
+                <p className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 4px' }}>
+                  ${profitFunded.toFixed(0)} <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>of ${profitTarget.toFixed(0)}</span>
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.5 }}>
+                  Reinvest in your practice — new training, tools, or equipment. Keep this in a dedicated business savings account.
+                </p>
+              </div>
+            )}
+            {showOpsInfo && (
+              <div style={{ ...cardStyle, flex: 1, marginBottom: 0, padding: '12px 14px' }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontWeight: 600 }}>{t('Operations Bucket')}</p>
+                <p className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-ops)', margin: '0 0 4px' }}>
+                  ${opsFunded.toFixed(0)} <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>of ${opsTarget.toFixed(0)}</span>
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.5 }}>
+                  Covers your business expenses — supplies, rent, software, insurance. This is the largest bucket because your practice runs on it every day.
+                </p>
+              </div>
+            )}
           </div>
-          <div>
-            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 4px' }}>
-              {taxDeadline.name}
+        )}
+
+        {/* Tax explainer tile */}
+        {showTaxInfo && (
+          <section style={{ ...cardStyle, marginBottom: 10 }}>
+            <p style={{ fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: '0 0 8px', fontWeight: 600 }}>{t('Tax Bucket')}</p>
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: '0 0 10px' }}>
+              As a self-employed practitioner, no employer withholds taxes for you. Bookwise recommends you set aside{' '}
+              <strong style={{ color: 'var(--color-ink)' }}>25% of your income</strong> into a dedicated tax-savings account.
+              Making quarterly estimated payments on time helps you avoid IRS underpayment penalties.
             </p>
-            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
-              Due {taxDeadline.label}
+            <div style={{ background: 'var(--color-background)', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--color-primary-dark)' }}>Pro tip:</strong>{' '}
+                Keep your tax savings in a high-yield savings account. Your money earns interest before it goes to the IRS.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 2px' }}>{taxDeadline.name}</p>
+                <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: 0 }}>Due {taxDeadline.label}</p>
+              </div>
+              <div style={{ background: 'var(--color-background)', borderRadius: 8, padding: '6px 12px', textAlign: 'center' }}>
+                <p className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', margin: 0, lineHeight: 1 }}>{taxDeadline.days}</p>
+                <p style={{ fontSize: 9, color: 'var(--color-muted-foreground)', margin: 0, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>days away</p>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: '10px 0 0', fontStyle: 'italic' }}>
+              Always confirm your payment with a licensed CPA before filing.
             </p>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Must-Pay Coverage */}
         <section style={{ ...cardStyle, marginBottom: 28 }}>
@@ -476,12 +597,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Tax savings line */}
-        <p style={{ textAlign: 'center', fontSize: 16, color: 'var(--color-accent)', fontWeight: 500, marginBottom: 28 }}>
-          You have set aside ${taxFunded.toFixed(2)} for taxes this month.
-        </p>
-
-        {/* Secure My Pay */}
+        {/* Transfer Done */}
         <button
           onClick={() => setShowPayModal(true)}
           style={{
@@ -494,10 +610,11 @@ export default function DashboardPage() {
             fontFamily: 'var(--font-serif)',
           }}
         >
-          Secure My Pay
+          Transfer Done
         </button>
-        <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 32 }}>
-          Confirm you have moved these funds to your separate accounts.
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 32, lineHeight: 1.5 }}>
+          Move your funds to your dedicated accounts first, then tap here to record it.
+          Come back every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong> to keep your numbers clean.
         </p>
 
         {/* Daily Pulse */}
@@ -633,86 +750,86 @@ export default function DashboardPage() {
 
       </main>
 
-      {/* Secure My Pay Modal */}
+      {/* Transfer Done Modal */}
       {showPayModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pay-modal-title"
-          style={{
-            position: 'fixed', inset: 0, zIndex: 60,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24,
-          }}
+        <div role="dialog" aria-modal="true" aria-labelledby="pay-modal-title"
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
           onClick={() => { if (!securing) setShowPayModal(false) }}
         >
-          <div
-            style={{
-              background: 'var(--color-card)',
-              borderRadius: 16, padding: 28,
-              width: '100%', maxWidth: 360,
-              boxShadow: '0 8px 40px rgba(0,0,0,0.2)',
-            }}
+          <div style={{ background: 'var(--color-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}
             onClick={e => e.stopPropagation()}
           >
             <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0 }}>
               Move these funds
             </h3>
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 24, lineHeight: 1.5 }}>
-              Transfer these amounts to your separate accounts today.
+              Transfer these amounts to your separate accounts, then confirm below.
             </p>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {[
-                { label: t('Profit Bucket'),     amount: monthIncome * profitFrac, color: 'var(--color-profit)' },
-                { label: t('Tax Bucket'),         amount: monthIncome * taxFrac,    color: 'var(--color-tax)' },
-                { label: t('Operations Bucket'), amount: monthIncome * opsFrac,    color: 'var(--color-ops)' },
+                { label: t('Take-Home'),         amount: payTarget,              color: 'var(--color-pay)' },
+                { label: t('Tax Bucket'),         amount: monthIncome * taxFrac,  color: 'var(--color-tax)' },
+                { label: t('Profit Bucket'),      amount: monthIncome * profitFrac, color: 'var(--color-profit)' },
+                { label: t('Operations Bucket'), amount: monthIncome * opsFrac,  color: 'var(--color-ops)' },
               ].map(({ label, amount, color }) => (
-                <div key={label} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '12px 16px',
-                  background: 'var(--color-background)',
-                  borderRadius: 10,
-                  border: '1px solid var(--color-border)',
-                }}>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-background)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
                   <span style={{ fontSize: 15, color: 'var(--color-foreground)' }}>{label}</span>
-                  <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>
-                    ${amount.toFixed(2)}
-                  </span>
+                  <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>${amount.toFixed(2)}</span>
                 </div>
               ))}
             </div>
-
-            <button
-              onClick={handleSecurePay}
-              disabled={securing}
-              style={{
-                width: '100%', minHeight: 52,
-                background: securing ? 'var(--color-muted)' : 'var(--color-primary)',
-                color: 'var(--color-primary-foreground)',
-                border: 'none', borderRadius: 12,
-                fontSize: 16, fontWeight: 700,
-                cursor: securing ? 'not-allowed' : 'pointer',
-                fontFamily: 'var(--font-sans)',
-              }}
+            <button onClick={handleSecurePay} disabled={securing}
+              style={{ width: '100%', minHeight: 52, background: securing ? 'var(--color-muted)' : 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: securing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
             >
-              {securing ? 'Saving...' : 'Done, I moved it'}
+              {securing ? 'Saving...' : 'Transfer Done'}
             </button>
-
-            <button
-              onClick={() => setShowPayModal(false)}
-              disabled={securing}
-              style={{
-                width: '100%', minHeight: 44,
-                background: 'none', border: 'none',
-                color: 'var(--color-muted-foreground)',
-                fontSize: 14, cursor: 'pointer',
-                marginTop: 8,
-                fontFamily: 'var(--font-sans)',
-              }}
+            <button onClick={() => setShowPayModal(false)} disabled={securing}
+              style={{ width: '100%', minHeight: 44, background: 'none', border: 'none', color: 'var(--color-muted-foreground)', fontSize: 14, cursor: 'pointer', marginTop: 8, fontFamily: 'var(--font-sans)' }}
             >
               Not yet
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration Modal */}
+      {showCelebration && (
+        <div role="dialog" aria-modal="true" aria-labelledby="celebration-title"
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        >
+          <div style={{ background: 'var(--color-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <p style={{ fontSize: 32, textAlign: 'center', margin: '0 0 8px' }}>🎉</p>
+            <h3 id="celebration-title" className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0, textAlign: 'center' }}>
+              You paid yourself this month.
+            </h3>
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5, textAlign: 'center' }}>
+              That is worth celebrating. What is one small thing you will do for yourself?
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {CELEBRATION_CHIPS.map(chip => (
+                <button key={chip} onClick={() => setCelebrationNote(chip)}
+                  style={{ padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, border: `1.5px solid ${celebrationNote === chip ? 'var(--color-pay)' : 'var(--color-border)'}`, background: celebrationNote === chip ? 'var(--color-pay)' : 'var(--color-card)', color: celebrationNote === chip ? '#fff' : 'var(--color-muted-foreground)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'var(--font-sans)' }}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={celebrationNote}
+              onChange={e => setCelebrationNote(e.target.value)}
+              placeholder="Write your own..."
+              rows={2}
+              style={{ width: '100%', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', fontSize: 13, padding: '10px 12px', fontFamily: 'var(--font-sans)', resize: 'none', outline: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+            />
+            <button onClick={() => handleSaveCelebration(false)} disabled={savingCelebration}
+              style={{ width: '100%', minHeight: 48, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8, fontFamily: 'var(--font-sans)' }}
+            >
+              {savingCelebration ? 'Saving...' : 'Save and Celebrate'}
+            </button>
+            <button onClick={() => handleSaveCelebration(true)}
+              style={{ width: '100%', background: 'none', border: 'none', fontSize: 13, color: 'var(--color-muted-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+            >
+              Skip for now
             </button>
           </div>
         </div>

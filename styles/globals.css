@@ -23,6 +23,7 @@
   --color-profit: #7C9A7E;
   --color-tax: #C4A882;
   --color-ops: #4E6E52;
+  --color-pay: #9B7DB5;
 }
 
 /* Midnight Orchid */
@@ -42,6 +43,7 @@
   --color-profit: #B09FCC;
   --color-tax: #C8C8D0;
   --color-ops: #8A7AAA;
+  --color-pay: #B09FCC;
 }
 
 /* Desert Rose */

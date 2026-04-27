@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 
 const supabase = createClient()
 
-const TOTAL_STEPS = 8
+const TOTAL_STEPS = 10
 
 const timeInputBase: React.CSSProperties = {
   width: 76, minHeight: 72, fontSize: 40, fontWeight: 700,
@@ -66,6 +66,8 @@ export default function OnboardingPage() {
   const [taxPct, setTaxPct] = useState(25)
   const [hour, setHour] = useState(17)
   const [minute, setMinute] = useState(0)
+  const [payTarget, setPayTarget] = useState('')
+  const [transferDay, setTransferDay] = useState('Monday')
   const [demoConnected, setDemoConnected] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
@@ -77,6 +79,12 @@ export default function OnboardingPage() {
   const opsPct = 100 - profitPct - taxPct
   const ampm = hour >= 12 ? 'PM' : 'AM'
   const displayH = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  const payTargetNum = parseFloat(payTarget.replace(/[^0-9.]/g, '')) || 0
+
+  const [hourRaw, setHourRaw] = useState(String(displayH))
+  const [minuteRaw, setMinuteRaw] = useState('00')
+
+  useEffect(() => { setHourRaw(String(displayH)) }, [displayH])
 
   function next() { setDir(1); setStep(s => s + 1) }
   function back() { setDir(-1); setStep(s => Math.max(1, s - 1)) }
@@ -128,6 +136,8 @@ export default function OnboardingPage() {
         google_drive_folder_id: 'demo',
         profit_pct: profitPct,
         tax_pct: taxPct,
+        pay_target: payTargetNum,
+        transfer_day: transferDay,
         onboarding_complete: true,
       })
 
@@ -485,8 +495,79 @@ export default function OnboardingPage() {
         )
       }
 
-      // ── Step 7: Pulse time ────────────────────────────────────────────────
-      case 7: {
+      // ── Step 7: Pay Target ────────────────────────────────────────────────
+      case 7:
+        return (
+          <div>
+            <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
+              What do you want to take home each month?
+            </h2>
+            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 40, lineHeight: 1.5 }}>
+              Set a monthly pay target. You can adjust this anytime in Settings.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+              <span className="font-serif" style={{ fontSize: 40, fontWeight: 700, color: 'var(--color-muted-foreground)' }}>$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={payTarget}
+                placeholder="0"
+                onChange={e => setPayTarget(e.target.value.replace(/[^0-9]/g, ''))}
+                style={{
+                  width: 160, minHeight: 72, fontSize: 40, fontWeight: 700,
+                  textAlign: 'center', borderRadius: 10,
+                  border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-card)', color: 'var(--color-ink)',
+                  outline: 'none', fontFamily: 'var(--font-serif)', padding: 0,
+                }}
+              />
+            </div>
+            <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 48 }}>
+              per month
+            </p>
+            <button onClick={next} style={primaryBtn}>
+              {payTargetNum > 0 ? 'Continue' : 'Skip for now'}
+            </button>
+          </div>
+        )
+
+      // ── Step 8: Transfer Day ──────────────────────────────────────────────
+      case 8: {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        return (
+          <div>
+            <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
+              Pick your transfer day.
+            </h2>
+            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 40, lineHeight: 1.5 }}>
+              Choose one day a week to move your funds and record it in Bookwise. Making it a habit is what makes it stick.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 48 }}>
+              {days.map(day => (
+                <button
+                  key={day}
+                  onClick={() => setTransferDay(day)}
+                  style={{
+                    minHeight: 52, borderRadius: 10, fontSize: 16, fontWeight: 600,
+                    border: `1.5px solid ${transferDay === day ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    background: transferDay === day ? 'var(--color-primary)' : 'var(--color-card)',
+                    color: transferDay === day ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
+                    cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                  }}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+            <button onClick={next} style={primaryBtn}>Continue</button>
+          </div>
+        )
+      }
+
+      // ── Step 9: Pulse time ────────────────────────────────────────────────
+      case 9: {
         return (
           <div>
             <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
@@ -501,8 +582,17 @@ export default function OnboardingPage() {
                 type="text"
                 inputMode="numeric"
                 maxLength={2}
-                value={String(displayH)}
-                onChange={e => handleHourInput(e.target.value)}
+                value={hourRaw}
+                onChange={e => setHourRaw(e.target.value.replace(/\D/g, ''))}
+                onBlur={() => {
+                  const n = parseInt(hourRaw)
+                  if (!isNaN(n) && n >= 1 && n <= 12) {
+                    setHour(ampm === 'PM' ? (n === 12 ? 12 : n + 12) : (n === 12 ? 0 : n))
+                    setHourRaw(String(n))
+                  } else {
+                    setHourRaw(String(displayH))
+                  }
+                }}
                 style={timeInputBase}
               />
               <span className="font-serif" style={{
@@ -514,11 +604,16 @@ export default function OnboardingPage() {
                 type="text"
                 inputMode="numeric"
                 maxLength={2}
-                value={minute === 0 ? '00' : String(minute)}
-                onChange={e => {
-                  const n = parseInt(e.target.value.replace(/\D/g, ''))
-                  if (!isNaN(n) && n >= 0 && n <= 59) setMinute(n)
-                  else if (e.target.value === '' || e.target.value === '0') setMinute(0)
+                value={minuteRaw}
+                onChange={e => setMinuteRaw(e.target.value.replace(/\D/g, ''))}
+                onBlur={() => {
+                  const n = parseInt(minuteRaw)
+                  if (!isNaN(n) && n >= 0 && n <= 59) {
+                    setMinute(n)
+                    setMinuteRaw(n === 0 ? '00' : String(n).padStart(2, '0'))
+                  } else {
+                    setMinuteRaw(minute === 0 ? '00' : String(minute).padStart(2, '0'))
+                  }
                 }}
                 style={timeInputBase}
               />
@@ -547,8 +642,8 @@ export default function OnboardingPage() {
         )
       }
 
-      // ── Step 8: Disclaimer ────────────────────────────────────────────────
-      case 8:
+      // ── Step 10: Disclaimer ───────────────────────────────────────────────
+      case 10:
         return (
           <div style={{ textAlign: 'center', paddingTop: 16 }}>
             <div style={{

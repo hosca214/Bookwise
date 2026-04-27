@@ -20,6 +20,8 @@ export type Profile = {
   created_at: string
   profit_pct: number | null
   tax_pct: number | null
+  pay_target: number
+  transfer_day: string
 }
 
 export type Transaction = {
@@ -58,6 +60,8 @@ export type Bucket = {
   tax_funded: number
   ops_target: number
   ops_funded: number
+  pay_funded: number
+  celebration_note: string | null
 }
 
 export type Service = {
