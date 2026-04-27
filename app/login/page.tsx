@@ -48,7 +48,8 @@ function LoginPageInner() {
 
   useEffect(() => {
     if (searchParams.get('error') === 'auth_callback_failed') {
-      toast.error('Sign in failed. Please try again.')
+      const detail = searchParams.get('detail')
+      toast.error(detail ? `Sign in failed: ${detail}` : 'Sign in failed. Please try again.')
     }
   }, [searchParams])
 

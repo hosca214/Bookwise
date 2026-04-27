@@ -27,7 +27,9 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`)
     }
+    const msg = encodeURIComponent(error.message ?? 'exchange_failed')
+    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed&detail=${msg}`)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed&detail=no_code`)
 }
