@@ -137,8 +137,8 @@ export default function LandingPage() {
             </a>
           ) : (
             <>
-              <a href="/login" style={{ ...pill(false), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Sign in</a>
-              <a href="/login" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Get early access</a>
+              <a href="/login" style={{ ...pill(false), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Sign In</a>
+              <a href="/login" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>Try Free</a>
             </>
           )}
         </div>
