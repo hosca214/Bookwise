@@ -8,7 +8,7 @@ import { useIQ } from '@/context/IQContext'
 import { useVibe, type Vibe, VIBES } from '@/context/VibeContext'
 import type { Industry } from '@/lib/iqMaps'
 import { Confetti } from '@/components/ui/Confetti'
-import { Briefcase, Activity, Heart, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react'
+import { Briefcase, Activity, Heart, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const supabase = createClient()
@@ -510,25 +510,18 @@ export default function OnboardingPage() {
                 color: 'var(--color-muted-foreground)',
                 lineHeight: 1, userSelect: 'none',
               }}>:</span>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <button
-                  type="button"
-                  onClick={() => setMinute(m => { const s = [0, 15, 30, 45]; return s[(s.indexOf(m) + 1) % 4] })}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted-foreground)', padding: 0, display: 'flex' }}
-                >
-                  <ChevronUp size={22} />
-                </button>
-                <div style={{ ...timeInputBase, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {minute.toString().padStart(2, '0')}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMinute(m => { const s = [0, 15, 30, 45]; return s[(s.indexOf(m) + 3) % 4] })}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-muted-foreground)', padding: 0, display: 'flex' }}
-                >
-                  <ChevronDown size={22} />
-                </button>
-              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={minute === 0 ? '00' : String(minute)}
+                onChange={e => {
+                  const n = parseInt(e.target.value.replace(/\D/g, ''))
+                  if (!isNaN(n) && n >= 0 && n <= 59) setMinute(n)
+                  else if (e.target.value === '' || e.target.value === '0') setMinute(0)
+                }}
+                style={timeInputBase}
+              />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 8 }}>
                 {(['AM', 'PM'] as const).map(period => (
                   <button
