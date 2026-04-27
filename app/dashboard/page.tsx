@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -13,6 +13,9 @@ import { RefreshCw } from 'lucide-react'
 import { PulseCalendar } from '@/components/dashboard/PulseCalendar'
 import type { Profile, Bucket } from '@/lib/supabase'
 
+const supabase = createClient()
+const MS_PER_DAY = 86_400_000
+
 function getNextTaxDeadline(now: Date) {
   const y = now.getFullYear()
   const todayMs = new Date(y, now.getMonth(), now.getDate()).getTime()
@@ -24,11 +27,22 @@ function getNextTaxDeadline(now: Date) {
   ]
   for (const c of candidates) {
     if (c.date.getTime() >= todayMs) {
-      return { ...c, days: Math.round((c.date.getTime() - todayMs) / 86400000) }
+      return { ...c, days: Math.round((c.date.getTime() - todayMs) / MS_PER_DAY) }
     }
   }
   return { ...candidates[3], days: 0 }
 }
+
+const cardStyle: React.CSSProperties = {
+  background: 'var(--color-card)',
+  borderRadius: 12,
+  border: '1px solid var(--color-border)',
+  padding: '18px 24px',
+  marginBottom: 16,
+  boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
+}
+
+const taxDeadline = getNextTaxDeadline(new Date())
 
 const SAGE_TIPS = [
   "The month you pay yourself first, even a small amount, is the month your business starts working for you.",
@@ -45,7 +59,6 @@ export default function DashboardPage() {
   const router = useRouter()
   const { t, setIndustry } = useIQ()
   const { setVibe } = useVibe()
-  const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -70,7 +83,7 @@ export default function DashboardPage() {
   const [tipIndex, setTipIndex] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const loadSage = useCallback(async (p: Profile, income: number, expenses: number, b: Bucket | null) => {
+  async function loadSage(p: Profile, income: number, expenses: number, b: Bucket | null) {
     setLoadingSage(true)
     setInsight(null)
     try {
@@ -107,7 +120,7 @@ export default function DashboardPage() {
     } finally {
       setLoadingSage(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     async function loadDashboard() {
@@ -234,12 +247,9 @@ export default function DashboardPage() {
     if (!profile || !bucket) return
     setSecuring(true)
 
-    const pFrac = (profile.profit_pct ?? 10) / 100
-    const tFrac = (profile.tax_pct ?? 25) / 100
-    const oFrac = 1 - pFrac - tFrac
-    const profitTarget = monthIncome * pFrac
-    const taxTarget = monthIncome * tFrac
-    const opsTarget = monthIncome * oFrac
+    const profitTarget = monthIncome * profitFrac
+    const taxTarget = monthIncome * taxFrac
+    const opsTarget = monthIncome * opsFrac
 
     const { error } = await supabase
       .from('buckets')
@@ -276,11 +286,9 @@ export default function DashboardPage() {
   }
 
   async function savePulse() {
+    if (!profile?.id) return
     setSavingPulse(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
       if (pulseId) {
         await supabase
           .from('daily_pulse')
@@ -289,7 +297,7 @@ export default function DashboardPage() {
       } else {
         const { data } = await supabase
           .from('daily_pulse')
-          .insert({ user_id: user.id, date: selectedDate, sessions_given: sessionsToday, hours_worked: hoursToday, miles_driven: milesToday })
+          .insert({ user_id: profile.id, date: selectedDate, sessions_given: sessionsToday, hours_worked: hoursToday, miles_driven: milesToday })
           .select()
           .single()
         if (data) setPulseId(data.id)
@@ -306,14 +314,13 @@ export default function DashboardPage() {
   }
 
   async function onSelectDate(date: string) {
+    if (!profile?.id) return
     setSelectedDate(date)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
       const { data } = await supabase
         .from('daily_pulse')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', profile.id)
         .eq('date', date)
         .maybeSingle()
       if (data) {
@@ -338,6 +345,11 @@ export default function DashboardPage() {
   const profitFunded = bucket?.profit_funded ?? 0
   const taxFunded = bucket?.tax_funded ?? 0
   const opsFunded = bucket?.ops_funded ?? 0
+
+  const expenseCoverage = monthExpenses > 0 ? Math.min(100, Math.round((monthIncome / monthExpenses) * 100)) : 0
+  const profitFrac = (profile?.profit_pct ?? 10) / 100
+  const taxFrac = (profile?.tax_pct ?? 25) / 100
+  const opsFrac = 1 - profitFrac - taxFrac
 
   if (loadError) {
     return (
@@ -416,80 +428,53 @@ export default function DashboardPage() {
         </section>
 
         {/* Tax Deadline Countdown */}
-        {(() => {
-          const dl = getNextTaxDeadline(new Date())
-          return (
-            <section style={{
-              background: 'var(--color-card)',
-              borderRadius: 12,
-              border: '1px solid var(--color-border)',
-              padding: '18px 24px',
-              marginBottom: 16,
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 20,
+        <section style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ textAlign: 'center', minWidth: 72 }}>
+            <span className="font-serif" style={{
+              fontSize: 52, fontWeight: 900, color: 'var(--color-primary)',
+              lineHeight: 1, display: 'block',
             }}>
-              <div style={{ textAlign: 'center', minWidth: 72 }}>
-                <span className="font-serif" style={{
-                  fontSize: 52, fontWeight: 900, color: 'var(--color-primary)',
-                  lineHeight: 1, display: 'block',
-                }}>
-                  {dl.days}
-                </span>
-                <span style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  days
-                </span>
-              </div>
-              <div>
-                <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 4px' }}>
-                  {dl.name}
-                </p>
-                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
-                  Due {dl.label}
-                </p>
-              </div>
-            </section>
-          )
-        })()}
+              {taxDeadline.days}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              days
+            </span>
+          </div>
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 4px' }}>
+              {taxDeadline.name}
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
+              Due {taxDeadline.label}
+            </p>
+          </div>
+        </section>
 
         {/* Must-Pay Coverage */}
-        {(() => {
-          const covered = monthExpenses > 0 ? Math.min(100, Math.round((monthIncome / monthExpenses) * 100)) : 0
-          return (
-            <section style={{
-              background: 'var(--color-card)',
-              borderRadius: 12,
-              border: '1px solid var(--color-border)',
-              padding: '18px 24px',
-              marginBottom: 28,
-              boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-            }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 12px' }}>
-                {monthExpenses > 0
-                  ? `Your essentials are ${covered}% covered this month.`
-                  : 'No expenses logged yet.'}
-              </p>
-              <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${covered}%`,
-                  background: 'var(--color-primary)',
-                  borderRadius: 99,
-                  transition: 'width 0.8s ease-out',
-                }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Income ${monthIncome.toFixed(2)}
-                </span>
-                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Expenses ${monthExpenses.toFixed(2)}
-                </span>
-              </div>
-            </section>
-          )
-        })()}
+        <section style={{ ...cardStyle, marginBottom: 28 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 12px' }}>
+            {monthExpenses > 0
+              ? `Your essentials are ${expenseCoverage}% covered this month.`
+              : 'No expenses logged yet.'}
+          </p>
+          <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${expenseCoverage}%`,
+              background: 'var(--color-primary)',
+              borderRadius: 99,
+              transition: 'width 0.8s ease-out',
+            }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+              Income ${monthIncome.toFixed(2)}
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+              Expenses ${monthExpenses.toFixed(2)}
+            </span>
+          </div>
+        </section>
 
         {/* Tax savings line */}
         <p style={{ textAlign: 'center', fontSize: 16, color: 'var(--color-accent)', fontWeight: 500, marginBottom: 28 }}>
@@ -516,14 +501,7 @@ export default function DashboardPage() {
         </p>
 
         {/* Daily Pulse */}
-        <section style={{
-          background: 'var(--color-card)',
-          borderRadius: 12,
-          border: '1px solid var(--color-border)',
-          padding: '24px',
-          marginBottom: 24,
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-        }}>
+        <section style={{ ...cardStyle, padding: '24px', marginBottom: 24 }}>
           <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 20, marginTop: 0 }}>
             Today's Pulse
           </h2>
@@ -585,13 +563,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Sage */}
-        <section style={{
-          background: 'var(--color-card)',
-          borderRadius: 12,
-          border: '1px solid var(--color-border)',
-          padding: '24px',
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-        }}>
+        <section style={{ ...cardStyle, padding: '24px', marginBottom: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
               Sage says...
@@ -599,6 +571,7 @@ export default function DashboardPage() {
             <button
               onClick={() => profile && loadSage(profile, monthIncome, monthExpenses, bucket)}
               disabled={loadingSage}
+              aria-label="Regenerate insight"
               style={{
                 background: 'none', border: 'none',
                 color: 'var(--color-muted-foreground)',
@@ -631,14 +604,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Sage Wisdom */}
-        <section style={{
-          background: 'var(--color-card)',
-          borderRadius: 12,
-          border: '1px solid var(--color-border)',
-          padding: '28px 24px',
-          marginTop: 24,
-          boxShadow: '0 1px 8px rgba(0,0,0,0.06)',
-        }}>
+        <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 24, marginBottom: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
             Sage Wisdom
           </p>
@@ -670,6 +636,9 @@ export default function DashboardPage() {
       {/* Secure My Pay Modal */}
       {showPayModal && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-modal-title"
           style={{
             position: 'fixed', inset: 0, zIndex: 60,
             background: 'rgba(0,0,0,0.5)',
@@ -687,7 +656,7 @@ export default function DashboardPage() {
             }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="font-serif" style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0 }}>
+            <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0 }}>
               Move these funds
             </h3>
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 24, lineHeight: 1.5 }}>
@@ -696,9 +665,9 @@ export default function DashboardPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {[
-                { label: t('Profit Bucket'),     amount: monthIncome * ((profile?.profit_pct ?? 10) / 100), color: 'var(--color-profit)' },
-                { label: t('Tax Bucket'),         amount: monthIncome * ((profile?.tax_pct ?? 25) / 100),   color: 'var(--color-tax)' },
-                { label: t('Operations Bucket'), amount: monthIncome * (1 - (profile?.profit_pct ?? 10) / 100 - (profile?.tax_pct ?? 25) / 100), color: 'var(--color-ops)' },
+                { label: t('Profit Bucket'),     amount: monthIncome * profitFrac, color: 'var(--color-profit)' },
+                { label: t('Tax Bucket'),         amount: monthIncome * taxFrac,    color: 'var(--color-tax)' },
+                { label: t('Operations Bucket'), amount: monthIncome * opsFrac,    color: 'var(--color-ops)' },
               ].map(({ label, amount, color }) => (
                 <div key={label} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',

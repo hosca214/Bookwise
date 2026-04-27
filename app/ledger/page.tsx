@@ -17,7 +17,21 @@ const EXPENSE_CATS = [
   'Utilities', 'Phone', 'Internet', 'Other Expense',
 ]
 
+const supabase = createClient()
 const today = new Date().toISOString().slice(0, 10)
+
+const fieldLabel: React.CSSProperties = {
+  display: 'block', fontSize: 12, fontWeight: 600,
+  color: 'var(--color-muted-foreground)', marginBottom: 6,
+  textTransform: 'uppercase', letterSpacing: '0.06em',
+}
+
+const fieldInput: React.CSSProperties = {
+  width: '100%', minHeight: 48, padding: '12px 14px', fontSize: 16,
+  borderRadius: 8, border: '1.5px solid var(--color-border)',
+  background: 'var(--color-card)', color: 'var(--color-foreground)',
+  outline: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+}
 
 function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -54,7 +68,6 @@ function SkeletonRow() {
 }
 
 export default function LedgerPage() {
-  const supabase = createClient()
   const { t, setIndustry } = useIQ()
 
   const [loading, setLoading] = useState(true)
@@ -62,7 +75,6 @@ export default function LedgerPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [error, setError] = useState(false)
 
-  // sheet state
   const [sheetOpen, setSheetOpen] = useState(false)
   const [txDate, setTxDate] = useState(today)
   const [txType, setTxType] = useState<'income' | 'expense'>('income')
@@ -72,7 +84,6 @@ export default function LedgerPage() {
   const [txPersonal, setTxPersonal] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // receipt
   const fileRef = useRef<HTMLInputElement>(null)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
@@ -84,21 +95,13 @@ export default function LedgerPage() {
         if (!user) return
         setUserId(user.id)
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('industry')
-          .eq('id', user.id)
-          .single()
+        const [{ data: profile }, { data, error: err }] = await Promise.all([
+          supabase.from('profiles').select('industry').eq('id', user.id).single(),
+          supabase.from('transactions').select('*').eq('user_id', user.id)
+            .order('date', { ascending: false }).order('created_at', { ascending: false }),
+        ])
 
         if (profile?.industry) setIndustry(profile.industry)
-
-        const { data, error: err } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('date', { ascending: false })
-          .order('created_at', { ascending: false })
-
         if (err) throw err
         setTransactions(data ?? [])
       } catch {
@@ -386,6 +389,9 @@ export default function LedgerPage() {
 
       {/* Add Transaction Sheet */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="New transaction"
         style={{
           position: 'fixed',
           bottom: 0,
@@ -446,50 +452,22 @@ export default function LedgerPage() {
 
           {/* Date */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Date
-            </label>
+            <label style={fieldLabel}>Date</label>
             <input
               type="date"
               value={txDate}
               onChange={(e) => setTxDate(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: 48,
-                padding: '12px 14px',
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1.5px solid var(--color-border)',
-                background: 'var(--color-card)',
-                color: 'var(--color-foreground)',
-                outline: 'none',
-                fontFamily: 'var(--font-sans)',
-                boxSizing: 'border-box',
-              }}
+              style={fieldInput}
             />
           </div>
 
           {/* Category */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Category
-            </label>
+            <label style={fieldLabel}>Category</label>
             <select
               value={txCategory}
               onChange={(e) => setTxCategory(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: 48,
-                padding: '12px 14px',
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1.5px solid var(--color-border)',
-                background: 'var(--color-card)',
-                color: 'var(--color-foreground)',
-                outline: 'none',
-                fontFamily: 'var(--font-sans)',
-                boxSizing: 'border-box',
-              }}
+              style={fieldInput}
             >
               {categories.map((cat) => (
                 <option key={cat} value={cat}>{t(cat)}</option>
@@ -500,9 +478,7 @@ export default function LedgerPage() {
           {/* Amount */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Amount
-              </label>
+              <label style={fieldLabel}>Amount</label>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -545,44 +521,19 @@ export default function LedgerPage() {
                 value={txAmount}
                 onChange={(e) => setTxAmount(e.target.value)}
                 placeholder="0.00"
-                style={{
-                  width: '100%',
-                  minHeight: 48,
-                  padding: '12px 14px',
-                  fontSize: 16,
-                  borderRadius: 8,
-                  border: '1.5px solid var(--color-border)',
-                  background: 'var(--color-card)',
-                  color: 'var(--color-foreground)',
-                  fontFamily: 'var(--font-sans)',
-                  boxSizing: 'border-box',
-                }}
+                style={fieldInput}
               />
           </div>
 
           {/* Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Notes (optional)
-            </label>
+            <label style={fieldLabel}>Notes (optional)</label>
             <input
               type="text"
               value={txNotes}
               onChange={(e) => setTxNotes(e.target.value)}
               placeholder="Vendor, description..."
-              style={{
-                width: '100%',
-                minHeight: 48,
-                padding: '12px 14px',
-                fontSize: 16,
-                borderRadius: 8,
-                border: '1.5px solid var(--color-border)',
-                background: 'var(--color-card)',
-                color: 'var(--color-foreground)',
-                outline: 'none',
-                fontFamily: 'var(--font-sans)',
-                boxSizing: 'border-box',
-              }}
+              style={fieldInput}
             />
           </div>
 

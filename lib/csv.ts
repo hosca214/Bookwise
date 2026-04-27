@@ -59,6 +59,3 @@ export function generateCPAExport(
   return header + toCSV(rows)
 }
 
-export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10)
-}

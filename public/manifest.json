@@ -1,0 +1,9 @@
+{
+  "name": "Bookwise",
+  "short_name": "Bookwise",
+  "description": "AI-powered bookkeeping for wellness professionals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F2EC",
+  "theme_color": "#7C9A7E"
+}

@@ -31,9 +31,7 @@ export function IQProvider({
     [industry, accountantMode]
   )
 
-  const setIndustry = useCallback((next: Industry) => {
-    setIndustryState(next)
-  }, [])
+  function setIndustry(next: Industry) { setIndustryState(next) }
 
   const toggleAccountantMode = useCallback(() => {
     setAccountantMode((prev) => !prev)

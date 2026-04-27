@@ -25,16 +25,32 @@ function monthEnd(start: string): string {
 }
 
 function yearStart(offset = 0): string {
-  const d = new Date()
-  return `${d.getFullYear() + offset}-01-01`
+  return `${new Date().getFullYear() + offset}-01-01`
 }
 
 function yearEnd(offset = 0): string {
-  if (offset === 0) {
-    const today = new Date()
-    return today.toISOString().slice(0, 10)
-  }
+  if (offset === 0) return new Date().toISOString().slice(0, 10)
   return `${new Date().getFullYear() + offset}-12-31`
+}
+
+// Stable date constants — computed once at module load, not per render
+const THIS_MONTH = monthStart(0)
+const LAST_MONTH = monthStart(-1)
+const THIS_YEAR  = yearStart(0)
+const LAST_YEAR  = yearStart(-1)
+
+function rangePill(active: boolean): React.CSSProperties {
+  return {
+    padding: '7px 14px',
+    borderRadius: 999,
+    border: `1.5px solid ${active ? 'var(--color-primary)' : 'var(--color-border)'}`,
+    background: active ? 'var(--color-primary)' : 'var(--color-card)',
+    color: active ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'var(--font-sans)',
+  }
 }
 
 function formatMonthLabel(start: string): string {
@@ -44,10 +60,24 @@ function formatMonthLabel(start: string): string {
 function groupByCategory(txns: Transaction[], type: 'income' | 'expense') {
   const groups: Record<string, number> = {}
   for (const t of txns) {
-    if (t.type !== type || t.is_personal) continue
+    if (t.type !== type) continue
     groups[t.category_key] = (groups[t.category_key] ?? 0) + t.amount
   }
   return Object.entries(groups).sort((a, b) => b[1] - a[1])
+}
+
+const sectionLabel: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+  letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', marginBottom: 2,
+}
+
+const lineRow: React.CSSProperties = {
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  padding: '9px 0', borderBottom: '1px solid var(--color-border)', fontSize: 15,
+}
+
+const indentRow: React.CSSProperties = {
+  ...lineRow, paddingLeft: 16, fontSize: 14, color: 'var(--color-muted-foreground)',
 }
 
 function SkeletonRow() {
@@ -59,36 +89,56 @@ function SkeletonRow() {
   )
 }
 
-// ── component ────────────────────────────────────────────────────────────────
+function CategoryRows({ groups }: { groups: [string, number][] }) {
+  const { t, accountantMode } = useIQ()
+  return (
+    <>
+      {groups.map(([cat, amt]) => (
+        <div key={cat} style={indentRow}>
+          <span>
+            {t(cat)}
+            {accountantMode && SCHEDULE_C_MAP[cat] && (
+              <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--color-muted-foreground)' }}>
+                {SCHEDULE_C_MAP[cat].line}
+              </span>
+            )}
+          </span>
+          <span>${amt.toFixed(2)}</span>
+        </div>
+      ))}
+    </>
+  )
+}
+
+const supabase = createClient()
 
 export default function ReportsPage() {
-  const supabase = createClient()
   const { t, setIndustry, accountantMode, toggleAccountantMode } = useIQ()
 
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
   const [practiceName, setPracticeName] = useState('My Practice')
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [error, setError] = useState(false)
 
-  const [rangeStart, setRangeStart] = useState(monthStart(0))
-  const [rangeEnd, setRangeEnd] = useState(monthEnd(monthStart(0)))
+  const [rangeStart, setRangeStart] = useState(THIS_MONTH)
+  const [rangeEnd, setRangeEnd] = useState(monthEnd(THIS_MONTH))
 
   useEffect(() => {
     async function load() {
+      setLoading(true)
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
-        setUserId(user.id)
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('industry, practice_name')
-          .eq('id', user.id)
-          .single()
+        const [{ data: profile }, { data: txns, error: txErr }] = await Promise.all([
+          supabase.from('profiles').select('industry, practice_name').eq('id', user.id).single(),
+          supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd).order('date', { ascending: true }),
+        ])
 
         if (profile?.industry) setIndustry(profile.industry)
         if (profile?.practice_name) setPracticeName(profile.practice_name)
+        if (txErr) throw txErr
+        setTransactions(txns ?? [])
       } catch {
         setError(true)
       } finally {
@@ -96,31 +146,7 @@ export default function ReportsPage() {
       }
     }
     load()
-  }, [])
-
-  useEffect(() => {
-    if (!userId) return
-    async function fetchTxns() {
-      setLoading(true)
-      try {
-        const { data, error: err } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', userId)
-          .gte('date', rangeStart)
-          .lte('date', rangeEnd)
-          .order('date', { ascending: true })
-
-        if (err) throw err
-        setTransactions(data ?? [])
-      } catch {
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchTxns()
-  }, [userId, rangeStart, rangeEnd])
+  }, [rangeStart, rangeEnd]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const businessTxns = transactions.filter((tx) => !tx.is_personal)
   const grossIncome = businessTxns.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
@@ -130,37 +156,10 @@ export default function ReportsPage() {
 
   const incomeGroups = groupByCategory(businessTxns, 'income')
   const expenseGroups = groupByCategory(businessTxns, 'expense')
-  const dateRange = `${formatMonthLabel(rangeStart)}${rangeStart !== monthStart(0) ? '' : ''}`
 
   function handleExport() {
-    const label = `${formatMonthLabel(rangeStart)}`
-    const csv = generateCPAExport(transactions, practiceName, label)
+    const csv = generateCPAExport(transactions, practiceName, formatMonthLabel(rangeStart))
     downloadCSV(`bookwise-${rangeStart.slice(0, 7)}.csv`, csv)
-  }
-
-  const sectionLabel: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--color-muted-foreground)',
-    marginBottom: 2,
-  }
-
-  const lineRow: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '9px 0',
-    borderBottom: '1px solid var(--color-border)',
-    fontSize: 15,
-  }
-
-  const indentRow: React.CSSProperties = {
-    ...lineRow,
-    paddingLeft: 16,
-    fontSize: 14,
-    color: 'var(--color-muted-foreground)',
   }
 
   return (
@@ -213,82 +212,16 @@ export default function ReportsPage() {
 
         {/* Date range */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button
-            onClick={() => {
-              const s = monthStart(0)
-              setRangeStart(s)
-              setRangeEnd(monthEnd(s))
-            }}
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              border: `1.5px solid ${rangeStart === monthStart(0) ? 'var(--color-primary)' : 'var(--color-border)'}`,
-              background: rangeStart === monthStart(0) ? 'var(--color-primary)' : 'var(--color-card)',
-              color: rangeStart === monthStart(0) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
+          <button onClick={() => { setRangeStart(THIS_MONTH); setRangeEnd(monthEnd(THIS_MONTH)) }} style={rangePill(rangeStart === THIS_MONTH)}>
             This Month
           </button>
-          <button
-            onClick={() => {
-              const s = monthStart(-1)
-              setRangeStart(s)
-              setRangeEnd(monthEnd(s))
-            }}
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              border: `1.5px solid ${rangeStart === monthStart(-1) ? 'var(--color-primary)' : 'var(--color-border)'}`,
-              background: rangeStart === monthStart(-1) ? 'var(--color-primary)' : 'var(--color-card)',
-              color: rangeStart === monthStart(-1) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
+          <button onClick={() => { setRangeStart(LAST_MONTH); setRangeEnd(monthEnd(LAST_MONTH)) }} style={rangePill(rangeStart === LAST_MONTH)}>
             Last Month
           </button>
-          <button
-            onClick={() => {
-              setRangeStart(yearStart(0))
-              setRangeEnd(yearEnd(0))
-            }}
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              border: `1.5px solid ${rangeStart === yearStart(0) ? 'var(--color-primary)' : 'var(--color-border)'}`,
-              background: rangeStart === yearStart(0) ? 'var(--color-primary)' : 'var(--color-card)',
-              color: rangeStart === yearStart(0) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
+          <button onClick={() => { setRangeStart(THIS_YEAR); setRangeEnd(yearEnd(0)) }} style={rangePill(rangeStart === THIS_YEAR)}>
             This Year
           </button>
-          <button
-            onClick={() => {
-              setRangeStart(yearStart(-1))
-              setRangeEnd(yearEnd(-1))
-            }}
-            style={{
-              padding: '7px 14px',
-              borderRadius: 999,
-              border: `1.5px solid ${rangeStart === yearStart(-1) ? 'var(--color-primary)' : 'var(--color-border)'}`,
-              background: rangeStart === yearStart(-1) ? 'var(--color-primary)' : 'var(--color-card)',
-              color: rangeStart === yearStart(-1) ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
+          <button onClick={() => { setRangeStart(LAST_YEAR); setRangeEnd(yearEnd(-1)) }} style={rangePill(rangeStart === LAST_YEAR)}>
             Last Year
           </button>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -346,19 +279,7 @@ export default function ReportsPage() {
                   <span>{t('Gross Income')}</span>
                   <span style={{ color: 'var(--color-profit)' }}>${grossIncome.toFixed(2)}</span>
                 </div>
-                {incomeGroups.map(([cat, amt]) => (
-                  <div key={cat} style={indentRow}>
-                    <span>
-                      {t(cat)}
-                      {accountantMode && SCHEDULE_C_MAP[cat] && (
-                        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--color-muted-foreground)' }}>
-                          {SCHEDULE_C_MAP[cat].line}
-                        </span>
-                      )}
-                    </span>
-                    <span>${amt.toFixed(2)}</span>
-                  </div>
-                ))}
+                <CategoryRows groups={incomeGroups} />
               </div>
 
               {/* Divider */}
@@ -370,19 +291,7 @@ export default function ReportsPage() {
                   <span>{t('Total Expenses')}</span>
                   <span style={{ color: 'var(--color-muted-foreground)' }}>${totalExpenses.toFixed(2)}</span>
                 </div>
-                {expenseGroups.map(([cat, amt]) => (
-                  <div key={cat} style={indentRow}>
-                    <span>
-                      {t(cat)}
-                      {accountantMode && SCHEDULE_C_MAP[cat] && (
-                        <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--color-muted-foreground)' }}>
-                          {SCHEDULE_C_MAP[cat].line}
-                        </span>
-                      )}
-                    </span>
-                    <span>${amt.toFixed(2)}</span>
-                  </div>
-                ))}
+                <CategoryRows groups={expenseGroups} />
               </div>
 
               {/* Divider */}

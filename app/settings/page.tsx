@@ -10,11 +10,24 @@ import { Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Service } from '@/lib/supabase'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+const supabase = createClient()
+
+const fieldLabel: React.CSSProperties = {
+  display: 'block', fontSize: 12, fontWeight: 600,
+  color: 'var(--color-muted-foreground)', marginBottom: 6,
+  textTransform: 'uppercase', letterSpacing: '0.06em',
+}
+
+const fieldInput: React.CSSProperties = {
+  width: '100%', minHeight: 48, padding: '12px 14px', fontSize: 16,
+  borderRadius: 8, border: '1.5px solid var(--color-border)',
+  background: 'var(--color-background)', color: 'var(--color-foreground)',
+  outline: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+}
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{
+    <h2 style={{
       fontSize: 11,
       fontWeight: 700,
       textTransform: 'uppercase',
@@ -23,14 +36,11 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
       marginBottom: 12,
     }}>
       {children}
-    </p>
+    </h2>
   )
 }
 
-// ── component ────────────────────────────────────────────────────────────────
-
 export default function SettingsPage() {
-  const supabase = createClient()
   const router = useRouter()
   const { setIndustry } = useIQ()
   const { vibe, setVibe } = useVibe()
@@ -53,39 +63,30 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setUserId(user.id)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        setUserId(user.id)
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('industry, vibe')
-        .eq('id', user.id)
-        .single()
+        const [{ data: profile }, { data: svcData }] = await Promise.all([
+          supabase.from('profiles').select('industry, vibe').eq('id', user.id).single(),
+          supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
+        ])
 
-      if (profile?.industry) setIndustry(profile.industry)
-      if (profile?.vibe) {
-        setVibe(profile.vibe)
-        setStagedVibe(profile.vibe as typeof vibe)
+        if (profile?.industry) setIndustry(profile.industry)
+        if (profile?.vibe) {
+          setVibe(profile.vibe)
+          setStagedVibe(profile.vibe as typeof vibe)
+        }
+        setServices(svcData ?? [])
+      } catch {
+        toast.error('Could not load settings. Try again.')
+      } finally {
+        setLoadingServices(false)
       }
-
-      const { data: svcData } = await supabase
-        .from('services')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('name')
-
-      setServices(svcData ?? [])
-      setLoadingServices(false)
     }
     load()
   }, [])
-
-  // live preview on vibe hover
-  useEffect(() => {
-    if (stagedVibe !== vibe) setVibe(stagedVibe)
-  }, [stagedVibe])
 
   async function saveVibe() {
     if (!userId) return
@@ -179,6 +180,7 @@ export default function SettingsPage() {
                     </span>
                     <button
                       onClick={() => removeService(svc.id)}
+                      aria-label={`Remove ${svc.name}`}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}
                     >
                       <X size={16} />
@@ -230,59 +232,30 @@ export default function SettingsPage() {
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Service name
-                      </label>
+                      <label style={fieldLabel}>Service name</label>
                       <input
                         type="text"
                         value={svcName}
                         onChange={(e) => setSvcName(e.target.value)}
                         placeholder="60-min Massage"
-                        style={{
-                          width: '100%',
-                          minHeight: 48,
-                          padding: '12px 14px',
-                          fontSize: 16,
-                          borderRadius: 8,
-                          border: '1.5px solid var(--color-border)',
-                          background: 'var(--color-background)',
-                          color: 'var(--color-foreground)',
-                          outline: 'none',
-                          fontFamily: 'var(--font-sans)',
-                          boxSizing: 'border-box',
-                        }}
+                        style={fieldInput}
                       />
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Price
-                      </label>
+                      <label style={fieldLabel}>Price</label>
                       <input
                         type="text"
                         inputMode="decimal"
                         value={svcPrice}
                         onChange={(e) => setSvcPrice(e.target.value)}
                         placeholder="0.00"
-                        style={{
-                          width: '100%',
-                          minHeight: 48,
-                          padding: '12px 14px',
-                          fontSize: 16,
-                          borderRadius: 8,
-                          border: '1.5px solid var(--color-border)',
-                          background: 'var(--color-card)',
-                          color: 'var(--color-foreground)',
-                          fontFamily: 'var(--font-sans)',
-                          boxSizing: 'border-box',
-                        }}
+                        style={{ ...fieldInput, background: 'var(--color-card)' }}
                       />
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Duration
-                      </label>
+                      <label style={{ ...fieldLabel, marginBottom: 8 }}>Duration</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                         <button
                           type="button"
@@ -344,7 +317,7 @@ export default function SettingsPage() {
               return (
                 <button
                   key={v.id}
-                  onClick={() => setStagedVibe(v.id)}
+                  onClick={() => { setStagedVibe(v.id); setVibe(v.id) }}
                   style={{
                     borderRadius: 12,
                     border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
@@ -359,7 +332,7 @@ export default function SettingsPage() {
                       <span key={sw} style={{ width: 18, height: 18, borderRadius: '50%', background: sw, border: '1px solid rgba(0,0,0,0.08)', display: 'inline-block' }} />
                     ))}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: v.id === 'sage' ? '#2C3528' : '#EEEEF4', fontFamily: 'var(--font-sans)' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: v.ink, fontFamily: 'var(--font-sans)' }}>
                     {v.name}
                   </div>
                 </button>

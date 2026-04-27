@@ -7,7 +7,6 @@ export function createClient() {
   )
 }
 
-export const BUCKET_ALLOC = { profit: 0.1, tax: 0.25, ops: 0.65 } as const
 
 export type Profile = {
   id: string

@@ -23,6 +23,16 @@ export const metadata: Metadata = {
   title: 'Bookwise',
   description: 'AI-powered bookkeeping for wellness professionals',
   manifest: '/manifest.json',
+  openGraph: {
+    title: 'Bookwise',
+    description: 'AI-powered bookkeeping for wellness professionals',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Bookwise',
+    description: 'AI-powered bookkeeping for wellness professionals',
+  },
 }
 
 export const viewport = {
@@ -32,9 +42,25 @@ export const viewport = {
   maximumScale: 1,
 }
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Bookwise',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  description: 'AI-powered bookkeeping for wellness professionals',
+  offers: { '@type': 'Offer', price: '0' },
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-vibe="sage" suppressHydrationWarning className={`${fraunces.variable} ${jakarta.variable}`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body>
         <VibeProvider>
           <IQProvider>

@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+
+const supabase = createClient()
 import { useIQ } from '@/context/IQContext'
 import { useVibe, type Vibe, VIBES } from '@/context/VibeContext'
 import type { Industry } from '@/lib/iqMaps'
@@ -12,6 +14,14 @@ import { Briefcase, Activity, Heart, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const TOTAL_STEPS = 8
+
+const timeInputBase: React.CSSProperties = {
+  width: 76, minHeight: 72, fontSize: 40, fontWeight: 700,
+  textAlign: 'center', borderRadius: 10,
+  border: '1.5px solid var(--color-border)',
+  background: 'var(--color-card)', color: 'var(--color-ink)',
+  outline: 'none', fontFamily: 'var(--font-serif)', padding: 0,
+}
 
 const primaryBtn: React.CSSProperties = {
   width: '100%',
@@ -106,7 +116,6 @@ export default function OnboardingPage() {
   async function handleComplete() {
     setLoading(true)
     try {
-      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
 
@@ -478,20 +487,6 @@ export default function OnboardingPage() {
 
       // ── Step 7: Pulse time ────────────────────────────────────────────────
       case 7: {
-        const timeInputBase: React.CSSProperties = {
-          width: 76,
-          minHeight: 72,
-          fontSize: 40,
-          fontWeight: 700,
-          textAlign: 'center',
-          borderRadius: 10,
-          border: '1.5px solid var(--color-border)',
-          background: 'var(--color-card)',
-          color: 'var(--color-ink)',
-          outline: 'none',
-          fontFamily: 'var(--font-serif)',
-          padding: 0,
-        }
         return (
           <div>
             <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>

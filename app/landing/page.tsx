@@ -82,6 +82,7 @@ const WHO = [
 
 export default function LandingPage() {
   const isMobile = useIsMobile()
+  const supabase = createClient()
   const [hasSession, setHasSession] = useState(false)
   const [industry, setIndustry] = useState<Industry>('bodyworker')
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -90,7 +91,6 @@ export default function LandingPage() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
     supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session))
   }, [])
 
@@ -99,7 +99,6 @@ export default function LandingPage() {
     if (!email || submitting) return
     setSubmitting(true)
     try {
-      const supabase = createClient()
       await supabase.from('waitlist').insert({ email })
     } catch {
       // silent -- duplicate emails are fine

@@ -1,0 +1,52 @@
+# Bookwise
+
+AI-powered bookkeeping for solo wellness professionals: coaches, personal trainers, and bodyworkers.
+
+## What it does
+
+Bookwise helps self-employed wellness practitioners track income and expenses, set aside money for taxes, and understand their numbers without accounting jargon. Every financial label is translated into industry-appropriate plain language via the IQ Engine.
+
+## Tech stack
+
+- Next.js 15 App Router (TypeScript)
+- Supabase (Postgres, auth, storage, RLS)
+- Anthropic Claude API (claude-sonnet-4-20250514) for Sage insights and receipt OCR
+- Tailwind CSS v4 + CSS variables for theming
+- Framer Motion for page transitions
+- Vercel deployment
+
+## Key concepts
+
+**IQ Engine** — `t(key)` from IQContext translates canonical financial keys into industry vocabulary. Example: "Session Income" becomes "Coaching Income" for coaches, "Training Income" for trainers, "Appointment Income" for bodyworkers. Every financial label in the UI must go through `t()`.
+
+**Vibes** — Five color themes (Ethereal Sage, Midnight Orchid, Desert Rose, Ocean Mist, Golden Hour) controlled by `data-vibe` attribute on `<html>`. CSS variables drive all colors. User preference is stored in `profiles.vibe`.
+
+**Buckets** — Income is split into three buckets: Growth Fund (profit), Tax Set-Aside, and Daily Operations. Percentages are user-defined during onboarding and stored in `profiles.profit_pct` and `profiles.tax_pct`.
+
+**Sage** — Claude-powered AI mentor that observes financial patterns and delivers plain-language insights. Sage never gives advice, never says "you should," never mentions filing taxes.
+
+## Pages
+
+- `/` — root redirect based on auth + onboarding state
+- `/login` — email/password + Google OAuth
+- `/onboarding` — 8-step wizard; writes to Supabase on step 8 only
+- `/dashboard` — reservoirs, daily pulse, Sage insight, tax countdown
+- `/ledger` — transaction list with OCR receipt scanning
+- `/reports` — P&L with accountant/plain-language toggle, CSV export
+- `/settings` — service menu, vibe picker, connected apps
+
+## API routes
+
+- `POST /api/sage` — Sage insights (daily_insight | pay_guidance | question)
+- `POST /api/ocr` — Receipt OCR returning `{ vendor, date, amount }`
+
+## Constraints
+
+- No em dashes in UI, copy, or comments
+- All financial labels through `t()` — never hardcoded
+- Currency always formatted as `$X.XX`
+- Exclude `is_personal=true` transactions from all calculations
+- Loading states use skeleton shimmer only, never spinners
+- No number spinwheels — use tap targets or increment buttons
+- Body text minimum 16px; primary metrics 36-40px Fraunces bold
+- Sage banned words: revenue, COGS, receivable, payable, you should, you owe, file your taxes
