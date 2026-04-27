@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 function GoogleIcon() {
@@ -35,16 +35,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
+  useEffect(() => {
+    if (searchParams.get('error') === 'auth_callback_failed') {
+      toast.error('Sign in failed. Please try again.')
+    }
+  }, [searchParams])
+
   async function handleGoogleSignIn() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) toast.error(error.message)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) toast.error(error.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Could not connect to Google. Try again.')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
