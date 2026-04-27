@@ -1,14 +1,14 @@
 import type { Metadata } from 'next'
-import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google'
+import { Lora, Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { IQProvider } from '@/context/IQContext'
 import { VibeProvider } from '@/context/VibeContext'
 import '@/styles/globals.css'
 
-const fraunces = Fraunces({
+const lora = Lora({
   subsets: ['latin'],
-  weight: ['400', '600', '700', '900'],
-  variable: '--font-fraunces',
+  weight: ['400', '600', '700'],
+  variable: '--font-lora',
   display: 'swap',
 })
 
@@ -54,7 +54,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-vibe="sage" suppressHydrationWarning className={`${fraunces.variable} ${jakarta.variable}`}>
+    <html lang="en" data-vibe="sage" suppressHydrationWarning className={`${lora.variable} ${jakarta.variable}`}>
       <head>
         <script
           type="application/ld+json"

@@ -2,7 +2,7 @@
 
 @theme {
   --font-sans: var(--font-jakarta, "Plus Jakarta Sans", system-ui, sans-serif);
-  --font-serif: var(--font-fraunces, "Fraunces", Georgia, serif);
+  --font-serif: var(--font-lora, "Lora", Georgia, serif);
 }
 
 /* Ethereal Sage (default) */
