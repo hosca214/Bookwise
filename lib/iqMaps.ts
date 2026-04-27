@@ -138,7 +138,7 @@ export const IQ_MAPS: Record<Industry, Record<string, string>> = {
   },
 }
 
-// Schedule C shadow map — used only in CSV export, never shown in UI
+// Schedule C shadow map - used only in CSV export, never shown in UI
 export const SCHEDULE_C_MAP: Record<string, { label: string; line: string }> = {
   'Session Income': { label: 'Gross Receipts or Sales', line: 'Line 1' },
   'Package Income': { label: 'Gross Receipts or Sales', line: 'Line 1' },

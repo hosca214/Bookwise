@@ -88,6 +88,10 @@ export default function LedgerPage() {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
 
+  const rowFileRef = useRef<HTMLInputElement>(null)
+  const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
+  const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
+
   useEffect(() => {
     async function load() {
       try {
@@ -205,6 +209,45 @@ export default function LedgerPage() {
     }
   }
 
+  async function handleRowReceiptCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !userId || !rowReceiptTarget) return
+    const txId = rowReceiptTarget
+    setRowOcrLoading(txId)
+    try {
+      const tx = transactions.find(t => t.id === txId)
+      if (!tx) return
+      const month = tx.date.slice(0, 7)
+      const path = `receipts/${userId}/${month}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+      const { error: uploadErr } = await supabase.storage.from('receipts').upload(path, file, { upsert: false })
+      if (uploadErr) throw uploadErr
+
+      const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
+      const url = urlData.publicUrl
+
+      await supabase.from('transactions').update({ receipt_url: url }).eq('id', txId)
+      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, receipt_url: url } : t))
+
+      const res = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: url }),
+      })
+      const ocr = await res.json()
+      if (ocr.vendor && !tx.notes) {
+        await supabase.from('transactions').update({ notes: ocr.vendor }).eq('id', txId)
+        setTransactions(prev => prev.map(t => t.id === txId ? { ...t, notes: ocr.vendor } : t))
+      }
+      toast.success('Receipt saved.')
+    } catch {
+      toast.error('Could not read receipt. Fill in manually.')
+    } finally {
+      setRowOcrLoading(null)
+      setRowReceiptTarget(null)
+      if (rowFileRef.current) rowFileRef.current.value = ''
+    }
+  }
+
   const categories = txType === 'income' ? INCOME_CATS : EXPENSE_CATS
 
   return (
@@ -313,6 +356,27 @@ export default function LedgerPage() {
               }}>
                 {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
               </div>
+
+              {/* receipt camera */}
+              <button
+                onClick={() => { setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
+                title={tx.receipt_url ? 'Replace receipt' : 'Scan receipt'}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  color: tx.receipt_url ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: rowOcrLoading === tx.id ? 0.4 : 1,
+                }}
+              >
+                {rowOcrLoading === tx.id
+                  ? <RefreshCw size={14} className="animate-spin" />
+                  : <Camera size={14} />}
+              </button>
 
               {/* personal toggle */}
               <button
@@ -508,6 +572,14 @@ export default function LedgerPage() {
               capture="environment"
               style={{ display: 'none' }}
               onChange={handleReceiptCapture}
+            />
+            <input
+              type="file"
+              ref={rowFileRef}
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={handleRowReceiptCapture}
             />
             {receiptUrl && (
               <div style={{ marginBottom: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>

@@ -33,7 +33,7 @@ function yearEnd(offset = 0): string {
   return `${new Date().getFullYear() + offset}-12-31`
 }
 
-// Stable date constants — computed once at module load, not per render
+// Stable date constants - computed once at module load, not per render
 const THIS_MONTH = monthStart(0)
 const LAST_MONTH = monthStart(-1)
 const THIS_YEAR  = yearStart(0)
