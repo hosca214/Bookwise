@@ -45,43 +45,16 @@ function FadeIn({ children, delay = 0, up = 24 }: { children: React.ReactNode; d
   )
 }
 
-function AnimatedNumber({ to, suffix = '' }: { to: number; suffix?: string }) {
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (!inView) return
-    const dur = 1400, t0 = performance.now()
-    const tick = (now: number) => {
-      const p = Math.min((now - t0) / dur, 1)
-      setV(Math.round((1 - Math.pow(1 - p, 3)) * to))
-      if (p < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }, [inView, to])
-  return <span ref={ref}>{v.toLocaleString()}{suffix}</span>
-}
-
 // ─── grain overlay ────────────────────────────────────────────────────────────
 function Grain() {
   return (
     <div aria-hidden style={{
-      position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none', opacity: 0.028,
+      position: 'fixed', inset: 0, zIndex: 9998, pointerEvents: 'none', opacity: 0.055,
       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E")`,
     }} />
   )
 }
 
-// ─── wave divider ─────────────────────────────────────────────────────────────
-function Wave({ from, to }: { from: string; to: string }) {
-  return (
-    <div aria-hidden style={{ lineHeight: 0, background: from, display: 'block' }}>
-      <svg viewBox="0 0 1440 64" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: 64 }}>
-        <path d="M0,32 C240,64 480,0 720,32 C960,64 1200,0 1440,32 L1440,64 L0,64 Z" fill={to} />
-      </svg>
-    </div>
-  )
-}
 
 // ─── rotating word ─────────────────────────────────────────────────────────────
 const PROFS = ['coaches', 'trainers', 'bodyworkers']
@@ -154,11 +127,11 @@ const FEATURE_SCREENS = [
         <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
         <div style={{ fontSize: 10, color: MUTED }}>Hands and Heart Massage</div>
       </div>
-      <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10% of income" />
       <BucketRow label="Tax Set-Aside" amount="$460" pct={73} color={GOLD}    sub="25% of income" />
       <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65% of income" />
+      <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10% of income" />
       <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Secure My Pay</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
       </div>
       <div style={{ background: CARD, borderRadius: 9, padding: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
         <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, marginBottom: 4 }}>Today's Pulse</div>
@@ -295,33 +268,92 @@ const FEATURE_SCREENS = [
 
 // ─── data ─────────────────────────────────────────────────────────────────────
 const IQ_LABELS = {
-  coach:      { income: 'Coaching Income',    expense: 'Certifications and Training', session: 'Coaching Session', bucket: 'Growth Fund' },
-  trainer:    { income: 'Training Income',    expense: 'Certifications and CECs',     session: 'Training Session', bucket: 'Growth Fund' },
-  bodyworker: { income: 'Appointment Income', expense: 'CE Credits and Training',     session: 'Appointment',      bucket: 'Growth Fund' },
+  coach:      { income: 'Coaching Income',    expense: 'Certifications and Training', session: 'Coaching Sessions', bucket: 'Growth Fund' },
+  trainer:    { income: 'Training Income',    expense: 'Certifications and CECs',     session: 'Training Sessions', bucket: 'Growth Fund' },
+  bodyworker: { income: 'Appointment Income', expense: 'CE Credits and Training',     session: 'Appointments',      bucket: 'Growth Fund' },
 }
 type Industry = keyof typeof IQ_LABELS
+
+const IQ_TRANSFORMS: Record<Industry, { generic: string; specific: string }[]> = {
+  coach: [
+    { generic: 'Revenue',              specific: 'Coaching Income' },
+    { generic: 'Work sessions',        specific: 'Coaching Sessions' },
+    { generic: 'Facility rent',        specific: 'Studio or Office Rent' },
+    { generic: 'Continuing education', specific: 'Certifications and Training' },
+    { generic: 'Daily hours',          specific: 'Coaching Hours' },
+  ],
+  trainer: [
+    { generic: 'Revenue',              specific: 'Training Income' },
+    { generic: 'Work sessions',        specific: 'Training Sessions' },
+    { generic: 'Facility rent',        specific: 'Gym or Studio Fee' },
+    { generic: 'Continuing education', specific: 'Certifications and CECs' },
+    { generic: 'Daily hours',          specific: 'Floor Time' },
+  ],
+  bodyworker: [
+    { generic: 'Revenue',              specific: 'Appointment Income' },
+    { generic: 'Work sessions',        specific: 'Appointments' },
+    { generic: 'Facility rent',        specific: 'Treatment Room Rent' },
+    { generic: 'Continuing education', specific: 'CE Credits and Training' },
+    { generic: 'Daily hours',          specific: 'Table Time' },
+  ],
+}
 
 const ACCORDION = [
   { q: 'Is this real bookkeeping?',     a: 'Bookwise organizes your income and expenses with clarity. For tax filing, we always recommend working with a licensed CPA. We make their job easier and your bill smaller.' },
   { q: 'Do I need to know accounting?', a: 'Not at all. Every label in Bookwise is written in plain language for your profession. No spreadsheets. No jargon. Just your numbers.' },
-  { q: 'What about my existing data?',  a: 'Connect Stripe or Plaid and your transactions import automatically. You can also add entries manually anytime.' },
-  { q: 'Is my data safe?',              a: 'Your data lives in Supabase with row-level security. Only you can access your records. We never sell or share your data.' },
-  { q: 'What does it cost?',            a: 'Bookwise is free during our early access period. Join the waitlist and lock in founding member pricing.' },
+  { q: 'What about my existing data?',  a: 'Connect your bank through Plaid (it takes two minutes), import from Stripe if you take card payments, or add entries manually anytime.' },
+  { q: 'Is my data safe?',              a: 'Your records are private and encrypted. Only you can see them. We never sell your data, ever.' },
+  { q: 'What does it cost?',            a: 'Bookwise starts with a free 30-day trial, no credit card required. After that, the Practitioner plan is $19 per month and Practice Pro is $49 per month. Beta testers in our founding 50 receive Practice Pro free for life.' },
+  { q: 'What is the beta program?',     a: 'We are opening Bookwise to 50 founding practitioners before we launch publicly. Beta testers get Practice Pro free for life, early access to new features, and a direct line to us as we build. We review every application and reach out within 5 business days.' },
 ]
 
 const FEATURES = [
-  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Growth Fund, Tax Set-Aside, and Daily Operations. You always know at a glance whether your practice is working for you.' },
+  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Tax Set-Aside, Daily Operations, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
   { icon: <Shield size={22} />,     title: 'Tax Set-Aside',    body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate, so you know what to put away before each deadline.' },
-  { icon: <MessageCircle size={22} />, title: 'Sage Insights', body: 'Sage reads your numbers each day and tells you what it sees: income patterns, expense shifts, and observations in plain language.' },
-  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt and Sage reads the amount, date, and category, then files it automatically into your Google Drive.' },
-  { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder, so your records are always backed up and ready.' },
+  { icon: <MessageCircle size={22} />, title: 'Sage Insights', body: 'Sage reads your numbers each day and tells you what it sees: income patterns, changes in what you\'re spending, and observations in plain language.' },
+  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt and Sage reads the amount, date, and category and files it automatically into your Google Drive, so you never lose a receipt at tax time.' },
+  { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder, so your records are always backed up and ready for your CPA.' },
   { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line, dated, categorized, and noted, so your CPA can start from it instead of starting over.' },
 ]
 
+const STEPS = [
+  {
+    n: '01',
+    icon: <Activity size={24} />,
+    title: 'Log your day',
+    body: 'Add a session, snap a receipt, or let Stripe and Plaid pull transactions in automatically. Takes sixty seconds.',
+  },
+  {
+    n: '02',
+    icon: <Sparkles size={24} />,
+    title: 'Sage sorts everything',
+    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Sage reads the patterns and tells you what it sees, in plain language.',
+  },
+  {
+    n: '03',
+    icon: <Download size={24} />,
+    title: 'Hand it to your CPA',
+    body: 'One tap generates a clean export organized by Schedule C line. Your CPA starts from it instead of starting over.',
+  },
+]
+
 const WHO = [
-  { icon: <Sparkles size={24} />, title: 'Coaches',     lines: ['Life coaches', 'Business coaches', 'Wellness coaches'] },
-  { icon: <Activity size={24} />, title: 'Trainers',    lines: ['Personal trainers', 'Fitness instructors', 'Movement teachers'] },
-  { icon: <Leaf size={24} />,     title: 'Bodyworkers', lines: ['Massage therapists', 'Acupuncturists', 'Somatic practitioners'] },
+  { icon: <Sparkles size={24} />, title: 'Coaches',     lines: ['Life coaches', 'Business coaches', 'Wellness coaches'],           value: 'Track packages, retainers, and sessions without a spreadsheet.' },
+  { icon: <Activity size={24} />, title: 'Trainers',    lines: ['Personal trainers', 'Fitness instructors', 'Group fitness instructors'], value: 'See your most profitable sessions and track every gym-related expense.' },
+  { icon: <Leaf size={24} />,     title: 'Bodyworkers', lines: ['Massage therapists', 'Acupuncturists', 'Somatic practitioners'],   value: 'Know your table income, supply costs, and take-home every month.' },
+]
+
+const PRACTITIONER_FEATURES = [
+  'Money Buckets dashboard', 'Daily Pulse log', 'Sage daily insights',
+  'Receipt scanning (30/month)', 'Stripe or Plaid import', 'CPA export (CSV)',
+  'Google Drive sync', 'Tax deadline countdown',
+]
+
+const PRO_FEATURES = [
+  'Everything in Practitioner', 'Ask Sage — direct AI questions',
+  'Monthly Sage Report emailed to you', 'Unlimited receipt scanning',
+  'Multiple bank connections', 'Multiple practice profiles',
+  'Priority support', 'Unlimited transaction history',
 ]
 
 // ─── page ─────────────────────────────────────────────────────────────────────
@@ -332,7 +364,10 @@ export default function LandingPage() {
   const [hasSession,       setHasSession]       = useState(false)
   const [industry,         setIndustry]         = useState<Industry>('bodyworker')
   const [openFaq,          setOpenFaq]          = useState<number | null>(null)
+  const [name,             setName]             = useState('')
   const [email,            setEmail]            = useState('')
+  const [practiceType,     setPracticeType]     = useState('')
+  const [challenge,        setChallenge]        = useState('')
   const [submitted,        setSubmitted]        = useState(false)
   const [submitting,       setSubmitting]       = useState(false)
   const [selectedFeature,  setSelectedFeature]  = useState<number | null>(null)
@@ -346,15 +381,16 @@ export default function LandingPage() {
     return () => { document.body.style.overflow = '' }
   }, [selectedFeature])
 
-  async function handleWaitlist(e: React.FormEvent) {
+  async function handleBetaApply(e: React.FormEvent) {
     e.preventDefault()
-    if (!email || submitting) return
+    if (!email || !practiceType || submitting) return
     setSubmitting(true)
-    try { await supabase.from('waitlist').insert({ email }) } catch { /* silent */ }
+    try {
+      await supabase.from('beta_applications').insert({ name, email, practice_type: practiceType, money_challenge: challenge })
+    } catch { /* silent */ }
     finally { setSubmitted(true); setSubmitting(false) }
   }
 
-  const labels     = IQ_LABELS[industry]
   const industries = Object.keys(IQ_LABELS) as Industry[]
 
   const pill = (active: boolean): React.CSSProperties => ({
@@ -370,6 +406,14 @@ export default function LandingPage() {
     background: 'rgba(124,154,126,0.12)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color: SAGE, flexShrink: 0,
+  }
+
+  const fieldStyle: React.CSSProperties = {
+    width: '100%', height: 54, padding: '0 20px', borderRadius: 12,
+    border: '1.5px solid rgba(245,242,236,0.18)',
+    background: 'rgba(245,242,236,0.07)',
+    fontSize: 16, color: CREAM, outline: 'none',
+    boxSizing: 'border-box' as const,
   }
 
   return (
@@ -394,7 +438,7 @@ export default function LandingPage() {
           ) : (
             <>
               <a href="/login" style={{ ...pill(false), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Sign In</a>
-              <a href="/login" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>Try Free <ArrowRight size={13} /></a>
+              <a href="#beta" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>Apply for beta <ArrowRight size={13} /></a>
             </>
           )}
         </div>
@@ -406,7 +450,7 @@ export default function LandingPage() {
         display: 'flex', alignItems: 'center',
         paddingTop: isMobile ? 110 : 0,
         paddingBottom: 0,
-        background: `linear-gradient(160deg, #C5D9C7 0%, #D4E3D6 18%, #E4EEE5 36%, ${CREAM} 62%)`,
+        background: `linear-gradient(160deg, #B8D1BC 0%, #C5D9C7 18%, #D9EAD9 36%, ${CREAM} 80%)`,
         position: 'relative', overflow: 'hidden',
       }}>
         {/* background circle */}
@@ -433,7 +477,7 @@ export default function LandingPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: 999, background: 'rgba(44,53,40,0.07)', border: `1px solid rgba(44,53,40,0.12)`, fontSize: 13, fontWeight: 600, color: INK, marginBottom: 28 }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: SAGE, display: 'inline-block' }} />
-              Built by The Zen Bookkeeper
+              Now accepting founding members
             </motion.div>
 
             {/* headline */}
@@ -454,7 +498,7 @@ export default function LandingPage() {
               what you earn.
             </motion.h1>
 
-            {/* subheadline — line 1 (rotating word) */}
+            {/* subheadline */}
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -463,8 +507,6 @@ export default function LandingPage() {
             >
               The financial clarity tool built for wellness <RotatingWord />{'.'}
             </motion.p>
-
-            {/* subheadline — line 2 (always on its own line) */}
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -481,8 +523,8 @@ export default function LandingPage() {
               transition={{ delay: 0.52, duration: 0.6 }}
               style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 40 }}
             >
-              <a href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 32px', height: 54, borderRadius: 999, background: INK, color: CREAM, fontSize: 16, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(44,53,40,0.25)' }}>
-                Start free <ArrowRight size={16} />
+              <a href="#beta" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '0 32px', height: 54, borderRadius: 999, background: INK, color: CREAM, fontSize: 16, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 20px rgba(44,53,40,0.25)' }}>
+                Apply for beta <ArrowRight size={16} />
               </a>
               <a href="#how-it-works" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 28px', height: 54, borderRadius: 999, background: 'rgba(255,255,255,0.65)', border: `1.5px solid ${BORDER}`, color: INK, fontSize: 16, fontWeight: 600, textDecoration: 'none', backdropFilter: 'blur(8px)' }}>
                 See how it works
@@ -497,7 +539,7 @@ export default function LandingPage() {
               style={{ fontSize: 13, color: MUTED, marginTop: 24, display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <Check size={13} color={SAGE} strokeWidth={2.5} />
-              Free during early access. No credit card required.
+              50 founding spots. Free 30-day trial. No credit card required.
             </motion.p>
           </motion.div>
 
@@ -507,27 +549,20 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: 40, y: 16 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.5, duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
-              style={{ flexShrink: 0, transform: 'rotate(2deg)', filter: 'drop-shadow(0 32px 56px rgba(44,53,40,0.20))' }}
+              style={{ flexShrink: 0, transform: 'rotate(6deg)', filter: 'drop-shadow(0 32px 56px rgba(44,53,40,0.24))' }}
             >
               <PhoneFrame>
                 <div style={{ padding: '0 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {/* dash header */}
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
                     <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
                   </div>
-
-                  {/* bucket cards — matches actual app */}
-                  <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10%" />
                   <BucketRow label="Tax Set-Aside" amount="$460" pct={73} color={GOLD}    sub="25%" />
                   <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65%" />
-
-                  {/* secure my pay */}
+                  <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10%" />
                   <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Secure My Pay</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
                   </div>
-
-                  {/* sage insight */}
                   <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(124,154,126,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -539,8 +574,6 @@ export default function LandingPage() {
                       Income is up 18% from last month. Your overhead stayed flat.
                     </p>
                   </div>
-
-                  {/* pulse */}
                   <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Today's Pulse</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -556,8 +589,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── WAVE hero → dark ────────────────────────────────────────────── */}
-      <Wave from={CREAM} to={INK} />
 
       {/* ── NERVOUS SYSTEM (dark) ───────────────────────────────────────── */}
       <section style={{ background: INK, padding: `${isMobile ? 64 : 96}px 24px` }}>
@@ -593,103 +624,91 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── WAVE dark → cream ───────────────────────────────────────────── */}
-      <Wave from={INK} to={CREAM} />
 
-      {/* ── IQ ENGINE DEMO ──────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
-        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      {/* ── STORIES ─────────────────────────────────────────────────────── */}
+      <section style={{ background: CREAM, padding: `${isMobile ? 64 : 96}px 24px` }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <FadeIn>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 10, textAlign: 'center' }}>Your language</p>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 14px', letterSpacing: '-0.02em' }}>
-              Your numbers, translated.
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>Sound familiar?</p>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 48px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              Two stories we hear every year.
             </h2>
-            <p style={{ fontSize: 17, color: MUTED, textAlign: 'center', margin: '0 auto 36px', lineHeight: 1.65, maxWidth: 460 }}>
-              Every label inside Bookwise speaks your profession's language, so you always know exactly where you stand.
+          </FadeIn>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
+            <FadeIn delay={0.05}>
+              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%' }}>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 16, margin: '0 0 16px' }}>The March scramble.</p>
+                <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 18 : 21, fontWeight: 600, color: INK, lineHeight: 1.5, margin: '0 0 18px' }}>
+                  Receipts in the glovebox, a shoebox under the desk, and a stack of screenshots on your phone.
+                </p>
+                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0 }}>
+                  You spend ten hours pulling a year's worth of records together before your CPA appointment. That's ten sessions you didn't take, plus whatever the CPA charges to sort through the pile. And the worst part: you did this last year too.
+                </p>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.12}>
+              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%' }}>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, margin: '0 0 16px' }}>The April surprise.</p>
+                <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 18 : 21, fontWeight: 600, color: INK, lineHeight: 1.5, margin: '0 0 18px' }}>
+                  Your biggest quarter ever. Then April arrives.
+                </p>
+                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0 }}>
+                  You had no idea quarterly estimated payments were a thing, so you didn't make them. The IRS charges 8% annually on what you missed, and it accrues from the day you were supposed to pay. The money was there. You just didn't know to set it aside.
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+          <FadeIn delay={0.18}>
+            <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 20 : 26, fontWeight: 600, color: INK, textAlign: 'center', margin: `${isMobile ? 40 : 56}px 0 0`, lineHeight: 1.4, fontStyle: 'italic' }}>
+              Bookwise is the system that makes both of these disappear.
             </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
-              {industries.map(ind => (
-                <button key={ind} onClick={() => setIndustry(ind)} style={pill(industry === ind)}>
-                  {ind.charAt(0).toUpperCase() + ind.slice(1)}
-                </button>
-              ))}
-            </div>
-            <AnimatePresence mode="wait">
-              <motion.div key={industry}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.22 }}
-                style={{ background: CARD, borderRadius: 16, boxShadow: '0 2px 20px rgba(0,0,0,0.07)', overflow: 'hidden' }}
-              >
-                {[
-                  { label: labels.income,  value: '$1,320.00',        color: SAGE },
-                  { label: labels.expense, value: '$150.00',           color: DANGER },
-                  { label: labels.session, value: '4 today',           color: INK },
-                  { label: labels.bucket,  value: '$132.00 set aside', color: GOLD },
-                ].map((row, i, arr) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
-                    <span style={{ fontSize: 16, color: INK }}>{row.label}</span>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: row.color }}>{row.value}</span>
-                  </div>
-                ))}
-              </motion.div>
-            </AnimatePresence>
           </FadeIn>
         </div>
       </section>
 
-      {/* ── STATS ───────────────────────────────────────────────────────── */}
-      <section style={{ background: CARD, borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, padding: `${isMobile ? 52 : 72}px 24px` }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          {isMobile ? (
-            <div>
-              {[
-                { to: 3,   suffix: ' industries', label: 'Supported out of the box' },
-                { to: 100, suffix: '%',            label: 'Mobile first, no desktop required' },
-                { to: 1,   suffix: ' tap',         label: 'To export everything your CPA needs' },
-              ].map((s, i, arr) => (
-                <FadeIn key={i} delay={i * 0.1}>
-                  <div style={{ textAlign: 'center', padding: '28px 0', borderBottom: i < arr.length - 1 ? `1px solid ${BORDER}` : 'none' }}>
-                    <div style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 44, fontWeight: 700, color: SAGE, lineHeight: 1 }}>
-                      <AnimatedNumber to={s.to} suffix={s.suffix} />
-                    </div>
-                    <div style={{ fontSize: 14, color: MUTED, marginTop: 8 }}>{s.label}</div>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0 }}>
-              {[
-                { to: 3,   suffix: ' industries', label: 'Supported out of the box' },
-                { to: 100, suffix: '%',            label: 'Mobile first, no desktop required' },
-                { to: 1,   suffix: ' tap',         label: 'To export everything your CPA needs' },
-              ].map((s, i) => (
-                <FadeIn key={i} delay={i * 0.12}>
-                  <div style={{ textAlign: 'center', padding: '0 32px', borderRight: i < 2 ? `1px solid ${BORDER}` : 'none' }}>
-                    <div style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 52, fontWeight: 700, color: SAGE, lineHeight: 1, marginBottom: 10 }}>
-                      <AnimatedNumber to={s.to} suffix={s.suffix} />
-                    </div>
-                    <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.45 }}>{s.label}</div>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* ── PULL QUOTE ──────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 72 : 104}px 24px`, background: CREAM }}>
+      <section style={{ padding: `${isMobile ? 72 : 104}px 24px`, background: SEC }}>
         <div style={{ maxWidth: 620, margin: '0 auto', textAlign: 'center' }}>
           <FadeIn>
             <div style={{ fontSize: 32, color: SAGE, fontFamily: '"Lora", Georgia, serif', lineHeight: 1, marginBottom: 20, opacity: 0.5 }}>"</div>
             <blockquote style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 24 : 34, fontWeight: 600, lineHeight: 1.42, color: INK, margin: 0, fontStyle: 'italic', letterSpacing: '-0.01em' }}>
               I used to avoid looking at my numbers. Now I check them every morning.
             </blockquote>
-            <p style={{ fontSize: 14, color: MUTED, marginTop: 20, fontWeight: 500 }}>Massage therapist, 8 years in practice</p>
+            <p style={{ fontSize: 14, color: MUTED, marginTop: 20, fontWeight: 500 }}>Sarah M., massage therapist, 8 years in practice</p>
           </FadeIn>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <FadeIn>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>How it works</p>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 56px', letterSpacing: '-0.02em' }}>
+              Three steps to knowing your numbers.
+            </h2>
+          </FadeIn>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 0 }}>
+            {STEPS.map((step, i) => (
+              <FadeIn key={i} delay={i * 0.14}>
+                <div style={{
+                  padding: isMobile ? '32px 0' : '0 40px',
+                  borderLeft: !isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
+                  borderTop: isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 12, fontWeight: 700, color: SAGE, letterSpacing: '0.14em', marginBottom: 20 }}>{step.n}</div>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 22px' }}>
+                    {step.icon}
+                  </div>
+                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{step.title}</h3>
+                  <p style={{ fontSize: 15, color: MUTED, margin: 0, lineHeight: 1.75 }}>{step.body}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -711,7 +730,7 @@ export default function LandingPage() {
                   whileHover={{ scale: 1.015, boxShadow: '0 6px 28px rgba(44,53,40,0.10)' }}
                   whileTap={{ scale: 0.995 }}
                   onClick={() => setSelectedFeature(i)}
-                  style={{ background: CARD, borderRadius: 16, display: 'flex', gap: 18, padding: '22px 24px', cursor: 'pointer', boxShadow: '0 1px 6px rgba(44,53,40,0.05)', transition: 'box-shadow 0.2s' }}
+                  style={{ background: CARD, borderRadius: 16, display: 'flex', gap: 18, padding: '22px 24px', cursor: 'pointer', boxShadow: '0 1px 6px rgba(44,53,40,0.05)', transition: 'box-shadow 0.2s', height: '100%' }}
                 >
                   <div style={{ ...iconBox }}>{f.icon}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -747,6 +766,7 @@ export default function LandingPage() {
                   {w.lines.map((ln, j) => (
                     <p key={j} style={{ fontSize: 15, color: MUTED, margin: '4px 0', lineHeight: 1.5 }}>{ln}</p>
                   ))}
+                  <p style={{ fontSize: 14, color: SAGE, margin: '16px 0 0', lineHeight: 1.55, fontWeight: 500 }}>{w.value}</p>
                 </div>
               </FadeIn>
             ))}
@@ -766,10 +786,10 @@ export default function LandingPage() {
               The Zen Bookkeeper.
             </h2>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: '0 0 18px' }}>
-              Bookwise was created by The Zen Bookkeeper, a boutique bookkeeping firm that has spent years helping wellness professionals get clear on their numbers. We have seen the same story over and over: skilled practitioners who are exceptional at their work and quietly overwhelmed by the financial side of running it.
+              After working with hundreds of coaches, trainers, and bodyworkers, the pattern was impossible to miss: amazing at the work, completely stressed about the money side.
             </p>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: 0 }}>
-              We built Bookwise because we wanted every practitioner to have what our best clients have: clarity, calm, and confidence in their numbers.
+              We built Bookwise because we wanted every practitioner to have what our best clients have: a clear picture of their money, all year long.
             </p>
           </FadeIn>
         </div>
@@ -780,7 +800,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <FadeIn>
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
-              Good questions.
+              Questions.
             </h2>
           </FadeIn>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -810,52 +830,154 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── WAVE cream → dark ───────────────────────────────────────────── */}
-      <Wave from={CREAM} to={INK} />
 
-      {/* ── WAITLIST CTA (dark) ─────────────────────────────────────────── */}
-      <section style={{ background: INK, padding: `${isMobile ? 72 : 104}px 24px` }}>
-        <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+      {/* ── PRICING ─────────────────────────────────────────────────────── */}
+      <section id="pricing" style={{ background: SEC, padding: `${isMobile ? 64 : 96}px 24px` }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <FadeIn>
-            <div style={{ ...iconBox, background: 'rgba(124,154,126,0.15)', margin: '0 auto 24px', width: 52, height: 52 }}>
-              <Zap size={24} color={SAGE} />
-            </div>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 32 : 46, fontWeight: 700, color: CREAM, margin: '0 0 14px', lineHeight: 1.16, letterSpacing: '-0.02em' }}>
-              Your practice deserves better than a notebook.
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>Pricing</p>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 14px', letterSpacing: '-0.02em' }}>
+              Simple, honest pricing.
             </h2>
-            <p style={{ fontSize: isMobile ? 16 : 18, color: 'rgba(245,242,236,0.65)', margin: '0 0 40px', lineHeight: 1.65 }}>
-              Join the waitlist and be first in when we open. Founding members lock in their rate before we go public.
+            <p style={{ fontSize: 16, color: MUTED, textAlign: 'center', margin: '0 auto 52px', maxWidth: 400, lineHeight: 1.65 }}>
+              Start with a free 30-day trial. No credit card required.
             </p>
-            {submitted ? (
-              <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'rgba(245,242,236,0.08)', border: `1px solid rgba(245,242,236,0.15)`, borderRadius: 14, padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <Check size={18} color={SAGE} />
-                <span style={{ fontSize: 16, fontWeight: 600, color: CREAM }}>You are on the list. We will be in touch.</span>
-              </motion.div>
-            ) : (
-              <form onSubmit={handleWaitlist} style={{ display: 'flex', gap: 10, flexDirection: isMobile ? 'column' : 'row' }}>
-                <input
-                  type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="your@email.com" required
-                  style={{ flex: 1, height: 54, padding: '0 20px', borderRadius: 12, border: '1.5px solid rgba(245,242,236,0.18)', background: 'rgba(245,242,236,0.07)', fontSize: 16, color: CREAM, outline: 'none' }}
-                />
-                <button type="submit" disabled={submitting}
-                  style={{ height: 54, padding: '0 32px', borderRadius: 12, border: 'none', background: SAGE, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: submitting ? 0.7 : 1, boxShadow: '0 4px 16px rgba(124,154,126,0.4)' }}
-                >
-                  {submitting ? 'Joining...' : 'Join waitlist'}
-                </button>
-              </form>
-            )}
-            <p style={{ fontSize: 13, color: 'rgba(245,242,236,0.4)', marginTop: 18 }}>Free during early access. No credit card required.</p>
+          </FadeIn>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
+            {/* Practitioner */}
+            <FadeIn delay={0.05}>
+              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 12px rgba(44,53,40,0.07)' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: MUTED, margin: '0 0 8px', letterSpacing: '0.04em' }}>Practitioner</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                  <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 48, fontWeight: 700, color: INK, lineHeight: 1 }}>$19</span>
+                  <span style={{ fontSize: 15, color: MUTED }}>/month</span>
+                </div>
+                <p style={{ fontSize: 14, color: MUTED, margin: '0 0 28px', lineHeight: 1.55 }}>Everything you need to stay on top of your money, every day.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                  {PRACTITIONER_FEATURES.map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Check size={15} color={SAGE} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 15, color: INK }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href="#beta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 50, borderRadius: 12, background: SEC, color: INK, fontSize: 15, fontWeight: 700, textDecoration: 'none', border: `1.5px solid ${BORDER}` }}>
+                  Start free trial
+                </a>
+              </div>
+            </FadeIn>
+            {/* Practice Pro */}
+            <FadeIn delay={0.1}>
+              <div style={{ background: INK, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 8px 40px rgba(44,53,40,0.22)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 20, right: 20, background: SAGE, borderRadius: 99, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#fff' }}>Most popular</div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(245,242,236,0.6)', margin: '0 0 8px', letterSpacing: '0.04em' }}>Practice Pro</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                  <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 48, fontWeight: 700, color: CREAM, lineHeight: 1 }}>$49</span>
+                  <span style={{ fontSize: 15, color: 'rgba(245,242,236,0.5)' }}>/month</span>
+                </div>
+                <p style={{ fontSize: 14, color: 'rgba(245,242,236,0.6)', margin: '0 0 28px', lineHeight: 1.55 }}>Ask Sage anything. Get your numbers delivered monthly. Run your whole practice.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                  {PRO_FEATURES.map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Check size={15} color={SAGE} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 15, color: CREAM }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href="#beta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 50, borderRadius: 12, background: SAGE, color: '#fff', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 16px rgba(124,154,126,0.4)' }}>
+                  Apply for beta <ArrowRight size={14} />
+                </a>
+              </div>
+            </FadeIn>
+          </div>
+          <FadeIn delay={0.15}>
+            <p style={{ textAlign: 'center', fontSize: 14, color: MUTED, marginTop: 28, lineHeight: 1.6 }}>
+              Beta testers in our founding 50 receive Practice Pro free for life.
+            </p>
           </FadeIn>
         </div>
       </section>
 
-      {/* ── WAVE dark → cream ───────────────────────────────────────────── */}
-      <Wave from={INK} to={CREAM} />
+
+      {/* ── BETA APPLICATION (dark) ──────────────────────────────────────── */}
+      <section id="beta" style={{ background: INK, padding: `${isMobile ? 72 : 104}px 24px` }}>
+        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+          <FadeIn>
+            <div style={{ ...iconBox, background: 'rgba(124,154,126,0.15)', margin: '0 auto 24px', width: 52, height: 52 }}>
+              <Zap size={24} color={SAGE} />
+            </div>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 32 : 46, fontWeight: 700, color: CREAM, margin: '0 0 14px', lineHeight: 1.16, letterSpacing: '-0.02em', textAlign: 'center' }}>
+              50 founding spots.
+            </h2>
+            <p style={{ fontSize: isMobile ? 16 : 18, color: 'rgba(245,242,236,0.65)', margin: '0 0 40px', lineHeight: 1.65, textAlign: 'center' }}>
+              Beta testers get Practice Pro free for life, early access to every new feature, and a direct line to us as we build. We review every application and reach out within 5 business days.
+            </p>
+
+            {submitted ? (
+              <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: 'rgba(245,242,236,0.08)', border: `1px solid rgba(245,242,236,0.15)`, borderRadius: 14, padding: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center' }}>
+                <Check size={24} color={SAGE} />
+                <p style={{ fontSize: 18, fontWeight: 600, color: CREAM, margin: 0 }}>Application received.</p>
+                <p style={{ fontSize: 15, color: 'rgba(245,242,236,0.6)', margin: 0, lineHeight: 1.6 }}>We will review it and be in touch within 5 business days.</p>
+              </motion.div>
+            ) : (
+              <form onSubmit={handleBetaApply} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <input
+                  type="text" value={name} onChange={e => setName(e.target.value)}
+                  placeholder="Your name"
+                  style={fieldStyle}
+                />
+                <input
+                  type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="Your email" required
+                  style={fieldStyle}
+                />
+                <select
+                  value={practiceType} onChange={e => setPracticeType(e.target.value)} required
+                  style={{ ...fieldStyle, appearance: 'none' as const, color: practiceType ? CREAM : 'rgba(245,242,236,0.4)' }}
+                >
+                  <option value="" disabled>What kind of practitioner are you?</option>
+                  <option value="life_coach" style={{ color: INK, background: CREAM }}>Life coach</option>
+                  <option value="business_coach" style={{ color: INK, background: CREAM }}>Business coach</option>
+                  <option value="wellness_coach" style={{ color: INK, background: CREAM }}>Wellness coach</option>
+                  <option value="personal_trainer" style={{ color: INK, background: CREAM }}>Personal trainer</option>
+                  <option value="fitness_instructor" style={{ color: INK, background: CREAM }}>Fitness instructor</option>
+                  <option value="massage_therapist" style={{ color: INK, background: CREAM }}>Massage therapist</option>
+                  <option value="acupuncturist" style={{ color: INK, background: CREAM }}>Acupuncturist</option>
+                  <option value="somatic_practitioner" style={{ color: INK, background: CREAM }}>Somatic practitioner</option>
+                  <option value="other" style={{ color: INK, background: CREAM }}>Other wellness practitioner</option>
+                </select>
+                <input
+                  type="text" value={challenge} onChange={e => setChallenge(e.target.value)}
+                  placeholder="What's your biggest money headache right now? (optional)"
+                  style={fieldStyle}
+                />
+                <button type="submit" disabled={submitting}
+                  style={{ height: 54, borderRadius: 12, border: 'none', background: SAGE, color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.7 : 1, boxShadow: '0 4px 16px rgba(124,154,126,0.4)', marginTop: 4 }}
+                >
+                  {submitting ? 'Submitting...' : 'Apply for a founding spot'}
+                </button>
+              </form>
+            )}
+
+            <p style={{ fontSize: 13, color: 'rgba(245,242,236,0.4)', marginTop: 18, textAlign: 'center' }}>Free 30-day trial. No credit card required.</p>
+          </FadeIn>
+        </div>
+      </section>
+
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer style={{ padding: '36px 24px', background: CREAM, borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
+      <footer style={{ padding: '40px 24px', background: CREAM, borderTop: `1px solid ${BORDER}`, textAlign: 'center' }}>
         <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 16, fontWeight: 600, color: INK, marginBottom: 10 }}>Bookwise</p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
+          {[
+            { label: 'How it works', href: '#how-it-works' },
+            { label: 'Pricing', href: '#pricing' },
+            { label: 'Apply for beta', href: '#beta' },
+            { label: 'Sign in', href: '/login' },
+          ].map(l => (
+            <a key={l.label} href={l.href} style={{ fontSize: 13, color: MUTED, textDecoration: 'none', fontWeight: 500 }}>{l.label}</a>
+          ))}
+        </div>
         <p style={{ fontSize: 12, color: MUTED, margin: '0 0 4px', lineHeight: 1.6 }}>A product of The Zen Bookkeeper.</p>
         <p style={{ fontSize: 12, color: MUTED, margin: '0 0 6px', lineHeight: 1.6 }}>Bookwise organizes your financial data. Sage shares observations, not advice. Always work with a licensed CPA before filing.</p>
         <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>&copy; {new Date().getFullYear()} Bookwise. All rights reserved.</p>
@@ -886,8 +1008,8 @@ export default function LandingPage() {
                 <div style={{ ...iconBox, marginBottom: 14 }}>{FEATURES[selectedFeature].icon}</div>
                 <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 22, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{FEATURES[selectedFeature].title}</h3>
                 <p style={{ fontSize: 16, color: MUTED, margin: '0 0 28px', lineHeight: 1.7 }}>{FEATURES[selectedFeature].body}</p>
-                <a href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 22px', height: 46, borderRadius: 999, background: INK, color: CREAM, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
-                  Try it free <ArrowRight size={14} />
+                <a href="#beta" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 22px', height: 46, borderRadius: 999, background: INK, color: CREAM, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+                  Apply for beta <ArrowRight size={14} />
                 </a>
               </div>
             </motion.div>

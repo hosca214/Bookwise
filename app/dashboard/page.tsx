@@ -524,30 +524,6 @@ export default function DashboardPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
 
-            {/* Growth Fund */}
-            <div style={{ ...cardStyle, marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-                  {t('Profit Bucket')}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(profitFrac * 100)}% of income</span>
-              </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${profitFunded.toFixed(2)}
-              </p>
-              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${profitTarget > 0 ? Math.min(100, (profitFunded / profitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
-              </div>
-              <button onClick={() => setShowGrowthInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {showGrowthInfo ? 'Hide' : 'What is this?'}
-              </button>
-              {showGrowthInfo && (
-                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
-                  Reinvest in your practice. Move this to a dedicated business savings account each month.
-                </p>
-              )}
-            </div>
-
             {/* Tax Set-Aside */}
             <div style={{ ...cardStyle, marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -607,6 +583,30 @@ export default function DashboardPage() {
               {showOpsInfo && (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
                   Covers your everyday business costs: supplies, rent, software, insurance.
+                </p>
+              )}
+            </div>
+
+            {/* Growth Fund */}
+            <div style={{ ...cardStyle, marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
+                  {t('Profit Bucket')}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(profitFrac * 100)}% of income</span>
+              </div>
+              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 8px', lineHeight: 1 }}>
+                ${profitFunded.toFixed(2)}
+              </p>
+              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
+                <div style={{ height: '100%', width: `${profitTarget > 0 ? Math.min(100, (profitFunded / profitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
+              </div>
+              <button onClick={() => setShowGrowthInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
+                {showGrowthInfo ? 'Hide' : 'What is this?'}
+              </button>
+              {showGrowthInfo && (
+                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
+                  Reinvest in your practice. Move this to a dedicated business savings account each month.
                 </p>
               )}
             </div>
@@ -683,11 +683,10 @@ export default function DashboardPage() {
             fontFamily: 'var(--font-serif)',
           }}
         >
-          Transfer Done
+          Make a Transfer
         </button>
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 32, lineHeight: 1.5 }}>
-          Open your banking app, move the amounts above to separate accounts, then tap Transfer Done.
-          Come back every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong> to keep your numbers clean.
+          Every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong>, open your bank app and move each amount to its own account. Tap when you are done.
         </p>
 
         {/* Daily Pulse */}
@@ -846,10 +845,10 @@ export default function DashboardPage() {
             onClick={e => e.stopPropagation()}
           >
             <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0 }}>
-              Move these funds
+              Move your money
             </h3>
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 24, lineHeight: 1.5 }}>
-              Open your banking app and move these amounts to separate accounts. Then come back and tap Transfer Done.
+              Open your banking app and move each amount to its own account. Come back when you are done.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {[
@@ -867,7 +866,7 @@ export default function DashboardPage() {
             <button onClick={handleSecurePay} disabled={securing}
               style={{ width: '100%', minHeight: 52, background: securing ? 'var(--color-muted)' : 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: securing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
             >
-              {securing ? 'Saving...' : 'Transfer Done'}
+              {securing ? 'Saving...' : 'I did it'}
             </button>
             <button onClick={() => setShowPayModal(false)} disabled={securing}
               style={{ width: '100%', minHeight: 44, background: 'none', border: 'none', color: 'var(--color-muted-foreground)', fontSize: 14, cursor: 'pointer', marginTop: 8, fontFamily: 'var(--font-sans)' }}
