@@ -38,6 +38,24 @@ Monthly income: $${context.monthIncome ?? 0}, expenses: $${context.monthExpenses
 Recent transactions: ${JSON.stringify(context.recentTransactions?.slice(0, 8) ?? [])}
 Question: ${context.question}
 Answer directly and specifically using the numbers provided.`,
+
+    pay_yourself: `Practice: ${context.practiceName}
+Industry: ${context.industry}
+Growth Fund this month: $${(context.buckets?.profitFunded ?? 0).toFixed(2)}
+Tax Set-Aside this month: $${(context.buckets?.taxFunded ?? 0).toFixed(2)}
+Operations: $${(context.buckets?.opsFunded ?? 0).toFixed(2)} of $${(context.buckets?.opsTarget ?? 0).toFixed(2)} covered
+Days left in month: ${context.daysLeft ?? 15}
+Net this month: $${(context.netProfit ?? 0).toFixed(2)}
+
+Your tone for this response: warm and direct, like a financially literate friend who is rooting for this person. Lead with what they can do right now, not what to watch out for. If the numbers support paying themselves, say so clearly and specifically. If it is a leaner month, acknowledge it without alarm. Never use the word "recommend." Never say "you should consider." Be specific with the dollar amounts in front of you. End with one short encouraging line that is specific to these exact numbers, not a generic platitude. Keep it to 2 short paragraphs.`,
+
+    seasonality_insight: `Monthly income data for the year so far:
+${JSON.stringify(context.monthlyIncome)}
+
+Identify the two months with the lowest income and the two months with the highest income.
+Give one practical sentence about what to do with that pattern.
+Keep the full response to 3 sentences maximum.
+Tone: warm and direct. No em dashes. No accounting terms.`,
   }
 
   const prompt = prompts[type] ?? prompts.daily_insight

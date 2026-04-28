@@ -7,11 +7,13 @@ import { BottomNav } from '@/components/ui/BottomNav'
 import { generateCPAExport, downloadCSV } from '@/lib/csv'
 import { SCHEDULE_C_MAP } from '@/lib/iqMaps'
 import type { Transaction } from '@/lib/supabase'
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
 type TrendMonth = { month: string; label: string; income: number; expenses: number; takeHome: number }
 type WinRecord = { month: string; pay_funded: number; celebration_note: string | null }
+type YearMonth = { month: string; label: string; income: number }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -118,7 +120,7 @@ function CategoryRows({ groups }: { groups: [string, number][] }) {
 const supabase = createClient()
 
 export default function ReportsPage() {
-  const { t, setIndustry, accountantMode, toggleAccountantMode } = useIQ()
+  const { t, setIndustry, industry, accountantMode, toggleAccountantMode } = useIQ()
 
   const [loading, setLoading] = useState(true)
   const [practiceName, setPracticeName] = useState('My Practice')
@@ -132,6 +134,10 @@ export default function ReportsPage() {
   const [wins, setWins] = useState<WinRecord[]>([])
   const [payTargetForReports, setPayTargetForReports] = useState(0)
 
+  const [yearIncome, setYearIncome] = useState<YearMonth[]>([])
+  const [seasonInsight, setSeasonInsight] = useState<string | null>(null)
+  const [seasonLoading, setSeasonLoading] = useState(false)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -143,11 +149,12 @@ export default function ReportsPage() {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
         const sixMonthStart = sixMonthsAgo.toISOString().slice(0, 8) + '01'
 
-        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }] = await Promise.all([
+        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }, { data: yearTxns }] = await Promise.all([
           supabase.from('profiles').select('industry, practice_name, pay_target').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd).order('date', { ascending: true }),
           supabase.from('transactions').select('date, amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', sixMonthStart).order('date', { ascending: true }),
           supabase.from('buckets').select('month, pay_funded, celebration_note').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
+          supabase.from('transactions').select('date, amount').eq('user_id', user.id).eq('is_personal', false).eq('type', 'income').gte('date', THIS_YEAR).order('date', { ascending: true }),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
@@ -175,6 +182,23 @@ export default function ReportsPage() {
               takeHome: income - expenses,
             }))
         )
+
+        const currentYear = new Date().getFullYear()
+        const yearIncomeMap: Record<string, number> = {}
+        for (const tx of yearTxns ?? []) {
+          const month = tx.date.slice(0, 7)
+          yearIncomeMap[month] = (yearIncomeMap[month] ?? 0) + Number(tx.amount)
+        }
+        setYearIncome(
+          Array.from({ length: 12 }, (_, i) => {
+            const month = `${currentYear}-${String(i + 1).padStart(2, '0')}`
+            return {
+              month,
+              label: new Date(month + '-02').toLocaleString('default', { month: 'short' }),
+              income: yearIncomeMap[month] ?? 0,
+            }
+          })
+        )
       } catch {
         setError(true)
       } finally {
@@ -183,6 +207,29 @@ export default function ReportsPage() {
     }
     load()
   }, [rangeStart, rangeEnd]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const monthsWithData = yearIncome.filter((m) => m.income > 0).length
+    if (monthsWithData < 3) return
+
+    setSeasonLoading(true)
+    setSeasonInsight(null)
+    fetch('/api/sage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'seasonality_insight',
+        context: {
+          industry,
+          monthlyIncome: yearIncome.map((m) => ({ month: m.label, income: m.income })),
+        },
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => setSeasonInsight(data.insight ?? null))
+      .catch(() => setSeasonInsight(null))
+      .finally(() => setSeasonLoading(false))
+  }, [yearIncome, industry]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const businessTxns = transactions.filter((tx) => !tx.is_personal)
   const grossIncome = businessTxns.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
@@ -246,7 +293,7 @@ export default function ReportsPage() {
           </div>
         </div>
         <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.6 }}>
-          Accountant View uses the labels your CPA knows. You don't need to understand them — just download and share the export.
+          Accountant View uses the labels your CPA knows. You don't need to understand them. Just download and share the export.
         </p>
 
         {/* Date range */}
@@ -349,6 +396,11 @@ export default function ReportsPage() {
                   ${netProfit.toFixed(2)}
                 </span>
               </div>
+              {netProfit < 0 && (
+                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '-4px 0 8px', lineHeight: 1.5 }}>
+                  Some months run lean. Your trend over time tells a more complete story.
+                </p>
+              )}
 
               {/* Tax estimate */}
               <div style={{
@@ -359,7 +411,7 @@ export default function ReportsPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-foreground)' }}>
-                    {t('Tax Estimate')}
+                    {t('Tax Set-Aside Estimate')}
                   </span>
                   <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums' }}>
                     ${taxEstimate.toFixed(2)}
@@ -393,6 +445,72 @@ export default function ReportsPage() {
           >
             Export for My CPA
           </button>
+        )}
+
+        {/* Year at a Glance */}
+        {yearIncome.some((m) => m.income > 0) && (
+          <div style={{ marginBottom: 12 }}>
+            <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 4 }}>
+              Your Year at a Glance
+            </h2>
+            <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 12 }}>
+              {t('Income')} by month, {new Date().getFullYear()}
+            </p>
+            <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)', marginBottom: 10, boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={yearIncome} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${v === 0 ? '0' : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
+                    width={40}
+                  />
+                  <Tooltip
+                    formatter={(value) => [`$${Number(value).toFixed(2)}`, t('Income')]}
+                    contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12, color: 'var(--color-foreground)' }}
+                    cursor={{ fill: 'var(--color-muted)' }}
+                  />
+                  <Bar dataKey="income" fill="var(--color-primary)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {yearIncome.filter((m) => m.income > 0).length < 3 ? (
+              <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.6 }}>
+                  Once you have a few months in, Sage will start spotting patterns in your income. Keep logging.
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', marginBottom: 8 }}>
+                  Sage sees a pattern
+                </p>
+                {seasonLoading ? (
+                  <>
+                    <div className="skeleton" style={{ width: '90%', height: 14, marginBottom: 8 }} />
+                    <div className="skeleton" style={{ width: '75%', height: 14, marginBottom: 8 }} />
+                    <div className="skeleton" style={{ width: '60%', height: 14 }} />
+                  </>
+                ) : seasonInsight ? (
+                  <p style={{ fontSize: 14, color: 'var(--color-foreground)', lineHeight: 1.65, margin: 0 }}>
+                    {seasonInsight}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
+                    Sage is thinking. Try again in a moment.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* 6-Month Trend Chart */}

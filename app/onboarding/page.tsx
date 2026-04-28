@@ -214,10 +214,9 @@ export default function OnboardingPage() {
                 One thing that makes a big difference
               </p>
               <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginBottom: 16 }}>
-                Keeping your business income and expenses in a dedicated account
-                makes your books clean, your tax prep easier, and your numbers
-                trustworthy. Mixing personal and business spending is the single
-                most common source of stress at tax time.
+                A dedicated business account keeps your numbers clean and your
+                tax prep easier. It is a small habit that pays off. You can
+                connect one anytime in Settings.
               </p>
               <p style={{
                 fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)',
@@ -250,7 +249,7 @@ export default function OnboardingPage() {
               </div>
               {hasBizAccount === false && (
                 <p style={{ fontSize: 14, color: 'var(--color-accent)', marginTop: 12, lineHeight: 1.5, marginBottom: 0 }}>
-                  No worries. Opening a free business checking account takes about 10 minutes online. Many practitioners do it before logging their first transaction.
+                  No problem. Bookwise works either way. You can connect an account anytime in Settings.
                 </p>
               )}
             </div>
@@ -364,7 +363,7 @@ export default function OnboardingPage() {
             onSlider: handleProfitSlider,
             color: 'var(--color-profit)',
             headline: 'This is your future.',
-            desc: 'Reinvest in courses, new tools, or the next version of your practice. Touch it only with intention, not out of need.',
+            desc: 'Reinvest in your practice.',
           },
           {
             key: 'Tax Bucket',
@@ -382,7 +381,7 @@ export default function OnboardingPage() {
             onSlider: null,
             color: 'var(--color-ops)',
             headline: 'Everything it takes to show up.',
-            desc: 'Rent, supplies, software, insurance. This is your cost of doing business each month.',
+            desc: 'Rent, supplies, software, insurance. This is what it costs to keep your practice running each month.',
           },
         ]
 
@@ -392,7 +391,7 @@ export default function OnboardingPage() {
               How do you want to split your income?
             </h2>
             <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 28, lineHeight: 1.5 }}>
-              Every dollar you earn gets a job. Adjust Growth and Tax. Operations covers what remains.
+              Every dollar you earn gets a job. Adjust Growth and Tax. Your day-to-day costs cover what remains.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>

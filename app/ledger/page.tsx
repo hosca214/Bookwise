@@ -7,6 +7,7 @@ import { BottomNav } from '@/components/ui/BottomNav'
 import { Camera, X, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction, Service } from '@/lib/supabase'
+import { SCHEDULE_C_MAP } from '@/lib/iqMaps'
 
 const INCOME_CATS = [
   'Session Income', 'Package Income', 'Retainer Income', 'Tip Income', 'Other Income',
@@ -70,7 +71,7 @@ function formatDate(d: string) {
 }
 
 function SourceBadge({ source }: { source: string }) {
-  const label = source === 'stripe' ? 'Stripe' : source === 'plaid' ? 'Plaid' : 'Entered by you'
+  const label = source === 'stripe' ? 'Stripe' : source === 'plaid' ? 'Plaid' : 'Manual'
   return (
     <span style={{
       fontSize: 11,
@@ -329,7 +330,7 @@ export default function LedgerPage() {
             ? filtered.length < transactions.length
               ? `${filtered.length} of ${transactions.length} entries`
               : `${transactions.length} entr${transactions.length === 1 ? 'y' : 'ies'}`
-            : 'All your transactions in one place'}
+            : 'Every dollar in, every dollar out.'}
         </p>
       </div>
 
@@ -410,7 +411,7 @@ export default function LedgerPage() {
             </>
           ) : (
             <>
-              <div style={totalColStyle}><div style={totalLabelStyle}>Filtered</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{categoryFilter.length === 0 ? 'All' : `${categoryFilter.length} cat${categoryFilter.length === 1 ? '' : 's'}`}</div></div>
+              <div style={totalColStyle}><div style={totalLabelStyle}>Filtered</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{categoryFilter.length === 0 ? 'All' : `${categoryFilter.length} ${categoryFilter.length === 1 ? 'category' : 'categories'}`}</div></div>
               <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
               <div style={totalColStyle}><div style={totalLabelStyle}>{typeFilter === 'income' ? 'Income' : 'Expenses'}</div><div style={{ ...totalValueStyle, color: typeFilter === 'income' ? 'var(--color-profit)' : 'var(--color-danger)' }}>{typeFilter === 'income' ? '+' : '-'}${(typeFilter === 'income' ? totalIncome : totalExpenses).toFixed(2)}</div></div>
               <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
@@ -456,7 +457,6 @@ export default function LedgerPage() {
           </div>
         ) : transactions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '64px 0' }}>
-            <p style={{ fontSize: 32, marginBottom: 12 }}>📋</p>
             <p className="font-serif" style={{ fontSize: 20, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 8 }}>
               No entries yet.
             </p>
@@ -482,7 +482,6 @@ export default function LedgerPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
-            <p style={{ fontSize: 32, marginBottom: 12 }}>🔍</p>
             <p className="font-serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 8 }}>No entries match your filters.</p>
             <button
               onClick={() => { setSearch(''); setTypeFilter('all'); setCategoryFilter([]); setMonthFilter(currentMonth) }}
@@ -516,7 +515,7 @@ export default function LedgerPage() {
                   </span>
                   {tx.date === today && !tx.pulse_matched && (
                     <button
-                      onClick={() => toast("You haven't logged today's Pulse yet. Head to your Dash to check in.", { icon: '📋' })}
+                      onClick={() => toast("Today's Pulse is waiting.", { icon: undefined })}
                       style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', flexShrink: 0, display: 'inline-block', border: 'none', padding: 0, cursor: 'pointer' }}
                     />
                   )}
@@ -529,6 +528,20 @@ export default function LedgerPage() {
                     </span>
                   )}
                 </div>
+                {SCHEDULE_C_MAP[tx.category_key] && (
+                  <div style={{ marginTop: 3 }}>
+                    <span style={{
+                      fontSize: 10,
+                      color: 'var(--color-muted-foreground)',
+                      padding: '1px 6px',
+                      borderRadius: 999,
+                      border: '1px solid var(--color-border)',
+                      letterSpacing: '0.02em',
+                    }}>
+                      {SCHEDULE_C_MAP[tx.category_key].label}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* amount */}
@@ -753,6 +766,11 @@ export default function LedgerPage() {
                 <option key={cat} value={cat}>{t(cat)}</option>
               ))}
             </select>
+            {SCHEDULE_C_MAP[txCategory] && (
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 6, lineHeight: 1.4 }}>
+                For your taxes, this goes under: {SCHEDULE_C_MAP[txCategory].label} (Schedule C)
+              </p>
+            )}
           </div>
 
           {/* Amount */}
