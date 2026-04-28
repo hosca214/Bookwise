@@ -305,6 +305,137 @@ Does it sound supportive or clinical? Clinical is a failure state.
 
 ---
 
+### Naval Ravikant
+**Role: Wealth Philosophy and Leverage Advisor**
+*Co-founder of AngelList. Early investor in Twitter, Uber, and Notion.
+Author of The Almanack of Naval Ravikant.*
+
+Naval's framework centers on a single idea: wealth is assets that earn
+while you sleep. For solo practitioners, every hour of client work is
+traded for money, which means the moment they stop working, income stops.
+Bookwise exists at the intersection of this tension: Maya cannot scale her
+hands, but she can scale her financial clarity. Knowing exactly where her
+money goes, what she is building, and what she can pay herself is the
+foundation of getting out from under the hour-for-dollar trap.
+
+Naval's concept of specific knowledge is also directly relevant: Maya's
+specific knowledge is her craft. Bodywork, movement, coaching. That is
+what took years to develop. Accounting did not. Bookwise exists to handle
+the thing that is not her specific knowledge so she can protect the thing
+that is.
+
+**What Naval guides in Bookwise:**
+- The Growth Fund is not a savings account. Frame it as the beginning
+  of an asset base. Maya is building something, not just setting aside.
+- Permissionless leverage: the automation that Plaid and Stripe provide
+  is leverage. When her bank feeds her numbers into Bookwise without
+  manual entry, she gains time without hiring anyone.
+- The Daily Pulse is a five-minute ritual that gives Maya financial clarity
+  she could not otherwise afford. That is software acting as leverage.
+- Sage should never make Maya feel behind. Behind implies a standard someone
+  else set. Sage shows where Maya is. Maya decides where to go.
+
+**His question Bookwise must answer:**
+"Is this app helping Maya build wealth, or just track expenses?"
+Tracking is administrative. Wealth-building requires intention and a system.
+Bookwise must be the system that makes intention visible.
+
+**How to apply his lens:**
+Before any feature decision, ask: "Does this help Maya work toward
+something, or does it just record what already happened?" The buckets
+answer this. The Sage insight should answer this. The empty state should
+answer this. Looking back is not enough. The app must also point forward.
+
+---
+
+### Andrew Chen
+**Role: Growth and Retention Advisor**
+*General Partner, Andreessen Horowitz (a16z). Former VP of Growth, Uber.
+Author of The Cold Start Problem.*
+
+Andrew's career has been built on one question: why do users come back?
+Not why they sign up — sign-up is the easy part — but why do they return
+on day 7, day 30, and day 365. The answer is never features. It is always
+habit, value accumulation, or network effects. For Bookwise, the retention
+mechanism is the Daily Pulse: a low-friction, high-frequency ritual that
+makes the app part of Maya's end-of-day routine.
+
+Andrew also thinks rigorously about the cold start problem: the moment before
+a product has enough data to be useful. For Bookwise, this is the first week
+before Maya has enough transactions to show a meaningful P&L. The Daily Pulse
+solves this: even on day one, Maya can log a session and feel the app tracking her.
+
+**What Andrew guides in Bookwise:**
+- The Daily Pulse notification at 5pm is the trigger. It must arrive at
+  the right time, say the right thing, and take under 60 seconds to complete.
+  That is the retention loop.
+- The aha moment for Bookwise is the first time a real bank connection
+  populates the buckets automatically. Getting Maya to that moment in
+  session one is the most important UX problem to solve.
+- Value accumulation: the app becomes more useful the longer Maya uses it.
+  Month 3 Sage insights are richer than month 1. This must be visible to her.
+- Virality for this audience is word-of-mouth between practitioners.
+  When Maya tells her table neighbor "it speaks massage," that is the growth loop.
+
+**His question Bookwise must answer:**
+"What brings Maya back tomorrow?" The answer must be specific.
+If the answer is "because the app is good," that is not an answer.
+The answer is: because her 5pm pulse notification arrived, she tapped it,
+logged two sessions, saw her bucket fill, and read what Sage noticed today.
+
+**How to apply his lens:**
+Map Maya's return path before shipping any feature. If a new feature does
+not either trigger a return visit or make the next return visit more
+valuable, it is a distraction. Every screen is either a hook or a burden.
+
+---
+
+### Sallie Krawcheck
+**Role: Financial Inclusion and Women's Financial Empowerment Advisor**
+*CEO and Co-founder of Ellevest. Former CEO of Merrill Lynch Wealth Management
+and Smith Barney. Wall Street veteran turned advocate for women's financial health.*
+
+Sallie built Ellevest from a single observation: the financial industry was
+built by men, for men, using assumptions about money, risk, and career arcs
+that do not match women's lives. She rebuilt from scratch around women's
+actual financial reality: different income curves, longer lives, more career
+interruptions, and a deep-seated anxiety about money that most financial tools
+accidentally reinforce by leading with jargon and judgment.
+
+Bookwise is operating in the same tension. The wellness practitioner audience
+is majority women. The product must feel like it was designed for them, not
+adapted for them. There is a difference, and Maya can feel it.
+
+**What Sallie guides in Bookwise:**
+- The onboarding must never make Maya feel behind before she has even started.
+  Every screen should say: you are exactly where you are, and that is fine.
+  We will help you see it clearly.
+- The celebration moments — confetti, the warm toast after moving money —
+  are not gimmicks. They are intentional emotional design. Sallie would
+  protect these aggressively. Financial tools that lead with shame lose users.
+  Tools that lead with celebration keep them.
+- The "cost to show up" framing for essential expenses is exactly right.
+  It is non-judgmental, grounded, and specific to how practitioners think
+  about their practice overhead.
+- Sage must never imply that Maya's numbers are bad. Sage shows what is.
+  The tone must be: "Here is what your numbers are telling us" — not
+  "Here is what you should have done."
+- Any friction that adds to money anxiety is a product failure.
+  Audit every error state and empty state for anxiety signals.
+
+**Her question Bookwise must answer:**
+"Does this app feel like it was designed for Maya, or does it feel like
+someone translated a finance app into massage terms?"
+Designed for is not the same as translated for. Maya will know the difference.
+
+**How to apply her lens:**
+Read every piece of copy through the lens of a woman who has felt overlooked
+by financial tools before. If any word could be interpreted as a judgment,
+a warning, or an implication that she is doing it wrong — rewrite it.
+The default emotional register of this app is warmth, not caution.
+
+---
+
 ## Board Decision Framework
 
 When a product decision is unclear, run it through this sequence:
@@ -317,8 +448,11 @@ When a product decision is unclear, run it through this sequence:
 6. **Jordan:** Is any word in this copy a legal risk?
 7. **April:** Is this positioned for our specific audience, or does it sound like it belongs in a different product?
 8. **Tara:** Does this screen reduce money anxiety or increase it?
+9. **Naval:** Does this help Maya build toward something, or does it only record what already happened?
+10. **Andrew:** What is the specific mechanism that brings Maya back tomorrow? If there is no clear answer, the feature is not ready.
+11. **Sallie:** Does this feel designed for Maya, or could it make her feel judged or behind?
 
-If the answer to all eight is yes, ship it.
+If the answer to all eleven is yes, ship it.
 If any answer is no, fix that thing first.
 
 ---
@@ -336,7 +470,9 @@ The judges evaluating this app are looking for:
 Bookwise is built for the $1,000 prize and the Best for Women award.
 The target user is a woman. The builder is a woman. The board includes
 voices that represent the practitioner, the designer, the lawyer,
-the CPA, and the AI builder. That is a complete picture.
+the CPA, the AI builder, the wealth philosopher, the growth engineer,
+and the woman who rebuilt Wall Street for people like Maya.
+That is a complete picture.
 
 ---
 

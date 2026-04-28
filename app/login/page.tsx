@@ -110,7 +110,7 @@ function LoginPageInner() {
             Bookwise
           </h1>
           <p style={{ color: 'var(--color-muted-foreground)', fontSize: 16 }}>
-            {mode === 'signin' ? 'Welcome back.' : 'Start keeping smarter books.'}
+            {mode === 'signin' ? 'Welcome back.' : 'Your practice, finally in your language.'}
           </p>
         </div>
 

@@ -609,7 +609,7 @@ export default function SettingsPage() {
                 onClick={handleResetOnboarding}
                 style={{ width: '100%', minHeight: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: confirmReset ? 'var(--color-danger)' : 'var(--color-muted-foreground)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'color 0.15s' }}
               >
-                {confirmReset ? 'Tap again to confirm' : 'Redo My Setup'}
+                {confirmReset ? 'Tap again to confirm' : 'Revisit My Setup'}
               </button>
               <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 6, textAlign: 'center' }}>
                 Your transactions and services stay safe. This just takes you back through setup.

@@ -45,10 +45,11 @@ const taxDeadline = getNextTaxDeadline(new Date())
 
 const SAGE_TIPS = [
   "The month you pay yourself first, even a small amount, is the month your business starts working for you.",
-  "Knowing what you need to earn before you open your calendar is one of the most powerful things you can do for your practice.",
-  "Your tax set-aside is not an expense. It is future peace of mind. Move it the same week you earn it.",
-  "Every time you raise your rate, you are not charging more. You are closing the gap between what you give and what you keep.",
-  "A slow month does not mean a failing business. Look at your three-month average before you change anything.",
+  "When you know your monthly number, booking clients feels less like chasing and more like choosing.",
+  "Your tax set-aside is not an expense. It is future peace of mind. Moving it the same week you earn it is a habit many practitioners find helpful.",
+  "When your rate reflects your value, your take-home reflects your effort.",
+  "A slow month does not mean a failing business. Many practitioners find a three-month average more telling than a single slow month.",
+  "Your Growth Fund is the first asset your practice owns. Every dollar you add is a vote for what you are building.",
 ]
 
 const today = new Date().toISOString().slice(0, 10)
@@ -88,6 +89,8 @@ export default function DashboardPage() {
   const [savingPulse, setSavingPulse] = useState(false)
   const [pulseLog, setPulseLog] = useState<Record<string, boolean>>({})
   const [selectedDate, setSelectedDate] = useState(today)
+
+  const [winStreak, setWinStreak] = useState(0)
 
   const [insight, setInsight] = useState<string | null>(null)
   const [loadingSage, setLoadingSage] = useState(false)
@@ -234,6 +237,25 @@ export default function DashboardPage() {
         log[row.date] = true
       }
       setPulseLog(log)
+
+      const { data: winsData } = await supabase
+        .from('buckets')
+        .select('month')
+        .eq('user_id', user.id)
+        .gt('pay_funded', 0)
+        .order('month', { ascending: false })
+      if (winsData && winsData.length >= 2) {
+        let streak = 1
+        for (let i = 1; i < winsData.length; i++) {
+          const [ay, am] = winsData[i - 1].month.slice(0, 7).split('-').map(Number)
+          const prev = new Date(ay, am - 1, 1)
+          prev.setMonth(prev.getMonth() - 1)
+          const [by, bm] = winsData[i].month.slice(0, 7).split('-').map(Number)
+          if (prev.getFullYear() === by && prev.getMonth() + 1 === bm) streak++
+          else break
+        }
+        if (streak >= 2) setWinStreak(streak)
+      }
 
       setLoading(false)
       loadSage(profileData, income, expenses, bucketRecord)
@@ -429,9 +451,16 @@ export default function DashboardPage() {
           <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1.1, margin: 0 }}>
             My Dash
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginTop: 4, marginBottom: 0 }}>
-            {profile?.practice_name ?? 'My Practice'}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
+              {profile?.practice_name ?? 'My Practice'}
+            </p>
+            {winStreak >= 2 && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'var(--color-muted)', borderRadius: 999, padding: '2px 10px' }}>
+                🔥 {winStreak} months strong
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
@@ -488,7 +517,7 @@ export default function DashboardPage() {
         {monthIncome === 0 ? (
           <div style={{ ...cardStyle, border: '1.5px dashed var(--color-border)', background: 'var(--color-muted)', textAlign: 'center', padding: '24px 20px', marginBottom: 16 }}>
             <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.6 }}>
-              Add income to see your money plan. Your Growth Fund, Tax Set-Aside, and Operations will appear here.{' '}
+              Add income in your Ledger to see your money plan. Your Growth Fund, Tax Set-Aside, and Operations will appear here.{' '}
               <a href="/ledger" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Add your first entry</a>
             </p>
           </div>
@@ -539,7 +568,7 @@ export default function DashboardPage() {
               {showTaxInfo && (
                 <div style={{ marginTop: 8 }}>
                   <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 10px', lineHeight: 1.6 }}>
-                    Set this aside so you are never surprised at tax time. Keep it in a separate savings account so it is ready when your quarterly payment is due.
+                    Set this aside so you are never surprised at tax time. Keep it in a dedicated savings account, separate from your spending, so it is ready when your quarterly payment is due. Always confirm your payment amount with a licensed CPA.
                   </p>
                   <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -600,7 +629,7 @@ export default function DashboardPage() {
           </div>
           {showEssentialsInfo && (
             <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 12, lineHeight: 1.6, borderLeft: '3px solid var(--color-border)', paddingLeft: 12 }}>
-              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your funds.
+              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your Growth Fund and Tax Set-Aside.
             </p>
           )}
           {essentialBase === 0 ? (
@@ -835,14 +864,6 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            <a
-              href="https://app.relayfi.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: 48, background: 'var(--color-background)', border: '1.5px solid var(--color-border)', borderRadius: 12, fontSize: 14, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 10, textDecoration: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box' }}
-            >
-              Open Relay to transfer
-            </a>
             <button onClick={handleSecurePay} disabled={securing}
               style={{ width: '100%', minHeight: 52, background: securing ? 'var(--color-muted)' : 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: securing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
             >
