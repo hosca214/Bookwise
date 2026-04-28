@@ -22,6 +22,7 @@ export type Profile = {
   tax_pct: number | null
   pay_target: number
   transfer_day: string
+  monthly_essential_cost: number | null
 }
 
 export type Transaction = {
@@ -39,6 +40,7 @@ export type Transaction = {
   receipt_filename: string | null
   pulse_matched: boolean
   created_at: string
+  service_id: string | null
 }
 
 export type DailyPulse = {

@@ -73,6 +73,8 @@ export default function DashboardPage() {
   const [showGrowthInfo, setShowGrowthInfo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
   const [showOpsInfo, setShowOpsInfo] = useState(false)
+  const [showEssentialsInfo, setShowEssentialsInfo] = useState(false)
+  const [showPulseInfo, setShowPulseInfo] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationNote, setCelebrationNote] = useState('')
   const [savingCelebration, setSavingCelebration] = useState(false)
@@ -369,7 +371,12 @@ export default function DashboardPage() {
   const taxFunded = bucket?.tax_funded ?? 0
   const opsFunded = bucket?.ops_funded ?? 0
 
-  const expenseCoverage = monthExpenses > 0 ? Math.min(100, Math.round((monthIncome / monthExpenses) * 100)) : 0
+  const essentialBase = (profile?.monthly_essential_cost ?? 0) > 0
+    ? (profile?.monthly_essential_cost ?? 0)
+    : monthExpenses
+  const essentialCoverage = essentialBase > 0
+    ? Math.min(100, Math.round((monthIncome / essentialBase) * 100))
+    : 0
   const profitFrac = (profile?.profit_pct ?? 10) / 100
   const taxFrac = (profile?.tax_pct ?? 25) / 100
   const opsFrac = 1 - profitFrac - taxFrac
@@ -578,30 +585,60 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Must-Pay Coverage */}
+        {/* Cost to Show Up */}
         <section style={{ ...cardStyle, marginBottom: 28 }}>
-          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 12px' }}>
-            {monthExpenses > 0
-              ? `Your essentials are ${expenseCoverage}% covered this month.`
-              : 'No expenses logged yet.'}
-          </p>
-          <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${expenseCoverage}%`,
-              background: 'var(--color-primary)',
-              borderRadius: 99,
-              transition: 'width 0.8s ease-out',
-            }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
+              Cost to Show Up
+            </p>
+            <button
+              onClick={() => setShowEssentialsInfo(v => !v)}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)' }}
+            >
+              {showEssentialsInfo ? 'Hide' : 'What is this?'}
+            </button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-            <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-              Income ${monthIncome.toFixed(2)}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-              Expenses ${monthExpenses.toFixed(2)}
-            </span>
-          </div>
+          {showEssentialsInfo && (
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 12, lineHeight: 1.6, borderLeft: '3px solid var(--color-border)', paddingLeft: 12 }}>
+              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your funds.
+            </p>
+          )}
+          {essentialBase === 0 ? (
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6 }}>
+              Add what it costs to show up in{' '}
+              <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Settings</a>{' '}
+              and we will show you how your income covers it.
+            </p>
+          ) : (
+            <>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 12px' }}>
+                {essentialCoverage >= 100
+                  ? 'Your practice is paying for itself this month.'
+                  : `Your costs are ${essentialCoverage}% covered this month.`}
+              </p>
+              <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${essentialCoverage}%`,
+                  background: 'var(--color-primary)',
+                  borderRadius: 99,
+                  transition: 'width 0.8s ease-out',
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+                  Income ${monthIncome.toFixed(2)}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+                  Cost to show up ${essentialBase.toFixed(2)}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 10, marginBottom: 0 }}>
+                Need to update this?{' '}
+                <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Settings</a>
+              </p>
+            </>
+          )}
         </section>
 
         {/* Transfer Done */}
@@ -626,9 +663,22 @@ export default function DashboardPage() {
 
         {/* Daily Pulse */}
         <section style={{ ...cardStyle, padding: '24px', marginBottom: 24 }}>
-          <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 20, marginTop: 0 }}>
-            Today's Pulse
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', margin: 0 }}>
+              Today's Pulse
+            </h2>
+            <button
+              onClick={() => setShowPulseInfo(v => !v)}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)' }}
+            >
+              {showPulseInfo ? 'Hide' : 'What is this?'}
+            </button>
+          </div>
+          {showPulseInfo && (
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.6, borderLeft: '3px solid var(--color-border)', paddingLeft: 12 }}>
+              Logging your sessions and miles helps Sage give you better insights. Miles driven for business can also be a tax deduction. Your CPA will want this number at year end.
+            </p>
+          )}
 
           <div style={{ width: '100%', maxWidth: 380, marginBottom: 20 }}>
             <PulseCalendar log={pulseLog} selected={selectedDate} onSelect={onSelectDate} startDate={profile?.created_at?.slice(0, 10)} />

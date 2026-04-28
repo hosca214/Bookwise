@@ -67,6 +67,7 @@ export default function OnboardingPage() {
   const [hour, setHour] = useState(17)
   const [minute, setMinute] = useState(0)
   const [payTarget, setPayTarget] = useState('')
+  const [essentialCost, setEssentialCost] = useState('')
   const [transferDay, setTransferDay] = useState('Monday')
   const [demoConnected, setDemoConnected] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(false)
@@ -80,6 +81,7 @@ export default function OnboardingPage() {
   const ampm = hour >= 12 ? 'PM' : 'AM'
   const displayH = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
   const payTargetNum = parseFloat(payTarget.replace(/[^0-9.]/g, '')) || 0
+  const essentialCostNum = parseFloat(essentialCost.replace(/[^0-9.]/g, '')) || 0
 
   const [hourRaw, setHourRaw] = useState(String(displayH))
   const [minuteRaw, setMinuteRaw] = useState('00')
@@ -138,6 +140,7 @@ export default function OnboardingPage() {
         tax_pct: taxPct,
         pay_target: payTargetNum,
         transfer_day: transferDay,
+        monthly_essential_cost: essentialCostNum,
         onboarding_complete: true,
       })
 
@@ -523,11 +526,40 @@ export default function OnboardingPage() {
                 }}
               />
             </div>
-            <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 48 }}>
+            <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 40 }}>
               per month
             </p>
+            <div style={{ marginBottom: 48 }}>
+              <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 6, lineHeight: 1.5 }}>
+                What does it cost to show up for your clients each month?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontStyle: 'italic', marginBottom: 16, lineHeight: 1.5 }}>
+                Think: room rent, supplies, insurance, software.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                <span className="font-serif" style={{ fontSize: 40, fontWeight: 700, color: 'var(--color-muted-foreground)' }}>$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={essentialCost}
+                  placeholder="0"
+                  onChange={e => setEssentialCost(e.target.value.replace(/[^0-9]/g, ''))}
+                  style={{
+                    width: 160, minHeight: 72, fontSize: 40, fontWeight: 700,
+                    textAlign: 'center', borderRadius: 10,
+                    border: '1.5px solid var(--color-border)',
+                    background: 'var(--color-card)', color: 'var(--color-ink)',
+                    outline: 'none', fontFamily: 'var(--font-serif)', padding: 0,
+                  }}
+                />
+              </div>
+              <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--color-muted-foreground)' }}>
+                per month
+              </p>
+            </div>
             <button onClick={next} style={primaryBtn}>
-              {payTargetNum > 0 ? 'Continue' : 'Skip for now'}
+              {payTargetNum === 0 && essentialCostNum === 0 ? 'Skip for now' : 'Continue'}
             </button>
           </div>
         )

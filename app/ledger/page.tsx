@@ -6,7 +6,7 @@ import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
 import { Camera, X, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Transaction } from '@/lib/supabase'
+import type { Transaction, Service } from '@/lib/supabase'
 
 const INCOME_CATS = [
   'Session Income', 'Package Income', 'Retainer Income', 'Tip Income', 'Other Income',
@@ -70,7 +70,7 @@ function formatDate(d: string) {
 }
 
 function SourceBadge({ source }: { source: string }) {
-  const label = source === 'stripe' ? 'Stripe' : source === 'plaid' ? 'Plaid' : 'Manual'
+  const label = source === 'stripe' ? 'Stripe' : source === 'plaid' ? 'Plaid' : 'Entered by you'
   return (
     <span style={{
       fontSize: 11,
@@ -124,6 +124,10 @@ export default function LedgerPage() {
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
 
+  const [services, setServices] = useState<Service[]>([])
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
+  const [personalHintDismissed, setPersonalHintDismissed] = useState(true)
+
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [categoryFilter, setCategoryFilter] = useState<string[]>([])
@@ -152,15 +156,18 @@ export default function LedgerPage() {
         if (!user) return
         setUserId(user.id)
 
-        const [{ data: profile }, { data, error: err }] = await Promise.all([
+        const [{ data: profile }, { data, error: err }, { data: svcData }] = await Promise.all([
           supabase.from('profiles').select('industry').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id)
             .order('date', { ascending: false }).order('created_at', { ascending: false }),
+          supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
         if (err) throw err
         setTransactions(data ?? [])
+        setServices(svcData ?? [])
+        setPersonalHintDismissed(!!localStorage.getItem('ledger_personal_hint_seen'))
       } catch {
         setError(true)
       } finally {
@@ -178,10 +185,12 @@ export default function LedgerPage() {
     setTxNotes('')
     setTxPersonal(false)
     setReceiptUrl(null)
+    setSelectedServiceId(null)
     setSheetOpen(true)
   }
 
   function closeSheet() {
+    setSelectedServiceId(null)
     setSheetOpen(false)
   }
 
@@ -207,6 +216,7 @@ export default function LedgerPage() {
           source: 'manual',
           receipt_url: receiptUrl,
           pulse_matched: false,
+          service_id: selectedServiceId,
         })
         .select()
         .single()
@@ -410,6 +420,26 @@ export default function LedgerPage() {
         </div>
       )}
 
+      {/* Personal toggle hint */}
+      {!personalHintDismissed && transactions.length > 0 && (
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '8px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--color-muted)', borderRadius: 8, padding: '8px 12px', gap: 8 }}>
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.5 }}>
+              Mark a transaction as personal and it won't count toward your funds or tax set-aside.
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem('ledger_personal_hint_seen', '1')
+                setPersonalHintDismissed(true)
+              }}
+              style={{ background: 'none', border: 'none', fontSize: 16, color: 'var(--color-muted-foreground)', cursor: 'pointer', flexShrink: 0, padding: 0, lineHeight: 1 }}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* List */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
         {loading ? (
@@ -485,7 +515,10 @@ export default function LedgerPage() {
                     {t(tx.category_key)}
                   </span>
                   {tx.date === today && !tx.pulse_matched && (
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', flexShrink: 0, display: 'inline-block' }} />
+                    <button
+                      onClick={() => toast("You haven't logged today's Pulse yet. Head to your Dash to check in.", { icon: '📋' })}
+                      style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', flexShrink: 0, display: 'inline-block', border: 'none', padding: 0, cursor: 'pointer' }}
+                    />
                   )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -655,6 +688,58 @@ export default function LedgerPage() {
               style={fieldInput}
             />
           </div>
+
+          {/* Service chips (income only) */}
+          {txType === 'income' && services.length > 0 && (() => {
+            const bookingCounts = transactions.reduce<Record<string, number>>((acc, tx) => {
+              if (tx.service_id) acc[tx.service_id] = (acc[tx.service_id] ?? 0) + 1
+              return acc
+            }, {})
+            const sorted = [...services].sort((a, b) => {
+              const diff = (bookingCounts[b.id] ?? 0) - (bookingCounts[a.id] ?? 0)
+              return diff !== 0 ? diff : a.name.localeCompare(b.name)
+            })
+            return (
+              <div>
+                <label style={fieldLabel}>Your Services</label>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                  {sorted.map((svc) => {
+                    const count = bookingCounts[svc.id] ?? 0
+                    const selected = selectedServiceId === svc.id
+                    return (
+                      <button
+                        key={svc.id}
+                        onClick={() => {
+                          setSelectedServiceId(selected ? null : svc.id)
+                          if (!selected) {
+                            setTxAmount(String(svc.price))
+                            setTxNotes(svc.name)
+                            setTxCategory('Session Income')
+                          }
+                        }}
+                        style={{
+                          flexShrink: 0,
+                          minHeight: 40,
+                          padding: '0 14px',
+                          borderRadius: 999,
+                          border: `1.5px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                          background: selected ? 'color-mix(in srgb, var(--color-primary) 10%, transparent)' : 'var(--color-card)',
+                          color: 'var(--color-foreground)',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-sans)',
+                          whiteSpace: 'nowrap' as const,
+                        }}
+                      >
+                        {svc.name} · ${svc.price}{count > 0 ? ` · ${count}x` : ''}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Category */}
           <div>

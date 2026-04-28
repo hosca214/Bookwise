@@ -13,47 +13,87 @@ import type { Service } from '@/lib/supabase'
 const supabase = createClient()
 
 const fieldLabel: React.CSSProperties = {
-  display: 'block', fontSize: 12, fontWeight: 600,
-  color: 'var(--color-muted-foreground)', marginBottom: 6,
-  textTransform: 'uppercase', letterSpacing: '0.06em',
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'var(--color-muted-foreground)',
+  display: 'block',
+  marginBottom: 6,
+  fontFamily: 'var(--font-sans)',
 }
 
 const fieldInput: React.CSSProperties = {
-  width: '100%', minHeight: 48, padding: '12px 14px', fontSize: 16,
-  borderRadius: 8, border: '1.5px solid var(--color-border)',
-  background: 'var(--color-background)', color: 'var(--color-foreground)',
-  outline: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+  width: '100%',
+  minHeight: 48,
+  fontSize: 16,
+  padding: '0 14px',
+  borderRadius: 8,
+  border: '1.5px solid var(--color-border)',
+  background: 'var(--color-background)',
+  color: 'var(--color-ink)',
+  outline: 'none',
+  fontFamily: 'var(--font-sans)',
+}
+
+const stepperBtn: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 10,
+  border: '1.5px solid var(--color-border)',
+  background: 'var(--color-card)',
+  fontSize: 20,
+  cursor: 'pointer',
+  color: 'var(--color-ink)',
+  fontFamily: 'var(--font-sans)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
 }
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h2 style={{
+    <p style={{
       fontSize: 11,
-      fontWeight: 700,
+      fontWeight: 600,
       textTransform: 'uppercase',
       letterSpacing: '0.08em',
       color: 'var(--color-muted-foreground)',
-      marginBottom: 12,
+      marginBottom: 10,
+      fontFamily: 'var(--font-sans)',
     }}>
       {children}
-    </h2>
+    </p>
   )
 }
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { setIndustry } = useIQ()
+  const { t, setIndustry } = useIQ()
   const { vibe, setVibe } = useVibe()
 
   const [userId, setUserId] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [services, setServices] = useState<Service[]>([])
+  const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({})
   const [loadingServices, setLoadingServices] = useState(true)
 
-  // pay and transfer settings
+  // vibe
+  const [stagedVibe, setStagedVibe] = useState(vibe)
+  const [savingVibe, setSavingVibe] = useState(false)
+
+  // pay and transfer
   const [payTarget, setPayTarget] = useState('')
   const [transferDay, setTransferDay] = useState('Monday')
+  const [essentialCost, setEssentialCost] = useState('')
   const [savingPay, setSavingPay] = useState(false)
+
+  // money plan
+  const [profitPct, setProfitPct] = useState(10)
+  const [taxPct, setTaxPct] = useState(25)
+  const [savingPlan, setSavingPlan] = useState(false)
+  const opsPct = 100 - profitPct - taxPct
 
   // add service form
   const [addOpen, setAddOpen] = useState(false)
@@ -62,10 +102,6 @@ export default function SettingsPage() {
   const [svcDuration, setSvcDuration] = useState(60)
   const [savingService, setSavingService] = useState(false)
 
-  // vibe staging (preview before save)
-  const [stagedVibe, setStagedVibe] = useState(vibe)
-  const [savingVibe, setSavingVibe] = useState(false)
-
   useEffect(() => {
     async function load() {
       try {
@@ -73,9 +109,10 @@ export default function SettingsPage() {
         if (!user) return
         setUserId(user.id)
 
-        const [{ data: profile }, { data: svcData }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day').eq('id', user.id).single(),
+        const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
+          supabase.from('transactions').select('service_id').eq('user_id', user.id).not('service_id', 'is', null),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
@@ -85,7 +122,21 @@ export default function SettingsPage() {
         }
         if (profile?.pay_target != null) setPayTarget(String(profile.pay_target))
         if (profile?.transfer_day) setTransferDay(profile.transfer_day)
-        setServices(svcData ?? [])
+        if (profile?.profit_pct != null) setProfitPct(profile.profit_pct)
+        if (profile?.tax_pct != null) setTaxPct(profile.tax_pct)
+        if (profile?.monthly_essential_cost != null) setEssentialCost(String(profile.monthly_essential_cost))
+
+        const counts: Record<string, number> = {}
+        for (const row of bookings ?? []) {
+          if (row.service_id) counts[row.service_id] = (counts[row.service_id] ?? 0) + 1
+        }
+        setBookingCounts(counts)
+
+        const sorted = (svcData ?? []).sort((a, b) => {
+          const diff = (counts[b.id] ?? 0) - (counts[a.id] ?? 0)
+          return diff !== 0 ? diff : a.name.localeCompare(b.name)
+        })
+        setServices(sorted)
       } catch {
         toast.error('Could not load settings. Try again.')
       } finally {
@@ -93,18 +144,61 @@ export default function SettingsPage() {
       }
     }
     load()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveVibe() {
     if (!userId) return
     setSavingVibe(true)
     try {
       await supabase.from('profiles').update({ vibe: stagedVibe }).eq('id', userId)
+      setVibe(stagedVibe)
       toast.success('Vibe saved.')
     } catch {
       toast.error('Could not save. Try again.')
     } finally {
       setSavingVibe(false)
+    }
+  }
+
+  async function savePay() {
+    if (!userId) return
+    setSavingPay(true)
+    try {
+      await supabase.from('profiles').update({
+        pay_target: parseFloat(payTarget) || 0,
+        transfer_day: transferDay,
+        monthly_essential_cost: parseFloat(essentialCost) || 0,
+      }).eq('id', userId)
+      toast.success('Pay settings saved.')
+    } catch {
+      toast.error('Could not save. Try again.')
+    } finally {
+      setSavingPay(false)
+    }
+  }
+
+  async function savePlan() {
+    if (!userId) return
+    setSavingPlan(true)
+    try {
+      await supabase.from('profiles').update({ profit_pct: profitPct, tax_pct: taxPct }).eq('id', userId)
+      toast.success('Your money plan is set.')
+    } catch {
+      toast.error('Could not save. Try again.')
+    } finally {
+      setSavingPlan(false)
+    }
+  }
+
+  function adjustBucket(bucket: 'profit' | 'tax', delta: number) {
+    if (bucket === 'profit') {
+      const next = profitPct + delta
+      if (next < 0 || opsPct - delta < 0) return
+      setProfitPct(next)
+    } else {
+      const next = taxPct + delta
+      if (next < 0 || opsPct - delta < 0) return
+      setTaxPct(next)
     }
   }
 
@@ -131,9 +225,11 @@ export default function SettingsPage() {
         .insert({ user_id: userId, name: svcName.trim(), price, duration_minutes: svcDuration })
         .select()
         .single()
-
       if (error) throw error
-      setServices((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+      setServices((prev) => [...prev, data].sort((a, b) => {
+        const diff = (bookingCounts[b.id] ?? 0) - (bookingCounts[a.id] ?? 0)
+        return diff !== 0 ? diff : a.name.localeCompare(b.name)
+      }))
       setSvcName('')
       setSvcPrice('')
       setSvcDuration(60)
@@ -151,6 +247,29 @@ export default function SettingsPage() {
     await supabase.from('services').update({ is_active: false }).eq('id', id)
   }
 
+  const buckets = [
+    {
+      key: 'Profit Bucket' as const,
+      pct: profitPct,
+      color: 'var(--color-profit)',
+      subtitle: 'Reinvest in your practice',
+      onMinus: () => adjustBucket('profit', -5),
+      onPlus: () => adjustBucket('profit', 5),
+      minusDisabled: profitPct <= 0,
+      plusDisabled: opsPct <= 0,
+    },
+    {
+      key: 'Tax Bucket' as const,
+      pct: taxPct,
+      color: 'var(--color-tax)',
+      subtitle: 'Ready when your quarterly payment is due',
+      onMinus: () => adjustBucket('tax', -5),
+      onPlus: () => adjustBucket('tax', 5),
+      minusDisabled: taxPct <= 0,
+      plusDisabled: opsPct <= 0,
+    },
+  ]
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background)', paddingBottom: 80 }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '56px 20px 0' }}>
@@ -159,166 +278,10 @@ export default function SettingsPage() {
           Settings
         </h1>
 
-        {/* ── Service Menu ─────────────────────────────────────────────────── */}
-        <section style={{ marginBottom: 40 }}>
-          <SectionHeader>Service Menu</SectionHeader>
-
-          {loadingServices ? (
-            <div style={{ height: 48, background: 'var(--color-muted)', borderRadius: 8 }} className="skeleton" />
-          ) : (
-            <>
-              {services.map((svc) => (
-                <div key={svc.id} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 0',
-                  borderBottom: '1px solid var(--color-border)',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>{svc.name}</div>
-                    {svc.duration_minutes && (
-                      <div style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>{svc.duration_minutes} min</div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-foreground)', fontVariantNumeric: 'tabular-nums' }}>
-                      ${svc.price.toFixed(2)}
-                    </span>
-                    <button
-                      onClick={() => removeService(svc.id)}
-                      aria-label={`Remove ${svc.name}`}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {services.length === 0 && !addOpen && (
-                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', padding: '8px 0' }}>
-                  No services yet. Add your first below.
-                </p>
-              )}
-
-              {/* Add service button */}
-              {!addOpen && (
-                <button
-                  onClick={() => setAddOpen(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 12,
-                    background: 'none',
-                    border: `1.5px dashed var(--color-border)`,
-                    borderRadius: 10,
-                    padding: '12px 16px',
-                    width: '100%',
-                    cursor: 'pointer',
-                    color: 'var(--color-muted-foreground)',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    fontFamily: 'var(--font-sans)',
-                  }}
-                >
-                  <Plus size={16} />
-                  Add a service
-                </button>
-              )}
-
-              {/* Add service form */}
-              {addOpen && (
-                <div style={{
-                  background: 'var(--color-card)',
-                  borderRadius: 12,
-                  padding: 16,
-                  marginTop: 12,
-                  border: '1.5px solid var(--color-border)',
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div>
-                      <label style={fieldLabel}>Service name</label>
-                      <input
-                        type="text"
-                        value={svcName}
-                        onChange={(e) => setSvcName(e.target.value)}
-                        placeholder="60-min Massage"
-                        style={fieldInput}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={fieldLabel}>Price</label>
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={svcPrice}
-                        onChange={(e) => setSvcPrice(e.target.value)}
-                        placeholder="0.00"
-                        style={{ ...fieldInput, background: 'var(--color-card)' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ ...fieldLabel, marginBottom: 8 }}>Duration</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <button
-                          type="button"
-                          onClick={() => setSvcDuration((d) => Math.max(15, d - 15))}
-                          style={{ width: 44, height: 44, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', fontSize: 20, cursor: 'pointer', color: 'var(--color-foreground)', fontFamily: 'var(--font-sans)' }}
-                        >
-                          -
-                        </button>
-                        <span style={{ fontSize: 18, fontWeight: 600, minWidth: 72, textAlign: 'center', color: 'var(--color-foreground)' }}>
-                          {svcDuration} min
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setSvcDuration((d) => d + 15)}
-                          style={{ width: 44, height: 44, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', fontSize: 20, cursor: 'pointer', color: 'var(--color-foreground)', fontFamily: 'var(--font-sans)' }}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                      <button
-                        onClick={() => setAddOpen(false)}
-                        style={{
-                          flex: 1, minHeight: 48, borderRadius: 10,
-                          border: '1.5px solid var(--color-border)',
-                          background: 'transparent', color: 'var(--color-foreground)',
-                          fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={addService}
-                        disabled={savingService}
-                        style={{
-                          flex: 2, minHeight: 48, borderRadius: 10,
-                          background: 'var(--color-primary)', color: 'var(--color-primary-foreground)',
-                          border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                        }}
-                      >
-                        {savingService ? 'Saving...' : 'Add Service'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </section>
-
         {/* ── Vibe ─────────────────────────────────────────────────────────── */}
         <section style={{ marginBottom: 40 }}>
           <SectionHeader>Vibe</SectionHeader>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 10, marginBottom: 12, scrollbarWidth: 'none' }}>
             {VIBES.map((v) => {
               const selected = stagedVibe === v.id
               return (
@@ -326,17 +289,24 @@ export default function SettingsPage() {
                   key={v.id}
                   onClick={() => { setStagedVibe(v.id); setVibe(v.id) }}
                   style={{
+                    flexShrink: 0,
+                    width: 140,
+                    height: 120,
                     borderRadius: 12,
                     border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
                     background: v.bg,
-                    padding: '16px 12px',
+                    padding: 16,
                     cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
                     textAlign: 'left',
+                    transition: 'border-color 0.15s',
                   }}
                 >
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                     {v.swatches.map((sw) => (
-                      <span key={sw} style={{ width: 18, height: 18, borderRadius: '50%', background: sw, border: '1px solid rgba(0,0,0,0.08)', display: 'inline-block' }} />
+                      <span key={sw} style={{ width: 16, height: 16, borderRadius: '50%', background: sw, border: '1px solid rgba(0,0,0,0.08)', display: 'inline-block' }} />
                     ))}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: v.ink, fontFamily: 'var(--font-sans)' }}>
@@ -350,18 +320,7 @@ export default function SettingsPage() {
             <button
               onClick={saveVibe}
               disabled={savingVibe}
-              style={{
-                width: '100%',
-                minHeight: 48,
-                borderRadius: 10,
-                background: 'var(--color-primary)',
-                color: 'var(--color-primary-foreground)',
-                border: 'none',
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-sans)',
-              }}
+              style={{ width: '100%', minHeight: 48, borderRadius: 10, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
             >
               {savingVibe ? 'Saving...' : 'Save Vibe'}
             </button>
@@ -371,12 +330,8 @@ export default function SettingsPage() {
         {/* ── Pay and Transfer ─────────────────────────────────────────────── */}
         <section style={{ marginBottom: 40 }}>
           <SectionHeader>Pay and Transfer</SectionHeader>
-          <div style={{
-            background: 'var(--color-card)',
-            borderRadius: 12,
-            padding: '20px 16px',
-            border: '1px solid var(--color-border)',
-          }}>
+          <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '20px 16px', border: '1px solid var(--color-border)' }}>
+
             <div style={{ marginBottom: 20 }}>
               <label style={fieldLabel}>Monthly Pay Goal</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -387,6 +342,26 @@ export default function SettingsPage() {
                   maxLength={6}
                   value={payTarget}
                   onChange={(e) => setPayTarget(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  style={{ width: 120, minHeight: 48, fontSize: 24, fontWeight: 700, textAlign: 'center', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', outline: 'none', fontFamily: 'var(--font-serif)', padding: 0 }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>/ month</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={fieldLabel}>Cost to show up each month</label>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontStyle: 'italic', marginBottom: 8 }}>
+                Think: room rent, supplies, insurance, software.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-serif)' }}>$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={essentialCost}
+                  onChange={(e) => setEssentialCost(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="0"
                   style={{ width: 120, minHeight: 48, fontSize: 24, fontWeight: 700, textAlign: 'center', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', outline: 'none', fontFamily: 'var(--font-serif)', padding: 0 }}
                 />
@@ -417,21 +392,7 @@ export default function SettingsPage() {
 
             <button
               disabled={savingPay}
-              onClick={async () => {
-                if (!userId) return
-                setSavingPay(true)
-                try {
-                  await supabase.from('profiles').update({
-                    pay_target: parseFloat(payTarget) || 0,
-                    transfer_day: transferDay,
-                  }).eq('id', userId)
-                  toast.success('Pay settings saved.')
-                } catch {
-                  toast.error('Could not save. Try again.')
-                } finally {
-                  setSavingPay(false)
-                }
-              }}
+              onClick={savePay}
               style={{ minHeight: 48, padding: '0 24px', borderRadius: 10, fontSize: 15, fontWeight: 700, border: 'none', background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
             >
               {savingPay ? 'Saving...' : 'Save'}
@@ -439,41 +400,191 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* ── Money Plan ───────────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader>Money Plan</SectionHeader>
+
+          {/* Stacked bar */}
+          <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
+            <div style={{ width: `${profitPct}%`, background: 'var(--color-profit)', transition: 'width 0.25s ease' }} />
+            <div style={{ width: `${taxPct}%`, background: 'var(--color-tax)', transition: 'width 0.25s ease' }} />
+            <div style={{ width: `${opsPct}%`, background: 'var(--color-ops)', transition: 'width 0.25s ease' }} />
+          </div>
+
+          <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+            {buckets.map(({ key, pct, color, subtitle, onMinus, onPlus, minusDisabled, plusDisabled }) => (
+              <div key={key} style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', lineHeight: 1.2 }}>{t(key)}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 2 }}>{subtitle}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={onMinus} disabled={minusDisabled} style={{ ...stepperBtn, opacity: minusDisabled ? 0.3 : 1, cursor: minusDisabled ? 'not-allowed' : 'pointer' }}>
+                      <span style={{ lineHeight: 1, position: 'relative', top: -1 }}>−</span>
+                    </button>
+                    <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color, minWidth: 52, textAlign: 'center' }}>{pct}%</span>
+                    <button onClick={onPlus} disabled={plusDisabled} style={{ ...stepperBtn, opacity: plusDisabled ? 0.3 : 1, cursor: plusDisabled ? 'not-allowed' : 'pointer' }}>
+                      <span style={{ lineHeight: 1, position: 'relative', top: -1 }}>+</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Operations row — read only */}
+            <div style={{ padding: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--color-ops)', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-muted-foreground)', lineHeight: 1.2 }}>{t('Operations Bucket')}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 2 }}>Covers your costs to show up</div>
+                  </div>
+                </div>
+                <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ops)', minWidth: 52, textAlign: 'right' }}>{opsPct}%</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={savePlan}
+            disabled={savingPlan}
+            style={{ width: '100%', minHeight: 48, borderRadius: 10, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', marginTop: 12 }}
+          >
+            {savingPlan ? 'Saving...' : 'Save Money Plan'}
+          </button>
+        </section>
+
+        {/* ── Your Services ─────────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader>Your Services</SectionHeader>
+
+          {loadingServices ? (
+            <div style={{ height: 48, background: 'var(--color-muted)', borderRadius: 8 }} className="skeleton" />
+          ) : (
+            <>
+              {services.map((svc) => {
+                const count = bookingCounts[svc.id] ?? 0
+                return (
+                  <div key={svc.id} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 0',
+                    borderBottom: '1px solid var(--color-border)',
+                    gap: 8,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {svc.duration_minutes && (
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', background: 'var(--color-muted)', borderRadius: 999, padding: '2px 8px' }}>
+                          {svc.duration_minutes} min
+                        </span>
+                      )}
+                      <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-foreground)', fontVariantNumeric: 'tabular-nums' }}>
+                        ${svc.price.toFixed(2)}
+                      </span>
+                      {count > 0 && (
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'rgba(124,154,126,0.1)', borderRadius: 999, padding: '2px 8px' }}>
+                          {count} sessions
+                        </span>
+                      )}
+                      <button
+                        onClick={() => removeService(svc.id)}
+                        aria-label={`Remove ${svc.name}`}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {services.length === 0 && !addOpen && (
+                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', padding: '8px 0' }}>
+                  No services yet. Add your first below.
+                </p>
+              )}
+
+              {!addOpen && (
+                <button
+                  onClick={() => setAddOpen(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, marginTop: 12,
+                    background: 'none', border: `1.5px dashed var(--color-border)`,
+                    borderRadius: 10, padding: '12px 16px', width: '100%',
+                    cursor: 'pointer', color: 'var(--color-muted-foreground)',
+                    fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <Plus size={16} />
+                  Add a service
+                </button>
+              )}
+
+              {addOpen && (
+                <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: 16, marginTop: 12, border: '1.5px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={fieldLabel}>Service name</label>
+                      <input type="text" value={svcName} onChange={(e) => setSvcName(e.target.value)} placeholder="60-min Massage" style={fieldInput} />
+                    </div>
+                    <div>
+                      <label style={fieldLabel}>Price</label>
+                      <input type="text" inputMode="decimal" value={svcPrice} onChange={(e) => setSvcPrice(e.target.value)} placeholder="0.00" style={{ ...fieldInput, background: 'var(--color-card)' }} />
+                    </div>
+                    <div>
+                      <label style={{ ...fieldLabel, marginBottom: 8 }}>Duration</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <button type="button" onClick={() => setSvcDuration((d) => Math.max(15, d - 15))} style={{ ...stepperBtn, width: 44, height: 44 }}>-</button>
+                        <span style={{ fontSize: 18, fontWeight: 600, minWidth: 72, textAlign: 'center', color: 'var(--color-foreground)' }}>{svcDuration} min</span>
+                        <button type="button" onClick={() => setSvcDuration((d) => d + 15)} style={{ ...stepperBtn, width: 44, height: 44 }}>+</button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                      <button onClick={() => setAddOpen(false)} style={{ flex: 1, minHeight: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: 'var(--color-foreground)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                        Cancel
+                      </button>
+                      <button onClick={addService} disabled={savingService} style={{ flex: 2, minHeight: 48, borderRadius: 10, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                        {savingService ? 'Saving...' : 'Add Service'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
         {/* ── Connected Apps ────────────────────────────────────────────────── */}
         <section style={{ marginBottom: 40 }}>
           <SectionHeader>Connected Apps</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             {(['Stripe', 'Plaid', 'Google Drive'] as const).map((app, i) => (
-              <div key={app} style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 16px',
-                borderBottom: i < 2 ? '1px solid var(--color-border)' : 'none',
-              }}>
+              <div key={app} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: i < 2 ? '1px solid var(--color-border)' : 'none' }}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>{app}</div>
                   <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Demo mode</div>
                 </div>
-                <span style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  background: 'var(--color-muted)',
-                  color: 'var(--color-profit)',
-                }}>
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
                   Connected
                 </span>
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 8 }}>
-            Live connections available after launch.
+          <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 8, lineHeight: 1.5 }}>
+            Your transactions and numbers are real and saved. Live connections to Stripe, Plaid, and Google Drive are coming.
           </p>
         </section>
 
-        {/* ── Disclaimer ───────────────────────────────────────────────────── */}
+        {/* ── About Bookwise ───────────────────────────────────────────────── */}
         <section style={{ marginBottom: 24 }}>
           <SectionHeader>About Bookwise</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)' }}>
@@ -489,39 +600,21 @@ export default function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button
               onClick={handleLogout}
-              style={{
-                width: '100%',
-                minHeight: 48,
-                borderRadius: 10,
-                border: '1.5px solid var(--color-border)',
-                background: 'transparent',
-                color: 'var(--color-foreground)',
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-sans)',
-              }}
+              style={{ width: '100%', minHeight: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: 'var(--color-foreground)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
             >
               Log Out
             </button>
-            <button
-              onClick={handleResetOnboarding}
-              style={{
-                width: '100%',
-                minHeight: 48,
-                borderRadius: 10,
-                border: '1.5px solid var(--color-border)',
-                background: 'transparent',
-                color: confirmReset ? 'var(--color-danger)' : 'var(--color-muted-foreground)',
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-sans)',
-                transition: 'color 0.15s',
-              }}
-            >
-              {confirmReset ? 'Tap again to confirm reset' : 'Reset Onboarding'}
-            </button>
+            <div>
+              <button
+                onClick={handleResetOnboarding}
+                style={{ width: '100%', minHeight: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: confirmReset ? 'var(--color-danger)' : 'var(--color-muted-foreground)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'color 0.15s' }}
+              >
+                {confirmReset ? 'Tap again to confirm' : 'Redo My Setup'}
+              </button>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 6, textAlign: 'center' }}>
+                Your transactions and services stay safe. This just takes you back through setup.
+              </p>
+            </div>
           </div>
         </section>
 

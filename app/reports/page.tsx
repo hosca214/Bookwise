@@ -245,6 +245,9 @@ export default function ReportsPage() {
             })}
           </div>
         </div>
+        <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.6 }}>
+          Accountant View uses the labels your CPA knows. You don't need to understand them — just download and share the export.
+        </p>
 
         {/* Date range */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
