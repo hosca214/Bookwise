@@ -105,7 +105,7 @@ Constraints:
 
 **Save button** below card: full width, 48px, primary style, label `"Save Money Plan"`.
 
-Saves `profit_pct` and `tax_pct` to `profiles`. Toast: `"Money plan saved."`.
+Saves `profit_pct` and `tax_pct` to `profiles`. Toast: `"Your money plan is set."`.
 
 State additions:
 ```ts
@@ -159,7 +159,7 @@ Below the existing `$` amount input and "per month" label, add:
 ```
 [16px gap]
 
-What does it cost to keep your practice running each month?
+What does it cost to show up for your clients each month?
 Think: room rent, supplies, insurance, software.
 
 $  [____]  per month
@@ -202,19 +202,19 @@ const essentialCoverage = essentialBase > 0
 
 **Explainer toggle** — same `"What is this?"` pattern already used on bucket tiles:
 
-> "This shows how much of your monthly must-pays your income covers. When you reach 100%, you have broken even — every dollar above this builds your funds."
+> "This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself — every dollar above this builds your funds."
 
 **Settings link** — below the income/expense row at the bottom of the card:
 
 ```
-Does this look off?  [Update in Settings →]
+Need to update this? Go to Settings
 ```
 
 12px, muted foreground, link in `var(--color-primary)`. Routes to `/settings`.
 
 **Empty state** — when `monthly_essential_cost === 0` and `monthExpenses === 0`:
 
-> "Add your monthly must-pays in Settings to see how your income measures up."
+> "Add what it costs to show up in Settings and we will show you how your income covers it."
 
 Link: `"Go to Settings"`.
 
@@ -266,11 +266,89 @@ If no services defined: "Your Services" section is omitted entirely. The existin
 
 ---
 
+## 10. Money Plan — Per-Bucket One-Liners
+
+Each bucket row in the Settings Money Plan card gets a permanent subtitle beneath the label — always visible, no toggle needed. One line, muted foreground, 12px.
+
+| Bucket | Subtitle |
+|--------|----------|
+| Growth Fund | *"Reinvest in your practice"* |
+| Tax Set-Aside | *"Ready when your quarterly payment is due"* |
+| Daily Operations | *"Covers your costs to show up"* |
+
+This replaces the educational text stripped out from onboarding. Maya needs to know what she's changing before she changes it.
+
+---
+
+## 11. Your Services — Booking Count Badge
+
+Change badge label from `"8x"` to `"8 sessions"`. Full badge: pill shape, `var(--color-primary)` at 10% opacity background, `var(--color-primary)` text, 12px, 600 weight. Hidden when count is 0.
+
+---
+
+## 12. Maya Audit — App-Wide Copy and UX
+
+Changes across existing pages to ensure Maya never has a question she cannot answer from the screen she is on.
+
+### Dashboard — "Today's Pulse" explainer
+
+Add a "What is this?" toggle to the Today's Pulse card header (same pattern as bucket tiles). Expanded text:
+
+> "Logging your sessions and miles helps Sage give you better insights. Miles driven for business can also be a tax deduction — your CPA will want this number at year end."
+
+### Ledger — Source badge rename
+
+`"Manual"` → `"Entered by you"`. Stripe and Plaid retain their brand names.
+
+Change in `SourceBadge` component:
+```ts
+const label = source === 'stripe' ? 'Stripe' : source === 'plaid' ? 'Plaid' : 'Entered by you'
+```
+
+### Ledger — Personal toggle explanation
+
+Each transaction row that shows a personal toggle gets a small muted hint rendered once globally at the top of the list (not repeated per row). Appears as a dismissible one-liner above the first transaction, shown only on first visit (localStorage flag `ledger_personal_hint_seen`):
+
+> "Mark a transaction as personal and it won't count toward your funds or tax set-aside."
+
+Dismiss button: `×`, 16px, muted foreground. Once dismissed, never shows again.
+
+### Ledger — Red dot explanation
+
+The red dot (today, pulse unmatched) gains a tap target. Tapping the dot shows a toast:
+
+> "You haven't logged today's Pulse yet. Head to your Dash to check in."
+
+No navigation forced. Maya decides.
+
+### Reports — Accountant View explainer
+
+Below the language toggle, add a one-line muted note (12px, always visible — not behind a toggle):
+
+> "Accountant View uses the labels your CPA knows. You don't need to understand them — just download and share the export."
+
+### Settings — "Reset Onboarding" rename
+
+Rename button label from `"Reset Onboarding"` to `"Redo My Setup"`.
+
+Add a muted note below the button (12px, muted foreground):
+
+> "Your transactions and services stay safe. This just takes you back through setup."
+
+### Settings — Connected Apps "Demo mode" clarification
+
+Add a one-liner below the Connected Apps card (12px, muted foreground, existing `<p>` tag):
+
+Replace current: *"Live connections available after launch."*
+With: *"Your transactions and numbers are real and saved. Live connections to Stripe, Plaid, and Google Drive are coming."*
+
+---
+
 ## Polish and Compliance
 
 - All bucket and service labels go through `t()`.
 - "Cost to show up" is practitioner language — never "fixed expenses," never "minimum costs."
-- Breakeven explainer: never say "breakeven" in the UI. Use "broken even" only in the explainer body, never as a label.
+- Breakeven language: never use "breakeven" or "broken even" anywhere in the UI. Use "your practice is paying for itself" instead.
 - `monthly_essential_cost` never appears in UI copy — always rendered as `"Cost to show up each month"`.
 - Settings link on dashboard card is a soft suggestion, never a prompt or warning.
 
@@ -280,9 +358,10 @@ If no services defined: "Your Services" section is omitted entirely. The existin
 
 | File | Change |
 |------|--------|
-| `app/settings/page.tsx` | Reorder sections, add Money Plan, rename Your Services, add essential cost field, vibe horizontal scroll |
+| `app/settings/page.tsx` | Reorder sections, add Money Plan (with one-liners), rename Your Services, add essential cost field, vibe horizontal scroll, rename Reset Onboarding, update Connected Apps note |
 | `app/onboarding/page.tsx` | Add essential cost field to Step 7 |
-| `app/dashboard/page.tsx` | Rename card, update coverage logic, add explainer + Settings link |
-| `app/ledger/page.tsx` | Add Quick Add from Service chips, load services, pass service_id on save |
+| `app/dashboard/page.tsx` | Rename essentials card, update coverage logic, add explainer + Settings link, add Pulse "What is this?" toggle |
+| `app/ledger/page.tsx` | Quick Add from Service chips, load services, pass service_id on save, rename source badge, personal hint banner, red dot toast |
+| `app/reports/page.tsx` | Add Accountant View one-liner explainer |
 | `lib/supabase.ts` | Add `service_id` and `monthly_essential_cost` to types |
 | Supabase migrations | Two `alter table` statements |
