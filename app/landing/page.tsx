@@ -7,6 +7,7 @@ import {
   ChevronDown, Check, ArrowRight, Folder, Sparkles, Activity,
   Leaf, Clock, BookOpen, X, RefreshCw, FileText, HardDrive, Zap,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase'
 
 // ─── colour constants (for SVGs and explicit dark sections) ──────────────────
@@ -301,19 +302,19 @@ const IQ_TRANSFORMS: Record<Industry, { generic: string; specific: string }[]> =
 const ACCORDION = [
   { q: 'Is this real bookkeeping?',     a: 'Bookwise organizes your income and expenses with clarity. For tax filing, we always recommend working with a licensed CPA. We make their job easier and your bill smaller.' },
   { q: 'Do I need to know accounting?', a: 'Not at all. Every label in Bookwise is written in plain language for your profession. No spreadsheets. No jargon. Just your numbers.' },
-  { q: 'What about my existing data?',  a: 'Connect your bank through Plaid (it takes two minutes), import from Stripe if you take card payments, or add entries manually anytime.' },
+  { q: 'What about my existing data?',  a: 'Connect your bank through Plaid. Import from Stripe if you take card payments. You can also add entries manually anytime.' },
   { q: 'Is my data safe?',              a: 'Your records are private and encrypted. Only you can see them. We never sell your data, ever.' },
-  { q: 'What does it cost?',            a: 'Bookwise starts with a free 30-day trial, no credit card required. After that, the Practitioner plan is $19 per month and Practice Pro is $49 per month. Beta testers in our founding 50 receive Practice Pro free for life.' },
+  { q: 'What does it cost?',            a: 'Bookwise starts with a free 30-day trial. No credit card required. After that, the Practitioner plan is $19 per month and Practice Pro is $49 per month. Beta testers in our founding 50 receive Practice Pro free for life.' },
   { q: 'What is the beta program?',     a: 'We are opening Bookwise to 50 founding practitioners before we launch publicly. Beta testers get Practice Pro free for life, early access to new features, and a direct line to us as we build. We review every application and reach out within 5 business days.' },
 ]
 
 const FEATURES = [
   { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Tax Set-Aside, Daily Operations, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
-  { icon: <Shield size={22} />,     title: 'Tax Set-Aside',    body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate, so you know what to put away before each deadline.' },
-  { icon: <MessageCircle size={22} />, title: 'Sage Insights', body: 'Sage reads your numbers each day and tells you what it sees: income patterns, changes in what you\'re spending, and observations in plain language.' },
-  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt and Sage reads the amount, date, and category and files it automatically into your Google Drive, so you never lose a receipt at tax time.' },
-  { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder, so your records are always backed up and ready for your CPA.' },
-  { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line, dated, categorized, and noted, so your CPA can start from it instead of starting over.' },
+  { icon: <Shield size={22} />,     title: 'Tax Set-Aside',    body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
+  { icon: <MessageCircle size={22} />, title: 'Sage Insights', body: 'Sage reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
+  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt. Sage reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
+  { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder. Your records are always backed up and ready for your CPA.' },
+  { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line. Dated, categorized, and noted. Your CPA starts from it instead of starting over.' },
 ]
 
 const STEPS = [
@@ -327,7 +328,7 @@ const STEPS = [
     n: '02',
     icon: <Sparkles size={24} />,
     title: 'Sage sorts everything',
-    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Sage reads the patterns and tells you what it sees, in plain language.',
+    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Sage reads the patterns and tells you what it sees. Always in plain language.',
   },
   {
     n: '03',
@@ -386,9 +387,18 @@ export default function LandingPage() {
     if (!email || !practiceType || submitting) return
     setSubmitting(true)
     try {
-      await supabase.from('beta_applications').insert({ name, email, practice_type: practiceType, money_challenge: challenge })
-    } catch { /* silent */ }
-    finally { setSubmitted(true); setSubmitting(false) }
+      const res = await fetch('/api/beta-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, practice_type: practiceType, money_challenge: challenge }),
+      })
+      if (!res.ok) throw new Error('submission failed')
+      setSubmitted(true)
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const industries = Object.keys(IQ_LABELS) as Industry[]
@@ -603,8 +613,11 @@ export default function LandingPage() {
             <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 16px' }}>
               Most wellness practitioners spend more energy avoiding their numbers than understanding them. That avoidance carries a quiet cost. The low-grade anxiety of not knowing what you earned, what you owe, or whether your practice is working for you is a weight you do not have to carry.
             </p>
-            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 52px' }}>
-              Bookwise is designed as a daily check-in, not a quarterly scramble. Sixty seconds. Your session count, your income, your set-asides. A clear picture, every single day. When you know your numbers, your nervous system can relax.
+            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 32px' }}>
+              Bookwise is designed as a daily check-in, not a quarterly scramble. A gentle reminder arrives at 5pm every day. You log your sessions. Your income updates. Your set-asides are clear. When you know your numbers, your nervous system can relax.
+            </p>
+            <p style={{ fontSize: isMobile ? 15 : 17, lineHeight: 1.7, color: 'rgba(245,242,236,0.55)', margin: '0 0 52px', fontStyle: 'italic' }}>
+              The whole check-in takes sixty seconds.
             </p>
 
             {/* habit chips */}
@@ -786,10 +799,10 @@ export default function LandingPage() {
               The Zen Bookkeeper.
             </h2>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: '0 0 18px' }}>
-              After working with hundreds of coaches, trainers, and bodyworkers, the pattern was impossible to miss: amazing at the work, completely stressed about the money side.
+              After working with hundreds of coaches, trainers, and bodyworkers, the pattern was impossible to miss. Amazing at the work. Completely stressed about the money side.
             </p>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: 0 }}>
-              We built Bookwise because we wanted every practitioner to have what our best clients have: a clear picture of their money, all year long.
+              We built Bookwise because we wanted every practitioner to have what our best clients have. A clear picture of their money all year long.
             </p>
           </FadeIn>
         </div>

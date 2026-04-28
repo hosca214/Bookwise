@@ -12,7 +12,7 @@
 3. Body text minimum 16px. Primary metrics 36-40px Fraunces bold.
 4. Headers: Fraunces. Body: Plus Jakarta Sans.
 5. Every financial label calls `t()` from IQContext. Never hardcode.
-6. Sage never says: revenue, COGS, receivable, payable, you should, you owe, file your taxes.
+6. Sage never says: revenue, COGS, receivable, payable, you should, you owe, file your taxes. These terms may appear in marketing copy and demo/translation context only. They must never appear in AI (Sage) output.
 7. Currency: always `$X.XX` format.
 8. Exclude `is_personal=true` from all financial calculations.
 9. "accounting" never appears in UI except the Reports language toggle label.
@@ -21,12 +21,13 @@
 12. Code must be written so it cannot silently break: no unguarded `.data[0]`, no optional chaining that swallows missing state, no assumptions about external availability.
 13. Write minimal, readable code. Name things clearly. No redundant state, no duplicate logic, no commented-out code. A human must be able to read and modify any file without prior context.
 14. Before committing any file: remove all `console.log`, dead imports, and unused variables.
+15. Write in full sentences throughout the app and all marketing copy. Do not connect clauses with commas to keep a sentence going. Use a period. Start a new sentence.
 
 ---
 
 ## Design System
 
-**Fonts** — `next/font/google`: Fraunces 400/600/700/900, Plus Jakarta Sans 400/500/600/700.
+**Fonts** — `next/font/google`: Lora 400/600/700, Plus Jakarta Sans 400/500/600/700.
 
 **Skins** — `data-vibe` on `<html>`, stored in `profiles.vibe`:
 
@@ -55,7 +56,7 @@
 - Inputs: 8px radius, min 48px height, 1.5px border `var(--color-border)`.
 - BottomNav: fixed 60px, 4 tabs, solid `var(--color-card)` bg — no backdrop-blur.
 - Layout: mobile-first, single column, max-width 480px centered.
-- Page headers: Fraunces 28px mobile / 32px tablet.
+- Page headers: Lora 28px mobile / 32px tablet.
 - Section labels: Jakarta 11px uppercase 0.08em tracking, `var(--color-muted-foreground)`.
 - No bold body text used as heading substitute.
 
@@ -252,10 +253,10 @@ Route `/onboarding`. Framer Motion slide transitions. Write to Supabase only on 
 - Step 7: Non-skippable disclaimer. "Bookwise organizes your numbers... Nothing here is financial or legal advice. Always work with a licensed CPA before filing." Button: "I understand. Let's go."
 
 ### Phase 3: Dashboard ✅
-Route `/dashboard`. Header "My Dash" (Fraunces). Sub-header: practice name.
+Route `/dashboard`. Header "My Dash" (Lora). Sub-header: practice name.
 - Three `Reservoir.tsx` SVG circles: Growth Fund (profit 10%), Tax Set-Aside (tax 25%), Daily Operations (ops 65%). Targets = % of current month income (`is_personal=false`). Liquid fill animation.
 - Tax line: "You have set aside $X for taxes this month." (`var(--color-accent)`)
-- Secure My Pay: full-width primary button → modal with bucket amounts → confirm → `Confetti.tsx` → toast "Done. You paid yourself. That is worth celebrating."
+- Make a Transfer: full-width primary button → modal with bucket amounts → confirm → `Confetti.tsx` → toast "Done. You paid yourself. That is worth celebrating."
 - Daily Pulse card: sessions/hours/miles via ChevronUp/Down. Writes to `daily_pulse`.
 - Sage Insight card: fetches `/api/sage` on mount. Skeleton loading. RefreshCw regenerate button.
 - Tax Deadline Countdown card: next quarterly deadline name + days remaining.
@@ -282,7 +283,7 @@ Route `/ledger`.
 Route `/reports`.
 - Language toggle (this page only): "My Language" | "Accountant View" → `toggleAccountantMode()`.
 - Date range: This Month / Last Month pills + custom date inputs.
-- P&L card: `t('Gross Income')` $X → line items (indented, 14px muted) → Total Expenses → Net Profit (Fraunces 28px `var(--color-primary)`) → Tax Estimate box (25%, "recommended safety rate. Confirm with your CPA.").
+- P&L card: `t('Gross Income')` $X → line items (indented, 14px muted) → Total Expenses → Net Profit (Lora 28px `var(--color-primary)`) → Tax Estimate box (25%, "recommended safety rate. Confirm with your CPA.").
 - Accountant View: same structure, `t()` returns raw keys, Schedule C line shown muted beside each line.
 - "Export for My CPA" → `generateCPAExport()` from `lib/csv.ts` → downloads CSV.
 - CSV: `Bookwise Export -- [Practice Name] -- [Range]` header + `Always review with a licensed CPA before filing.` + columns: Date, Description, Category, Schedule C Category, Schedule C Line, Amount, Type, Receipt URL.
