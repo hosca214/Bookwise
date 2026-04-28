@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -19,6 +19,21 @@ const EXPENSE_CATS = [
 
 const supabase = createClient()
 const today = new Date().toISOString().slice(0, 10)
+const currentMonth = today.slice(0, 7)
+
+function buildMonthChips(): { label: string; value: string }[] {
+  const chips: { label: string; value: string }[] = []
+  const now = new Date()
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    chips.push({ label, value })
+  }
+  return chips
+}
+
+const MONTH_CHIPS = buildMonthChips()
 
 const fieldLabel: React.CSSProperties = {
   display: 'block', fontSize: 12, fontWeight: 600,
@@ -31,6 +46,23 @@ const fieldInput: React.CSSProperties = {
   borderRadius: 8, border: '1.5px solid var(--color-border)',
   background: 'var(--color-card)', color: 'var(--color-foreground)',
   outline: 'none', fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+}
+
+const filterBarStyle: React.CSSProperties = {
+  maxWidth: 480, margin: '0 auto', padding: '0 20px 10px',
+  display: 'flex', flexDirection: 'column', gap: 8,
+  background: 'var(--color-background)', borderBottom: '1px solid var(--color-border)',
+}
+
+const totalColStyle: React.CSSProperties = { flex: 1, padding: '8px 0', textAlign: 'center' }
+
+const totalLabelStyle: React.CSSProperties = {
+  fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+  textTransform: 'uppercase', color: 'var(--color-muted-foreground)', marginBottom: 2,
+}
+
+const totalValueStyle: React.CSSProperties = {
+  fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
 }
 
 function formatDate(d: string) {
@@ -91,6 +123,27 @@ export default function LedgerPage() {
   const rowFileRef = useRef<HTMLInputElement>(null)
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([])
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonth)
+
+  const filtered = useMemo(() => transactions.filter((tx) => {
+    if (typeFilter !== 'all' && tx.type !== typeFilter) return false
+    if (categoryFilter.length > 0 && !categoryFilter.includes(tx.category_key)) return false
+    if (monthFilter !== 'all' && !tx.date.startsWith(monthFilter)) return false
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      if (!t(tx.category_key).toLowerCase().includes(q) && !(tx.notes ?? '').toLowerCase().includes(q)) return false
+    }
+    return true
+  }), [transactions, typeFilter, categoryFilter, monthFilter, search, t])
+
+  const businessFiltered = filtered.filter((tx) => !tx.is_personal)
+  const totalIncome = businessFiltered.filter((tx) => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
+  const totalExpenses = businessFiltered.filter((tx) => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
+  const netTotal = totalIncome - totalExpenses
 
   useEffect(() => {
     async function load() {
@@ -263,10 +316,99 @@ export default function LedgerPage() {
         </h1>
         <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>
           {transactions.length > 0
-            ? `${transactions.length} entr${transactions.length === 1 ? 'y' : 'ies'}`
+            ? filtered.length < transactions.length
+              ? `${filtered.length} of ${transactions.length} entries`
+              : `${transactions.length} entr${transactions.length === 1 ? 'y' : 'ies'}`
             : 'All your transactions in one place'}
         </p>
       </div>
+
+      {/* Filter bar */}
+      {!loading && !error && (
+        <div style={filterBarStyle}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--color-muted-foreground)', pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search entries..."
+              style={{ width: '100%', height: 36, borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', padding: '0 10px 0 30px', fontSize: 13, color: 'var(--color-foreground)', fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderRadius: 8, overflow: 'hidden', border: '1.5px solid var(--color-border)' }}>
+            {(['all', 'income', 'expense'] as const).map((type, i) => (
+              <button
+                key={type}
+                onClick={() => { setTypeFilter(type); setCategoryFilter([]) }}
+                style={{ minHeight: 36, border: 'none', borderRight: i < 2 ? '1px solid var(--color-border)' : 'none', background: typeFilter === type ? (type === 'income' ? 'var(--color-profit)' : type === 'expense' ? 'var(--color-danger)' : 'var(--color-ink)') : 'var(--color-card)', color: typeFilter === type ? 'white' : 'var(--color-muted-foreground)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+              >
+                {type === 'all' ? 'All' : type === 'income' ? 'Income' : 'Expenses'}
+              </button>
+            ))}
+          </div>
+
+          {typeFilter !== 'all' && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              {(typeFilter === 'income' ? INCOME_CATS : EXPENSE_CATS).map((cat) => {
+                const sel = categoryFilter.includes(cat)
+                const activeColor = typeFilter === 'income' ? 'var(--color-profit)' : 'var(--color-danger)'
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter((prev) => sel ? prev.filter((c) => c !== cat) : [...prev, cat])}
+                    style={{ height: 28, padding: '0 10px', borderRadius: 999, border: `1.5px solid ${sel ? activeColor : 'var(--color-border)'}`, background: sel ? `color-mix(in srgb, ${activeColor} 15%, var(--color-card))` : 'var(--color-card)', color: sel ? activeColor : 'var(--color-muted-foreground)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0, fontFamily: 'var(--font-sans)' }}
+                  >
+                    {sel ? '✓ ' : ''}{t(cat)}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+            {MONTH_CHIPS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setMonthFilter(value)}
+                style={{ height: 28, padding: '0 10px', borderRadius: 999, border: '1.5px solid var(--color-border)', background: monthFilter === value ? 'var(--color-ink)' : 'var(--color-card)', color: monthFilter === value ? 'var(--color-card)' : 'var(--color-muted-foreground)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0, fontFamily: 'var(--font-sans)' }}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => setMonthFilter('all')}
+              style={{ height: 28, padding: '0 10px', borderRadius: 999, border: '1.5px solid var(--color-border)', background: monthFilter === 'all' ? 'var(--color-ink)' : 'var(--color-card)', color: monthFilter === 'all' ? 'var(--color-card)' : 'var(--color-muted-foreground)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0, fontFamily: 'var(--font-sans)' }}
+            >
+              All time
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Totals strip */}
+      {!loading && !error && transactions.length > 0 && (
+        <div style={{ display: 'flex', background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)', maxWidth: 480, margin: '0 auto' }}>
+          {typeFilter === 'all' ? (
+            <>
+              <div style={totalColStyle}><div style={totalLabelStyle}>Income</div><div style={{ ...totalValueStyle, color: 'var(--color-profit)' }}>+${totalIncome.toFixed(2)}</div></div>
+              <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
+              <div style={totalColStyle}><div style={totalLabelStyle}>Expenses</div><div style={{ ...totalValueStyle, color: 'var(--color-danger)' }}>-${totalExpenses.toFixed(2)}</div></div>
+              <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
+              <div style={totalColStyle}><div style={totalLabelStyle}>Net</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>${netTotal.toFixed(2)}</div></div>
+            </>
+          ) : (
+            <>
+              <div style={totalColStyle}><div style={totalLabelStyle}>Filtered</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{categoryFilter.length === 0 ? 'All' : `${categoryFilter.length} cat${categoryFilter.length === 1 ? '' : 's'}`}</div></div>
+              <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
+              <div style={totalColStyle}><div style={totalLabelStyle}>{typeFilter === 'income' ? 'Income' : 'Expenses'}</div><div style={{ ...totalValueStyle, color: typeFilter === 'income' ? 'var(--color-profit)' : 'var(--color-danger)' }}>{typeFilter === 'income' ? '+' : '-'}${(typeFilter === 'income' ? totalIncome : totalExpenses).toFixed(2)}</div></div>
+              <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
+              <div style={totalColStyle}><div style={totalLabelStyle}>Entries</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{businessFiltered.length}</div></div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* List */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px' }}>
@@ -308,8 +450,19 @@ export default function LedgerPage() {
               Add your first entry
             </button>
           </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <p style={{ fontSize: 32, marginBottom: 12 }}>🔍</p>
+            <p className="font-serif" style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 8 }}>No entries match your filters.</p>
+            <button
+              onClick={() => { setSearch(''); setTypeFilter('all'); setCategoryFilter([]); setMonthFilter(currentMonth) }}
+              style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+            >
+              Clear filters
+            </button>
+          </div>
         ) : (
-          transactions.map((tx) => (
+          filtered.map((tx) => (
             <div
               key={tx.id}
               style={{
@@ -361,21 +514,12 @@ export default function LedgerPage() {
               <button
                 onClick={() => { setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
                 title={tx.receipt_url ? 'Replace receipt' : 'Scan receipt'}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  color: tx.receipt_url ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: rowOcrLoading === tx.id ? 0.4 : 1,
-                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: tx.receipt_url ? 'var(--color-primary)' : 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
               >
-                {rowOcrLoading === tx.id
-                  ? <RefreshCw size={14} className="animate-spin" />
-                  : <Camera size={14} />}
+                {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
+                {tx.type === 'expense' && !tx.receipt_url && (
+                  <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
+                )}
               </button>
 
               {/* personal toggle */}
@@ -412,30 +556,17 @@ export default function LedgerPage() {
 
       {/* Floating + button */}
       {!sheetOpen && (
-        <button
-          onClick={openSheet}
-          style={{
-            position: 'fixed',
-            bottom: 80,
-            right: 20,
-            width: 56,
-            height: 56,
-            borderRadius: '50%',
-            background: 'var(--color-primary)',
-            color: 'var(--color-primary-foreground)',
-            border: 'none',
-            fontSize: 28,
-            fontWeight: 300,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
-            zIndex: 40,
-          }}
-        >
-          +
-        </button>
+        <div style={{ position: 'fixed', bottom: 80, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, zIndex: 40 }}>
+          <button
+            onClick={openSheet}
+            style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 28, fontWeight: 300, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.22)' }}
+          >
+            +
+          </button>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-primary-dark)', fontFamily: 'var(--font-sans)', letterSpacing: '0.03em' }}>
+            Add Entry
+          </span>
+        </div>
       )}
 
       {/* Sheet backdrop */}
