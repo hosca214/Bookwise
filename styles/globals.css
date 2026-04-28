@@ -63,6 +63,7 @@
   --color-profit: #C4816A;
   --color-tax: #E8C4B8;
   --color-ops: #9A5A48;
+  --color-pay: #B07090;
 }
 
 /* Ocean Mist */
@@ -82,6 +83,7 @@
   --color-profit: #4A8FA8;
   --color-tax: #A8C8D8;
   --color-ops: #2E6E88;
+  --color-pay: #7090B8;
 }
 
 /* Golden Hour */
@@ -101,6 +103,7 @@
   --color-profit: #C4943A;
   --color-tax: #E8D090;
   --color-ops: #9A6820;
+  --color-pay: #A08850;
 }
 
 *,
