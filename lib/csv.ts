@@ -25,12 +25,32 @@ export function downloadCSV(filename: string, csv: string) {
   URL.revokeObjectURL(url)
 }
 
+const r2 = (n: number) => Math.round(n * 100) / 100
+const fmt = (n: number) => `$${n.toFixed(2)}`
+
 export function generateCPAExport(
   transactions: Transaction[],
   practiceName: string,
   dateRange: string
 ): string {
   const businessTxns = transactions.filter((t) => !t.is_personal)
+  const incomeTxns = businessTxns.filter((t) => t.type === 'income')
+  const expenseTxns = businessTxns.filter((t) => t.type === 'expense')
+
+  const groupByCategory = (txns: Transaction[]) =>
+    txns.reduce<Record<string, number>>((acc, t) => {
+      acc[t.category_key] = r2((acc[t.category_key] ?? 0) + Math.abs(t.amount))
+      return acc
+    }, {})
+
+  const incomeByCategory = groupByCategory(incomeTxns)
+  const expensesByCategory = groupByCategory(expenseTxns)
+  const grossIncome = r2(Object.values(incomeByCategory).reduce((a, b) => a + b, 0))
+  const totalExpenses = r2(Object.values(expensesByCategory).reduce((a, b) => a + b, 0))
+  const netProfit = r2(grossIncome - totalExpenses)
+  const taxEstimate = r2(netProfit * TAX_SET_ASIDE_RATE)
+  const taxPct = `${Math.round(TAX_SET_ASIDE_RATE * 100)}%`
+  const mileageRate = `$${MILEAGE_RATE_USD_PER_MILE.toFixed(2)}`
 
   const header = [
     `Bookwise Export - ${practiceName} - ${dateRange}`,
@@ -38,7 +58,25 @@ export function generateCPAExport(
     '',
   ].join('\n')
 
-  const rows: (string | number)[][] = [
+  const plSummary: (string | number)[][] = [
+    ['PROFIT AND LOSS SUMMARY', '', ''],
+    ['', '', ''],
+    ['INCOME', '', ''],
+    ...Object.entries(incomeByCategory).map(([cat, amt]) => [`  ${cat}`, fmt(amt), '']),
+    ['Gross Income', fmt(grossIncome), ''],
+    ['', '', ''],
+    ['EXPENSES', '', ''],
+    ...Object.entries(expensesByCategory).map(([cat, amt]) => [`  ${cat}`, fmt(amt), '']),
+    ['Total Expenses', fmt(totalExpenses), ''],
+    ['', '', ''],
+    ['Net Profit', fmt(netProfit), ''],
+    ['Tax Reserve', fmt(taxEstimate), `${taxPct} of net profit. Recommended safety rate. Confirm with your CPA.`],
+    ['', '', ''],
+    ['', '', ''],
+  ]
+
+  const transactionDetail: (string | number)[][] = [
+    ['TRANSACTION DETAIL', '', '', '', '', '', '', ''],
     ['Date', 'Description', 'Category', 'Schedule C Category', 'Schedule C Line', 'Amount', 'Type', 'Receipt URL'],
     ...businessTxns
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -57,23 +95,17 @@ export function generateCPAExport(
       }),
   ]
 
-  const taxPct = `${Math.round(TAX_SET_ASIDE_RATE * 100)}%`
-  const mileageRate = `$${MILEAGE_RATE_USD_PER_MILE.toFixed(2)}`
-
-  const methodology = [
-    '',
-    '',
-    'CALCULATION METHODOLOGY',
-    '',
+  const methodology: (string | number)[][] = [
+    ['', '', ''],
+    ['', '', ''],
+    ['CALCULATION METHODOLOGY', '', ''],
     ['Item', 'Formula', 'Notes'],
     ['Net Profit', 'Gross Income minus Business Expenses', 'Personal transactions excluded from all calculations'],
-    ['Tax Reserve', `Net Profit x ${taxPct}`, `Recommended safety rate covering federal income tax and self-employment tax. Confirm with your CPA.`],
-    ['Gross Income', 'Sum of all income transactions marked as business', 'Excludes personal income entries'],
-    ['Business Expenses', 'Sum of all expense transactions marked as business', 'Excludes personal expense entries'],
+    ['Tax Reserve', `Net Profit x ${taxPct}`, 'Recommended safety rate covering federal income tax and self-employment tax. Confirm with your CPA.'],
     ['Mileage Deduction', `Miles x ${mileageRate} per mile`, 'IRS standard mileage rate (2024). Subject to annual IRS adjustment.'],
     ['Schedule C Lines', 'Assigned per category key', 'See Schedule C column above. Always review with a licensed CPA before filing.'],
-  ].map((r) => (Array.isArray(r) ? toCSV([r]) : r)).join('\n')
+  ]
 
-  return header + toCSV(rows) + methodology
+  return header + toCSV([...plSummary, ...transactionDetail, ...methodology])
 }
 
