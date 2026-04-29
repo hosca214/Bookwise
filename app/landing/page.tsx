@@ -73,7 +73,7 @@ function RotatingWord({ dark = false }: { dark?: boolean }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        style={{ display: 'inline-block', color: dark ? SAGE : SAGE, fontStyle: 'italic' }}
+        style={{ display: 'inline-block', color: dark ? SAGE : SAGE, fontStyle: 'italic', fontSize: '1.4em' }}
       >
         {PROFS[idx]}
       </motion.span>
