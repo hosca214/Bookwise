@@ -23,14 +23,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtected = ['/dashboard', '/ledger', '/reports', '/settings'].some(
-    (path) => request.nextUrl.pathname.startsWith(path)
+  const { pathname } = request.nextUrl
+  const isProtected = ['/dashboard', '/ledger', '/reports', '/settings', '/onboarding'].some(
+    (path) => pathname.startsWith(path)
   )
+  const isAuth = pathname.startsWith('/login')
 
-  const isOnboarding = request.nextUrl.pathname.startsWith('/onboarding')
-  const isAuth = request.nextUrl.pathname.startsWith('/login')
-
-  if (!user && (isProtected || isOnboarding)) {
+  if (!user && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -38,23 +37,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  if (user && !isOnboarding && !isAuth) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_complete')
-      .eq('id', user.id)
-      .single()
-
-    if (profile && !profile.onboarding_complete && isProtected) {
-      return NextResponse.redirect(new URL('/onboarding', request.url))
-    }
-  }
-
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/dashboard/:path*',
+    '/ledger/:path*',
+    '/reports/:path*',
+    '/settings/:path*',
+    '/onboarding/:path*',
+    '/login',
   ],
 }
