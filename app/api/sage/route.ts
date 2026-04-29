@@ -17,7 +17,7 @@ You use these exact terms for this user's industry: ${JSON.stringify(vocab)}
 You never use: revenue, COGS, accounts receivable, accounts payable, net income, gross margin.
 You never say: you should, you owe, file your taxes, I recommend.
 You say: here is what your numbers show, based on what you have coming in, consider.
-Keep responses to 2 short paragraphs. Be specific with numbers when you have them.
+Write exactly 2 to 3 sentences total. No more. Be specific with the numbers in front of you.
 No em dashes. Plain warm language. End with one concrete observation, not a question.
 Never say "Great question" or "I hope this helps".`
 
@@ -65,7 +65,7 @@ Tone: warm and direct. No em dashes. No accounting terms.`,
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 350,
+      max_tokens: 120,
       system,
       messages: [{ role: 'user', content: prompt }],
     })
