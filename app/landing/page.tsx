@@ -362,7 +362,6 @@ export default function LandingPage() {
   const isMobile = useIsMobile()
   const supabase  = createClient()
 
-  const [hasSession,       setHasSession]       = useState(false)
   const [industry,         setIndustry]         = useState<Industry>('bodyworker')
   const [openFaq,          setOpenFaq]          = useState<number | null>(null)
   const [name,             setName]             = useState('')
@@ -374,7 +373,6 @@ export default function LandingPage() {
   const [selectedFeature,  setSelectedFeature]  = useState<number | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session))
   }, [])
 
   useEffect(() => {
@@ -441,16 +439,7 @@ export default function LandingPage() {
       }}>
         <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 21, fontWeight: 700, color: INK, letterSpacing: '-0.02em' }}>Bookwise</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {hasSession ? (
-            <a href="/dashboard" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-              Go to Dash <ArrowRight size={14} />
-            </a>
-          ) : (
-            <>
-              <a href="/login" style={{ ...pill(false), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Sign In</a>
-              <a href="#beta" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>Apply for beta <ArrowRight size={13} /></a>
-            </>
-          )}
+          <a href="/login" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Sign In</a>
         </div>
       </nav>
 

@@ -8,7 +8,7 @@ import { useVibe } from '@/context/VibeContext'
 import { Confetti } from '@/components/ui/Confetti'
 import { BottomNav } from '@/components/ui/BottomNav'
 import toast from 'react-hot-toast'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, SendHorizonal, X } from 'lucide-react'
 import { PulseCalendar } from '@/components/dashboard/PulseCalendar'
 import type { Profile, Bucket } from '@/lib/supabase'
 
@@ -97,6 +97,14 @@ export default function DashboardPage() {
   const [tipIndex, setTipIndex] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  const [monthlyGoal, setMonthlyGoal] = useState(0)
+  const [recentTransactions, setRecentTransactions] = useState<Array<{ date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
+
+  const [showSageChat, setShowSageChat] = useState(false)
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'sage'; text: string }>>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+
   async function loadSage(p: Profile, income: number, expenses: number, b: Bucket | null) {
     setLoadingSage(true)
     setInsight(null)
@@ -136,6 +144,37 @@ export default function DashboardPage() {
     }
   }
 
+  async function askSage(question: string) {
+    if (!profile || !question.trim()) return
+    setChatMessages(prev => [...prev, { role: 'user', text: question }])
+    setChatInput('')
+    setChatLoading(true)
+    try {
+      const res = await fetch('/api/sage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'question',
+          context: {
+            practiceName: profile.practice_name,
+            industry: profile.industry,
+            monthIncome,
+            monthExpenses,
+            recentTransactions,
+            question,
+          },
+        }),
+      })
+      if (!res.ok) throw new Error('Sage unavailable')
+      const data = await res.json()
+      setChatMessages(prev => [...prev, { role: 'sage', text: data.insight ?? 'Sage is thinking. Try again in a moment.' }])
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'sage', text: 'Sage is thinking. Try again in a moment.' }])
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
   useEffect(() => {
     async function loadDashboard() {
       try {
@@ -154,7 +193,7 @@ export default function DashboardPage() {
           { data: existingBucket },
         ] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
-          supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth),
+          supabase.from('transactions').select('amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', currentMonth).lte('date', today),
           supabase.from('buckets').select('month').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
@@ -167,6 +206,7 @@ export default function DashboardPage() {
         setProfile(profileData)
         if (profileData.industry) setIndustry(profileData.industry)
         setVibe(profileData.vibe ?? 'sage')
+        setMonthlyGoal(Number(profileData.monthly_income_goal) || 0)
 
         let income = 0
         let expenses = 0
@@ -176,6 +216,49 @@ export default function DashboardPage() {
         })
         setMonthIncome(income)
         setMonthExpenses(expenses)
+        setRecentTransactions((txns ?? []).slice(0, 10).map(tx => ({
+          date: tx.date,
+          amount: Number(tx.amount),
+          type: tx.type,
+          category_key: tx.category_key,
+          notes: tx.notes,
+        })))
+
+        // Auto-insert recurring entries for current month
+        const { data: templates } = await supabase
+          .from('recurring_templates')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+        if (templates && templates.length > 0) {
+          const existingExternalIds = new Set((txns ?? []).map(tx => tx.external_id).filter(Boolean))
+          const yyyyMM = currentMonth.slice(0, 7)
+          const toInsert = templates
+            .filter(tmpl => {
+              const extId = `recurring_${tmpl.id}_${yyyyMM}`
+              return !existingExternalIds.has(extId)
+            })
+            .map(tmpl => ({
+              user_id: user.id,
+              date: `${yyyyMM}-${String(tmpl.day_of_month).padStart(2, '0')}`,
+              amount: tmpl.amount,
+              type: tmpl.type,
+              category_key: tmpl.category_key,
+              notes: tmpl.name,
+              source: 'recurring',
+              external_id: `recurring_${tmpl.id}_${yyyyMM}`,
+              is_personal: false,
+            }))
+          if (toInsert.length > 0) {
+            await supabase.from('transactions').insert(toInsert)
+            toInsert.forEach(tx => {
+              if (tx.type === 'income') income += tx.amount
+              else expenses += tx.amount
+            })
+            setMonthIncome(income)
+            setMonthExpenses(expenses)
+          }
+        }
 
         if (pulseData) {
           setPulseId(pulseData.id)
@@ -483,6 +566,28 @@ export default function DashboardPage() {
           )}
         </section>
 
+        {/* Monthly Income Goal */}
+        {monthlyGoal > 0 && (
+          <section style={{ ...cardStyle, marginBottom: 16 }}>
+            <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
+              Income Goal
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '4px 0 10px' }}>
+              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-primary)', margin: 0, lineHeight: 1 }}>
+                ${monthIncome.toFixed(0)}
+              </p>
+              <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>of ${monthlyGoal.toFixed(0)} goal</span>
+            </div>
+            <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ height: '100%', width: `${Math.min(100, (monthIncome / monthlyGoal) * 100)}%`, background: monthIncome >= monthlyGoal ? 'var(--color-profit)' : 'var(--color-primary)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
+              <span>{Math.round((monthIncome / monthlyGoal) * 100)}% there</span>
+              <span>${Math.max(0, monthlyGoal - monthIncome).toFixed(0)} to go</span>
+            </div>
+          </section>
+        )}
+
         {/* Money Plan Tiles */}
         {monthIncome === 0 ? (
           <div style={{ ...cardStyle, border: '1.5px dashed var(--color-border)', background: 'var(--color-muted)', textAlign: 'center', padding: '24px 20px', marginBottom: 16 }}>
@@ -775,8 +880,25 @@ export default function DashboardPage() {
           )}
         </section>
 
+        {/* Ask Sage */}
+        <button
+          onClick={() => setShowSageChat(true)}
+          style={{
+            width: '100%', minHeight: 48,
+            background: 'var(--color-card)',
+            border: '1.5px solid var(--color-primary)',
+            borderRadius: 12,
+            fontSize: 15, fontWeight: 600,
+            color: 'var(--color-primary)',
+            cursor: 'pointer', marginTop: 12, marginBottom: 24,
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
+          Ask Sage a question
+        </button>
+
         {/* Sage Wisdom */}
-        <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 24, marginBottom: 0 }}>
+        <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 0, marginBottom: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
             Sage Wisdom
           </p>
@@ -886,6 +1008,84 @@ export default function DashboardPage() {
             >
               Skip for now
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sage Chat Drawer */}
+      {showSageChat && (
+        <div
+          role="dialog" aria-modal="true" aria-label="Ask Sage"
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+          onClick={() => setShowSageChat(false)}
+        >
+          <div
+            style={{ background: 'var(--color-card)', borderRadius: '20px 20px 0 0', padding: '0 0 20px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 -4px 40px rgba(0,0,0,0.15)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 12px', borderBottom: '1px solid var(--color-border)' }}>
+              <h3 className="font-serif" style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-ink)', margin: 0 }}>Ask Sage</h3>
+              <button onClick={() => setShowSageChat(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 120 }}>
+              {chatMessages.length === 0 && (
+                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
+                  Ask about your income, expenses, whether to invest in something, or anything on your mind about your practice. Sage uses your actual numbers.
+                </p>
+              )}
+              {chatMessages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '85%', padding: '10px 14px', borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-muted)',
+                    color: msg.role === 'user' ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+                    fontSize: 15, lineHeight: 1.6,
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                  <div style={{ padding: '10px 14px', borderRadius: '16px 16px 16px 4px', background: 'var(--color-muted)' }}>
+                    <div className="skeleton" style={{ width: 120, height: 14, borderRadius: 4 }} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 24px 0', borderTop: '1px solid var(--color-border)', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <textarea
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askSage(chatInput) } }}
+                placeholder="What do you want to know about your practice?"
+                rows={2}
+                style={{
+                  flex: 1, borderRadius: 10, border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-background)', color: 'var(--color-ink)',
+                  fontSize: 15, padding: '10px 12px', fontFamily: 'var(--font-sans)',
+                  resize: 'none', outline: 'none', lineHeight: 1.5,
+                }}
+              />
+              <button
+                onClick={() => askSage(chatInput)}
+                disabled={chatLoading || !chatInput.trim()}
+                style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  background: chatInput.trim() ? 'var(--color-primary)' : 'var(--color-muted)',
+                  border: 'none', cursor: chatInput.trim() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: chatInput.trim() ? 'var(--color-primary-foreground)' : 'var(--color-muted-foreground)',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <SendHorizonal size={18} />
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -9,7 +9,7 @@ import { useVibe, VIBES } from '@/context/VibeContext'
 import { BottomNav } from '@/components/ui/BottomNav'
 import { Plus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { Service } from '@/lib/supabase'
+import type { Service, RecurringTemplate } from '@/lib/supabase'
 
 const supabase = createClient()
 
@@ -93,7 +93,17 @@ export default function SettingsPage() {
   const [payTarget, setPayTarget] = useState('')
   const [transferDay, setTransferDay] = useState('Monday')
   const [essentialCost, setEssentialCost] = useState('')
+  const [monthlyGoal, setMonthlyGoal] = useState('')
   const [savingPay, setSavingPay] = useState(false)
+
+  const [recurringTemplates, setRecurringTemplates] = useState<RecurringTemplate[]>([])
+  const [recurringAddOpen, setRecurringAddOpen] = useState(false)
+  const [recurringName, setRecurringName] = useState('')
+  const [recurringAmount, setRecurringAmount] = useState('')
+  const [recurringType, setRecurringType] = useState<'income' | 'expense'>('income')
+  const [recurringCategory, setRecurringCategory] = useState('Session Income')
+  const [recurringDay, setRecurringDay] = useState(1)
+  const [savingRecurring, setSavingRecurring] = useState(false)
 
   // money plan
   const [profitPct, setProfitPct] = useState(10)
@@ -116,7 +126,7 @@ export default function SettingsPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, monthly_income_goal, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
           supabase.from('transactions').select('service_id').eq('user_id', user.id).not('service_id', 'is', null),
         ])
@@ -131,6 +141,7 @@ export default function SettingsPage() {
         if (profile?.profit_pct != null) setProfitPct(profile.profit_pct)
         if (profile?.tax_pct != null) setTaxPct(profile.tax_pct)
         if (profile?.monthly_essential_cost != null) setEssentialCost(String(profile.monthly_essential_cost))
+        if (profile?.monthly_income_goal != null) setMonthlyGoal(String(profile.monthly_income_goal))
         if (profile?.google_drive_folder_id) setDriveConnected(true)
         if (profile?.plaid_item_id) setPlaidConnected(true)
 
@@ -157,6 +168,14 @@ export default function SettingsPage() {
           return diff !== 0 ? diff : a.name.localeCompare(b.name)
         })
         setServices(sorted)
+
+        const { data: recurringData } = await supabase
+          .from('recurring_templates')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+        setRecurringTemplates(recurringData ?? [])
       } catch {
         toast.error('Could not load settings. Try again.')
       } finally {
@@ -188,6 +207,7 @@ export default function SettingsPage() {
         pay_target: parseFloat(payTarget) || 0,
         transfer_day: transferDay,
         monthly_essential_cost: parseFloat(essentialCost) || 0,
+        monthly_income_goal: parseFloat(monthlyGoal) || 0,
       }).eq('id', userId)
       toast.success('Pay settings saved.')
     } catch {
@@ -220,6 +240,34 @@ export default function SettingsPage() {
       if (next < 0 || opsPct - delta < 0) return
       setTaxPct(next)
     }
+  }
+
+  async function addRecurringTemplate() {
+    if (!userId || !recurringName.trim()) return
+    const amount = parseFloat(recurringAmount)
+    if (isNaN(amount) || amount <= 0) { toast.error('Enter an amount.'); return }
+    setSavingRecurring(true)
+    try {
+      const { data } = await supabase
+        .from('recurring_templates')
+        .insert({ user_id: userId, name: recurringName.trim(), amount, type: recurringType, category_key: recurringCategory, day_of_month: recurringDay })
+        .select().single()
+      if (data) setRecurringTemplates(prev => [...prev, data])
+      setRecurringName('')
+      setRecurringAmount('')
+      setRecurringDay(1)
+      setRecurringAddOpen(false)
+      toast.success('Recurring entry added.')
+    } catch {
+      toast.error('Could not save. Try again.')
+    } finally {
+      setSavingRecurring(false)
+    }
+  }
+
+  async function removeRecurringTemplate(id: string) {
+    setRecurringTemplates(prev => prev.filter(r => r.id !== id))
+    await supabase.from('recurring_templates').update({ is_active: false }).eq('id', id)
   }
 
   async function handleLogout() {
@@ -404,6 +452,26 @@ export default function SettingsPage() {
                   maxLength={6}
                   value={payTarget}
                   onChange={(e) => setPayTarget(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  style={{ width: 120, minHeight: 48, fontSize: 24, fontWeight: 700, textAlign: 'center', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', outline: 'none', fontFamily: 'var(--font-serif)', padding: 0 }}
+                />
+                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>/ month</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={fieldLabel}>Monthly Income Goal</label>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontStyle: 'italic', marginBottom: 8 }}>
+                The total your practice brings in — before you divide it up.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-serif)' }}>$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={monthlyGoal}
+                  onChange={(e) => setMonthlyGoal(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="0"
                   style={{ width: 120, minHeight: 48, fontSize: 24, fontWeight: 700, textAlign: 'center', borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-background)', color: 'var(--color-ink)', outline: 'none', fontFamily: 'var(--font-serif)', padding: 0 }}
                 />
@@ -622,6 +690,133 @@ export default function SettingsPage() {
                 </div>
               )}
             </>
+          )}
+        </section>
+
+        {/* ── Recurring Entries ─────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 40 }}>
+          <SectionHeader>Recurring Entries</SectionHeader>
+          <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 12, lineHeight: 1.6 }}>
+            These entries auto-add to your ledger at the start of each month. Use them for membership income, room rent, software subscriptions, or anything that repeats.
+          </p>
+
+          {recurringTemplates.length > 0 && (
+            <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', marginBottom: 12, overflow: 'hidden' }}>
+              {recurringTemplates.map((r, i) => (
+                <div key={r.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  borderBottom: i < recurringTemplates.length - 1 ? '1px solid var(--color-border)' : 'none',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>{r.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>
+                      {t(r.category_key)} · adds on the {r.day_of_month}{r.day_of_month === 1 ? 'st' : r.day_of_month === 2 ? 'nd' : r.day_of_month === 3 ? 'rd' : 'th'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: r.type === 'income' ? 'var(--color-profit)' : 'var(--color-danger)' }}>
+                      {r.type === 'income' ? '+' : '-'}${r.amount.toFixed(2)}
+                    </span>
+                    <button onClick={() => removeRecurringTemplate(r.id)} aria-label={`Remove ${r.name}`}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!recurringAddOpen ? (
+            <button
+              onClick={() => setRecurringAddOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'none', border: '1.5px dashed var(--color-border)',
+                borderRadius: 10, padding: '12px 16px', width: '100%',
+                cursor: 'pointer', color: 'var(--color-muted-foreground)',
+                fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <Plus size={16} />
+              Add a recurring entry
+            </button>
+          ) : (
+            <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: 16, border: '1.5px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={fieldLabel}>Name</label>
+                  <input type="text" value={recurringName} onChange={e => setRecurringName(e.target.value)}
+                    placeholder="Room rent, membership income..." style={{ ...fieldInput }}
+                  />
+                </div>
+                <div>
+                  <label style={fieldLabel}>Type</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['income', 'expense'] as const).map(entryType => (
+                      <button key={entryType} onClick={() => { setRecurringType(entryType); setRecurringCategory(entryType === 'income' ? 'Session Income' : 'Rent') }}
+                        style={{
+                          flex: 1, minHeight: 44, borderRadius: 8, fontSize: 14, fontWeight: 600,
+                          border: `1.5px solid ${recurringType === entryType ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                          background: recurringType === entryType ? 'var(--color-primary)' : 'transparent',
+                          color: recurringType === entryType ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        {entryType.charAt(0).toUpperCase() + entryType.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={fieldLabel}>Category</label>
+                  <select
+                    value={recurringCategory}
+                    onChange={e => setRecurringCategory(e.target.value)}
+                    style={{ ...fieldInput, cursor: 'pointer', appearance: 'none' as const }}
+                  >
+                    {recurringType === 'income'
+                      ? ['Session Income', 'Package Income', 'Retainer Income', 'Other Income'].map(k => (
+                          <option key={k} value={k}>{k}</option>
+                        ))
+                      : ['Rent', 'Software', 'Insurance', 'Supplies', 'Marketing', 'Professional Services', 'Other Expense'].map(k => (
+                          <option key={k} value={k}>{k}</option>
+                        ))
+                    }
+                  </select>
+                </div>
+                <div>
+                  <label style={fieldLabel}>Amount</label>
+                  <input type="text" inputMode="decimal" value={recurringAmount}
+                    onChange={e => setRecurringAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                    placeholder="0.00" style={fieldInput}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...fieldLabel, marginBottom: 8 }}>Adds on day</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <button type="button" onClick={() => setRecurringDay(d => Math.max(1, d - 1))} style={{ ...stepperBtn, width: 44, height: 44 }}>-</button>
+                    <span style={{ fontSize: 18, fontWeight: 600, minWidth: 60, textAlign: 'center', color: 'var(--color-foreground)' }}>{recurringDay}</span>
+                    <button type="button" onClick={() => setRecurringDay(d => Math.min(28, d + 1))} style={{ ...stepperBtn, width: 44, height: 44 }}>+</button>
+                    <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>of each month</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={() => setRecurringAddOpen(false)}
+                    style={{ flex: 1, minHeight: 48, borderRadius: 10, border: '1.5px solid var(--color-border)', background: 'transparent', color: 'var(--color-foreground)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  >
+                    Cancel
+                  </button>
+                  <button onClick={addRecurringTemplate} disabled={savingRecurring}
+                    style={{ flex: 2, minHeight: 48, borderRadius: 10, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  >
+                    {savingRecurring ? 'Saving...' : 'Add Entry'}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </section>
 
