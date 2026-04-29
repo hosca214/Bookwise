@@ -128,9 +128,10 @@ const FEATURE_SCREENS = [
         <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
         <div style={{ fontSize: 10, color: MUTED }}>Hands and Heart Massage</div>
       </div>
-      <BucketRow label="Tax Set-Aside" amount="$460" pct={73} color={GOLD}    sub="25% of income" />
+      <BucketRow label="Taxes"          amount="$460" pct={73} color={GOLD}    sub="25% of income" />
       <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65% of income" />
       <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10% of income" />
+      <BucketRow label="Owner Pay"     amount="$318" pct={58} color={DANGER}  sub="paid this month" />
       <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
       </div>
@@ -502,7 +503,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.38, duration: 0.6 }}
-              style={{ fontSize: isMobile ? 24 : 27, lineHeight: 1.65, color: MUTED, margin: 0 }}
+              style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.65, color: MUTED, margin: 0 }}
             >
               The financial clarity tool built for wellness <RotatingWord />{'.'}
             </motion.p>
