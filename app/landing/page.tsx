@@ -73,7 +73,7 @@ function RotatingWord({ dark = false }: { dark?: boolean }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        style={{ display: 'inline-block', color: dark ? SAGE : SAGE, fontStyle: 'italic', fontSize: '1.4em' }}
+        style={{ display: 'inline-block', color: dark ? SAGE : SAGE, fontStyle: 'italic' }}
       >
         {PROFS[idx]}
       </motion.span>
@@ -502,7 +502,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.38, duration: 0.6 }}
-              style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.65, color: MUTED, margin: 0 }}
+              style={{ fontSize: isMobile ? 24 : 27, lineHeight: 1.65, color: MUTED, margin: 0 }}
             >
               The financial clarity tool built for wellness <RotatingWord />{'.'}
             </motion.p>
