@@ -23,6 +23,19 @@ export type Profile = {
   pay_target: number
   transfer_day: string
   monthly_essential_cost: number | null
+  monthly_income_goal: number | null
+}
+
+export type RecurringTemplate = {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  type: 'income' | 'expense'
+  category_key: string
+  day_of_month: number
+  is_active: boolean
+  created_at: string
 }
 
 export type Transaction = {
