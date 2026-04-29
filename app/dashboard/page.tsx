@@ -139,126 +139,91 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { router.push('/login'); return }
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+        // Round 1: fetch all independent data in parallel
+        const [
+          { data: profileData },
+          { data: txns },
+          { data: pulseData },
+          { data: monthPulse },
+          { data: winsData },
+        ] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', user.id).single(),
+          supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth),
+          supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
+          supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', currentMonth).lte('date', today),
+          supabase.from('buckets').select('month').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
+        ])
 
-      if (!profileData) { router.push('/login'); return }
-      if (!profileData.onboarding_complete) { router.push('/onboarding'); return }
+        if (!profileData) { router.push('/login'); return }
+        if (!profileData.onboarding_complete) { router.push('/onboarding'); return }
 
-      setProfile(profileData)
-      if (profileData.industry) setIndustry(profileData.industry)
-      setVibe(profileData.vibe ?? 'sage')
+        setProfile(profileData)
+        if (profileData.industry) setIndustry(profileData.industry)
+        setVibe(profileData.vibe ?? 'sage')
 
-      const { data: txns } = await supabase
-        .from('transactions')
-        .select('amount, type')
-        .eq('user_id', user.id)
-        .eq('is_personal', false)
-        .gte('date', currentMonth)
+        let income = 0
+        let expenses = 0
+        txns?.forEach(tx => {
+          if (tx.type === 'income') income += Number(tx.amount)
+          else expenses += Number(tx.amount)
+        })
+        setMonthIncome(income)
+        setMonthExpenses(expenses)
 
-      let income = 0
-      let expenses = 0
-      txns?.forEach(tx => {
-        if (tx.type === 'income') income += Number(tx.amount)
-        else expenses += Number(tx.amount)
-      })
-      setMonthIncome(income)
-      setMonthExpenses(expenses)
-
-      const profitFrac = (profileData.profit_pct ?? 10) / 100
-      const taxFrac = (profileData.tax_pct ?? 25) / 100
-      const opsFrac = 1 - profitFrac - taxFrac
-      const profitTarget = income * profitFrac
-      const taxTarget = income * taxFrac
-      const opsTarget = income * opsFrac
-
-      const { data: existingBucket } = await supabase
-        .from('buckets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month', currentMonth)
-        .maybeSingle()
-
-      let bucketRecord: Bucket | null = existingBucket ?? null
-
-      if (existingBucket) {
-        await supabase
-          .from('buckets')
-          .update({ profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget })
-          .eq('id', existingBucket.id)
-        bucketRecord = { ...existingBucket, profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget }
-      } else {
-        const { data: newBucket } = await supabase
-          .from('buckets')
-          .insert({
-            user_id: user.id,
-            month: currentMonth,
-            profit_target: profitTarget,
-            profit_funded: 0,
-            tax_target: taxTarget,
-            tax_funded: 0,
-            ops_target: opsTarget,
-            ops_funded: 0,
-          })
-          .select()
-          .single()
-        bucketRecord = newBucket
-      }
-      setBucket(bucketRecord)
-
-      const { data: pulseData } = await supabase
-        .from('daily_pulse')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .maybeSingle()
-
-      if (pulseData) {
-        setPulseId(pulseData.id)
-        setSessionsToday(pulseData.sessions_given ?? 0)
-        setHoursToday(Number(pulseData.hours_worked) ?? 0)
-        setMilesToday(Number(pulseData.miles_driven) ?? 0)
-      }
-
-      const { data: monthPulse } = await supabase
-        .from('daily_pulse')
-        .select('date')
-        .eq('user_id', user.id)
-        .gte('date', currentMonth)
-        .lte('date', today)
-      const log: Record<string, boolean> = {}
-      for (const row of monthPulse ?? []) {
-        log[row.date] = true
-      }
-      setPulseLog(log)
-
-      const { data: winsData } = await supabase
-        .from('buckets')
-        .select('month')
-        .eq('user_id', user.id)
-        .gt('pay_funded', 0)
-        .order('month', { ascending: false })
-      if (winsData && winsData.length >= 2) {
-        let streak = 1
-        for (let i = 1; i < winsData.length; i++) {
-          const [ay, am] = winsData[i - 1].month.slice(0, 7).split('-').map(Number)
-          const prev = new Date(ay, am - 1, 1)
-          prev.setMonth(prev.getMonth() - 1)
-          const [by, bm] = winsData[i].month.slice(0, 7).split('-').map(Number)
-          if (prev.getFullYear() === by && prev.getMonth() + 1 === bm) streak++
-          else break
+        if (pulseData) {
+          setPulseId(pulseData.id)
+          setSessionsToday(pulseData.sessions_given ?? 0)
+          setHoursToday(Number(pulseData.hours_worked) ?? 0)
+          setMilesToday(Number(pulseData.miles_driven) ?? 0)
         }
-        if (streak >= 2) setWinStreak(streak)
-      }
 
-      setLoading(false)
-      loadSage(profileData, income, expenses, bucketRecord)
+        const log: Record<string, boolean> = {}
+        for (const row of monthPulse ?? []) log[row.date] = true
+        setPulseLog(log)
+
+        if (winsData && winsData.length >= 2) {
+          let streak = 1
+          for (let i = 1; i < winsData.length; i++) {
+            const [ay, am] = winsData[i - 1].month.slice(0, 7).split('-').map(Number)
+            const prev = new Date(ay, am - 1, 1)
+            prev.setMonth(prev.getMonth() - 1)
+            const [by, bm] = winsData[i].month.slice(0, 7).split('-').map(Number)
+            if (prev.getFullYear() === by && prev.getMonth() + 1 === bm) streak++
+            else break
+          }
+          if (streak >= 2) setWinStreak(streak)
+        }
+
+        // Round 2: upsert bucket (needs income + profile data from round 1)
+        const profitFrac = (profileData.profit_pct ?? 10) / 100
+        const taxFrac = (profileData.tax_pct ?? 25) / 100
+        const opsFrac = 1 - profitFrac - taxFrac
+        const profitTarget = income * profitFrac
+        const taxTarget = income * taxFrac
+        const opsTarget = income * opsFrac
+
+        const { data: existingBucket } = await supabase
+          .from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle()
+
+        let bucketRecord: Bucket | null = existingBucket ?? null
+        if (existingBucket) {
+          await supabase.from('buckets')
+            .update({ profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget })
+            .eq('id', existingBucket.id)
+          bucketRecord = { ...existingBucket, profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget }
+        } else {
+          const { data: newBucket } = await supabase.from('buckets')
+            .insert({ user_id: user.id, month: currentMonth, profit_target: profitTarget, profit_funded: 0, tax_target: taxTarget, tax_funded: 0, ops_target: opsTarget, ops_funded: 0 })
+            .select().single()
+          bucketRecord = newBucket
+        }
+        setBucket(bucketRecord)
+
+        setLoading(false)
+        loadSage(profileData, income, expenses, bucketRecord)
       } catch {
         setLoadError(true)
         setLoading(false)
