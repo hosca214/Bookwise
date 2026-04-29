@@ -139,10 +139,12 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { router.push('/login'); return }
+        // getSession reads from local storage — no network call, instant
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) { setLoading(false); router.push('/login'); return }
+        const user = session.user
 
-        // Round 1: fetch all data in parallel — including bucket
+        // Fetch all data in parallel
         const [
           { data: profileData },
           { data: txns },
@@ -159,8 +161,8 @@ export default function DashboardPage() {
           supabase.from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle(),
         ])
 
-        if (!profileData) { router.push('/login'); return }
-        if (!profileData.onboarding_complete) { router.push('/onboarding'); return }
+        if (!profileData) { setLoading(false); router.push('/login'); return }
+        if (!profileData.onboarding_complete) { setLoading(false); router.push('/onboarding'); return }
 
         setProfile(profileData)
         if (profileData.industry) setIndustry(profileData.industry)
