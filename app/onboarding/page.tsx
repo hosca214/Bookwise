@@ -69,7 +69,7 @@ export default function OnboardingPage() {
   const [payTarget, setPayTarget] = useState('')
   const [essentialCost, setEssentialCost] = useState('')
   const [transferDay, setTransferDay] = useState('Monday')
-  const [demoConnected, setDemoConnected] = useState<Record<string, boolean>>({})
+  const [driveConnected, setDriveConnected] = useState(false)
   const [loading, setLoading] = useState(false)
   const [confettiTrigger, setConfettiTrigger] = useState(0)
 
@@ -87,6 +87,38 @@ export default function OnboardingPage() {
   const [minuteRaw, setMinuteRaw] = useState('00')
 
   useEffect(() => { setHourRaw(String(displayH)) }, [displayH])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const connected = params.get('driveConnected') === '1'
+    const errored = params.get('driveError') === '1'
+    if (!connected && !errored) return
+
+    if (connected) setDriveConnected(true)
+    if (errored) toast.error('Could not connect Google Drive. Please try again.')
+
+    try {
+      const saved = sessionStorage.getItem('onboarding_draft')
+      if (saved) {
+        const d = JSON.parse(saved)
+        sessionStorage.removeItem('onboarding_draft')
+        if (d.practiceName) setPracticeName(d.practiceName)
+        if (d.hasBizAccount !== undefined) setHasBizAccount(d.hasBizAccount)
+        if (d.industryLocal) { setIndustryLocal(d.industryLocal); setIndustry(d.industryLocal) }
+        if (d.vibeLocal) { setVibeLocal(d.vibeLocal); setVibe(d.vibeLocal) }
+        if (d.profitPct != null) setProfitPct(d.profitPct)
+        if (d.taxPct != null) setTaxPct(d.taxPct)
+        if (d.hour != null) setHour(d.hour)
+        if (d.minute != null) setMinute(d.minute)
+        if (d.payTarget) setPayTarget(d.payTarget)
+        if (d.essentialCost) setEssentialCost(d.essentialCost)
+        if (d.transferDay) setTransferDay(d.transferDay)
+      }
+    } catch {}
+
+    setStep(6)
+    window.history.replaceState({}, '', '/onboarding')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function next() { setDir(1); setStep(s => s + 1) }
   function back() { setDir(-1); setStep(s => Math.max(1, s - 1)) }
@@ -135,7 +167,6 @@ export default function OnboardingPage() {
         industry: industryLocal,
         vibe: vibeLocal,
         daily_pulse_time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
-        google_drive_folder_id: 'demo',
         profit_pct: profitPct,
         tax_pct: taxPct,
         pay_target: payTargetNum,
@@ -437,10 +468,9 @@ export default function OnboardingPage() {
 
       // ── Step 6: Integrations ──────────────────────────────────────────────
       case 6: {
-        const apps = [
+        const demoApps = [
           { id: 'Stripe', desc: 'Income from client payments' },
           { id: 'Plaid', desc: 'Your business bank account' },
-          { id: 'Google Drive', desc: 'Receipt storage' },
         ]
         return (
           <div>
@@ -456,41 +486,66 @@ export default function OnboardingPage() {
               marginBottom: 24,
               lineHeight: 1.5,
             }}>
-              Running on demo data. Connect live accounts in Settings.
+              Stripe and Plaid connections are coming soon. Connect Google Drive now to store receipts.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
-              {apps.map(({ id, desc }) => (
+              {demoApps.map(({ id, desc }) => (
                 <div key={id} style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '16px 20px',
                   borderRadius: 10,
-                  border: `1.5px solid ${demoConnected[id] ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  border: '1.5px solid var(--color-border)',
                   background: 'var(--color-card)',
-                  transition: 'border-color 0.2s',
                 }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)' }}>{id}</div>
                     <div style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>{desc}</div>
                   </div>
-                  {demoConnected[id] ? (
-                    <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-primary)' }}>Connected</span>
-                  ) : (
-                    <button
-                      onClick={() => setDemoConnected(prev => ({ ...prev, [id]: true }))}
-                      style={{
-                        padding: '8px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600,
-                        border: '1.5px solid var(--color-primary)',
-                        background: 'transparent', color: 'var(--color-primary)', cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                      }}
-                    >
-                      Connect
-                    </button>
-                  )}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>Coming soon</span>
                 </div>
               ))}
+
+              {/* Google Drive — real OAuth */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderRadius: 10,
+                border: `1.5px solid ${driveConnected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                background: 'var(--color-card)',
+                transition: 'border-color 0.2s',
+              }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-ink)' }}>Google Drive</div>
+                  <div style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>Receipt storage</div>
+                </div>
+                {driveConnected ? (
+                  <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-primary)' }}>Connected</span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem('onboarding_draft', JSON.stringify({
+                          practiceName, hasBizAccount, industryLocal, vibeLocal,
+                          profitPct, taxPct, hour, minute, payTarget, essentialCost, transferDay,
+                        }))
+                      } catch {}
+                      window.location.href = '/api/auth/google-drive?from=onboarding'
+                    }}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, fontSize: 14, fontWeight: 600,
+                      border: '1.5px solid var(--color-primary)',
+                      background: 'transparent', color: 'var(--color-primary)', cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    Connect
+                  </button>
+                )}
+              </div>
             </div>
             <button onClick={next} style={primaryBtn}>Continue</button>
           </div>

@@ -79,6 +79,8 @@ export default function SettingsPage() {
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({})
   const [loadingServices, setLoadingServices] = useState(true)
 
+  const [driveConnected, setDriveConnected] = useState(false)
+
   // vibe
   const [stagedVibe, setStagedVibe] = useState(vibe)
   const [savingVibe, setSavingVibe] = useState(false)
@@ -110,7 +112,7 @@ export default function SettingsPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, google_drive_folder_id').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
           supabase.from('transactions').select('service_id').eq('user_id', user.id).not('service_id', 'is', null),
         ])
@@ -125,6 +127,19 @@ export default function SettingsPage() {
         if (profile?.profit_pct != null) setProfitPct(profile.profit_pct)
         if (profile?.tax_pct != null) setTaxPct(profile.tax_pct)
         if (profile?.monthly_essential_cost != null) setEssentialCost(String(profile.monthly_essential_cost))
+        if (profile?.google_drive_folder_id) setDriveConnected(true)
+
+        // Check if returning from Google Drive OAuth
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('driveConnected') === '1') {
+          setDriveConnected(true)
+          toast.success('Google Drive connected.')
+          window.history.replaceState({}, '', '/settings')
+        }
+        if (params.get('driveError') === '1') {
+          toast.error('Could not connect Google Drive. Please try again.')
+          window.history.replaceState({}, '', '/settings')
+        }
 
         const counts: Record<string, number> = {}
         for (const row of bookings ?? []) {
@@ -567,20 +582,44 @@ export default function SettingsPage() {
         <section style={{ marginBottom: 40 }}>
           <SectionHeader>Connected Apps</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-            {(['Stripe', 'Plaid', 'Google Drive'] as const).map((app, i) => (
-              <div key={app} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: i < 2 ? '1px solid var(--color-border)' : 'none' }}>
+            {(['Stripe', 'Plaid'] as const).map((app, i) => (
+              <div key={app} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)' }}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>{app}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Demo mode</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Coming soon</div>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
-                  Connected
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>
+                  —
                 </span>
               </div>
             ))}
+            {/* Google Drive — real OAuth */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>Google Drive</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Receipt storage</div>
+              </div>
+              {driveConnected ? (
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
+                  Connected
+                </span>
+              ) : (
+                <button
+                  onClick={() => { window.location.href = '/api/auth/google-drive?from=settings' }}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    border: '1.5px solid var(--color-primary)',
+                    background: 'transparent', color: 'var(--color-primary)', cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Connect
+                </button>
+              )}
+            </div>
           </div>
           <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 8, lineHeight: 1.5 }}>
-            Your transactions and numbers are real and saved. Live connections to Stripe, Plaid, and Google Drive are coming.
+            Connecting Google Drive creates a Bookwise Receipts folder for storing your receipts.
           </p>
         </section>
 
