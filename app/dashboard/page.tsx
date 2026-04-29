@@ -142,19 +142,21 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { router.push('/login'); return }
 
-        // Round 1: fetch all independent data in parallel
+        // Round 1: fetch all data in parallel — including bucket
         const [
           { data: profileData },
           { data: txns },
           { data: pulseData },
           { data: monthPulse },
           { data: winsData },
+          { data: existingBucket },
         ] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', currentMonth).lte('date', today),
           supabase.from('buckets').select('month').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
+          supabase.from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle(),
         ])
 
         if (!profileData) { router.push('/login'); return }
@@ -197,7 +199,6 @@ export default function DashboardPage() {
           if (streak >= 2) setWinStreak(streak)
         }
 
-        // Round 2: upsert bucket (needs income + profile data from round 1)
         const profitFrac = (profileData.profit_pct ?? 10) / 100
         const taxFrac = (profileData.tax_pct ?? 25) / 100
         const opsFrac = 1 - profitFrac - taxFrac
@@ -205,24 +206,26 @@ export default function DashboardPage() {
         const taxTarget = income * taxFrac
         const opsTarget = income * opsFrac
 
-        const { data: existingBucket } = await supabase
-          .from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle()
+        // Show the page immediately with existing bucket data
+        const bucketRecord: Bucket | null = existingBucket
+          ? { ...existingBucket, profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget }
+          : null
+        setBucket(bucketRecord)
+        setLoading(false)
 
-        let bucketRecord: Bucket | null = existingBucket ?? null
+        // Upsert bucket in background — does not block render
         if (existingBucket) {
-          await supabase.from('buckets')
+          supabase.from('buckets')
             .update({ profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget })
             .eq('id', existingBucket.id)
-          bucketRecord = { ...existingBucket, profit_target: profitTarget, tax_target: taxTarget, ops_target: opsTarget }
+            .then(() => {})
         } else {
-          const { data: newBucket } = await supabase.from('buckets')
+          supabase.from('buckets')
             .insert({ user_id: user.id, month: currentMonth, profit_target: profitTarget, profit_funded: 0, tax_target: taxTarget, tax_funded: 0, ops_target: opsTarget, ops_funded: 0 })
             .select().single()
-          bucketRecord = newBucket
+            .then(({ data }) => { if (data) setBucket(data) })
         }
-        setBucket(bucketRecord)
 
-        setLoading(false)
         loadSage(profileData, income, expenses, bucketRecord)
       } catch {
         setLoadError(true)
