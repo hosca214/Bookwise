@@ -82,9 +82,14 @@ function LoginPageInner() {
           toast.success('Check your email to confirm your account.')
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push('/dashboard')
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_complete')
+          .eq('id', data.user.id)
+          .maybeSingle()
+        router.push(profile?.onboarding_complete ? '/dashboard' : '/onboarding')
         router.refresh()
       }
     } catch (err: unknown) {
