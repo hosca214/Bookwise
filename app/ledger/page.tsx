@@ -239,6 +239,16 @@ export default function LedgerPage() {
     await supabase.from('transactions').update({ is_personal: next }).eq('id', tx.id)
   }
 
+  async function uploadToDrive(file: File) {
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      await fetch('/api/drive/upload', { method: 'POST', body: fd })
+    } catch {
+      // Drive upload failure is non-blocking — receipt is already in Supabase
+    }
+  }
+
   async function handleReceiptCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !userId) return
@@ -255,12 +265,16 @@ export default function LedgerPage() {
       const url = urlData.publicUrl
       setReceiptUrl(url)
 
-      const res = await fetch('/api/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: url }),
-      })
-      const ocr = await res.json()
+      const [ocrRes] = await Promise.all([
+        fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: url }),
+        }),
+        uploadToDrive(file),
+      ])
+
+      const ocr = await ocrRes.json()
       if (ocr.amount && ocr.amount > 0) setTxAmount(String(ocr.amount))
       if (ocr.date && /^\d{4}-\d{2}-\d{2}$/.test(ocr.date)) setTxDate(ocr.date)
       if (ocr.vendor) setTxNotes(ocr.vendor)
@@ -289,15 +303,19 @@ export default function LedgerPage() {
       const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
       const url = urlData.publicUrl
 
-      await supabase.from('transactions').update({ receipt_url: url }).eq('id', txId)
+      const [ocrRes] = await Promise.all([
+        fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: url }),
+        }),
+        supabase.from('transactions').update({ receipt_url: url }).eq('id', txId),
+        uploadToDrive(file),
+      ])
+
       setTransactions(prev => prev.map(t => t.id === txId ? { ...t, receipt_url: url } : t))
 
-      const res = await fetch('/api/ocr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: url }),
-      })
-      const ocr = await res.json()
+      const ocr = await ocrRes.json()
       if (ocr.vendor && !tx.notes) {
         await supabase.from('transactions').update({ notes: ocr.vendor }).eq('id', txId)
         setTransactions(prev => prev.map(t => t.id === txId ? { ...t, notes: ocr.vendor } : t))

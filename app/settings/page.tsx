@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { usePlaidLink } from 'react-plaid-link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -80,6 +81,9 @@ export default function SettingsPage() {
   const [loadingServices, setLoadingServices] = useState(true)
 
   const [driveConnected, setDriveConnected] = useState(false)
+  const [plaidConnected, setPlaidConnected] = useState(false)
+  const [plaidLinking, setPlaidLinking] = useState(false)
+  const [plaidLinkToken, setPlaidLinkToken] = useState<string | null>(null)
 
   // vibe
   const [stagedVibe, setStagedVibe] = useState(vibe)
@@ -112,7 +116,7 @@ export default function SettingsPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, google_drive_folder_id').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
           supabase.from('transactions').select('service_id').eq('user_id', user.id).not('service_id', 'is', null),
         ])
@@ -128,6 +132,7 @@ export default function SettingsPage() {
         if (profile?.tax_pct != null) setTaxPct(profile.tax_pct)
         if (profile?.monthly_essential_cost != null) setEssentialCost(String(profile.monthly_essential_cost))
         if (profile?.google_drive_folder_id) setDriveConnected(true)
+        if (profile?.plaid_item_id) setPlaidConnected(true)
 
         // Check if returning from Google Drive OAuth
         const params = new URLSearchParams(window.location.search)
@@ -257,10 +262,52 @@ export default function SettingsPage() {
     }
   }
 
+  async function fetchPlaidLinkToken() {
+    setPlaidLinking(true)
+    try {
+      const res = await fetch('/api/plaid/link-token', { method: 'POST' })
+      const { link_token, error } = await res.json()
+      if (error || !link_token) throw new Error(error)
+      setPlaidLinkToken(link_token)
+    } catch {
+      toast.error('Could not connect your bank account. Try again.')
+      setPlaidLinking(false)
+    }
+  }
+
   async function removeService(id: string) {
     setServices((prev) => prev.filter((s) => s.id !== id))
     await supabase.from('services').update({ is_active: false }).eq('id', id)
   }
+
+  const onPlaidSuccess = useCallback(async (publicToken: string) => {
+    try {
+      const res = await fetch('/api/plaid/exchange-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public_token: publicToken }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setPlaidConnected(true)
+      toast.success('Bank account connected.')
+    } catch {
+      toast.error('Could not connect your bank account. Try again.')
+    } finally {
+      setPlaidLinking(false)
+      setPlaidLinkToken(null)
+    }
+  }, [])
+
+  const { open: openPlaidLink, ready: plaidReady } = usePlaidLink({
+    token: plaidLinkToken ?? '',
+    onSuccess: onPlaidSuccess,
+    onExit: () => { setPlaidLinking(false); setPlaidLinkToken(null) },
+  })
+
+  useEffect(() => {
+    if (plaidLinkToken && plaidReady) openPlaidLink()
+  }, [plaidLinkToken, plaidReady, openPlaidLink])
 
   const buckets = [
     {
@@ -582,18 +629,53 @@ export default function SettingsPage() {
         <section style={{ marginBottom: 40 }}>
           <SectionHeader>Connected Apps</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-            {(['Stripe', 'Plaid'] as const).map((app, i) => (
-              <div key={app} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)' }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>{app}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Coming soon</div>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>
-                  —
-                </span>
+
+            {/* Plaid */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>Plaid</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Bank account sync</div>
               </div>
-            ))}
-            {/* Google Drive — real OAuth */}
+              {plaidConnected ? (
+                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
+                  Connected
+                </span>
+              ) : (
+                <button
+                  onClick={fetchPlaidLinkToken}
+                  disabled={plaidLinking}
+                  style={{
+                    padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    border: '1.5px solid var(--color-primary)',
+                    background: 'transparent', color: 'var(--color-primary)',
+                    cursor: plaidLinking ? 'not-allowed' : 'pointer', opacity: plaidLinking ? 0.6 : 1,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {plaidLinking ? 'Opening...' : 'Connect'}
+                </button>
+              )}
+            </div>
+
+            {/* Stripe */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>Stripe</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Coming soon</div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>—</span>
+            </div>
+
+            {/* Square */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>Square</div>
+                <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Coming soon</div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)' }}>—</span>
+            </div>
+
+            {/* Google Drive */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)' }}>Google Drive</div>
@@ -617,9 +699,10 @@ export default function SettingsPage() {
                 </button>
               )}
             </div>
+
           </div>
           <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 8, lineHeight: 1.5 }}>
-            Connecting Google Drive creates a Bookwise Receipts folder for storing your receipts.
+            Connecting Google Drive creates a Bookwise Receipts folder for your receipts. Connecting Plaid, Stripe, or Square imports your transactions automatically.
           </p>
         </section>
 

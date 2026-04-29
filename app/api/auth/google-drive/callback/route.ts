@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     })
 
     if (!tokenRes.ok) throw new Error('Token exchange failed')
-    const { access_token } = await tokenRes.json()
+    const { access_token, refresh_token } = await tokenRes.json()
 
     const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
@@ -55,7 +55,11 @@ export async function GET(request: Request) {
 
     await supabase
       .from('profiles')
-      .update({ google_drive_folder_id: folderId })
+      .update({
+        google_drive_folder_id: folderId,
+        google_drive_access_token: access_token,
+        google_drive_refresh_token: refresh_token,
+      })
       .eq('id', user.id)
 
     const dest = state === 'onboarding' ? '/onboarding?driveConnected=1' : '/settings?driveConnected=1'
