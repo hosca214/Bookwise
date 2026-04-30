@@ -499,21 +499,23 @@ export default function LandingPage() {
             </motion.h1>
 
             {/* subheadline */}
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.38, duration: 0.6 }}
-              style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.65, color: MUTED, margin: 0 }}
+              style={{ fontSize: isMobile ? 17 : 18, lineHeight: 2, color: MUTED, margin: 0 }}
             >
-              The financial clarity tool built for wellness <RotatingWord />{'.'}
-            </motion.p>
+              <p style={{ margin: 0 }}>Track every dollar in and out.</p>
+              <p style={{ margin: 0 }}>See exactly what to save for taxes.</p>
+              <p style={{ margin: 0 }}>Know what to pay yourself this month.</p>
+            </motion.div>
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.44, duration: 0.6 }}
-              style={{ fontSize: isMobile ? 17 : 19, lineHeight: 1.65, color: MUTED, margin: '0 0 0' }}
+              style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.5, color: INK, fontWeight: 600, margin: '8px 0 0' }}
             >
-              No spreadsheets. No jargon. No anxiety.
+              Your money finally makes sense. Clear numbers, calm mind.
             </motion.p>
 
             {/* CTAs */}
