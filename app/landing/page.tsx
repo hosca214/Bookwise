@@ -485,17 +485,17 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 46 : 68, fontWeight: 700, lineHeight: 1.06, letterSpacing: '-0.03em', color: INK, margin: '0 0 10px' }}
+              style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 38 : 52, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em', color: INK, margin: '0 0 10px' }}
             >
-              Keep more of
+              Always know where your money goes.
             </motion.h1>
             <motion.h1
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.28, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 46 : 68, fontWeight: 700, lineHeight: 1.06, letterSpacing: '-0.03em', color: INK, margin: '0 0 32px' }}
+              style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 38 : 52, fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.02em', color: INK, margin: '0 0 32px' }}
             >
-              what you earn.
+              Never get surprised by your tax bill.
             </motion.h1>
 
             {/* subheadline */}
