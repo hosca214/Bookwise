@@ -854,7 +854,7 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <a href="#beta" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, height: 50, borderRadius: 12, background: SEC, color: INK, fontSize: 15, fontWeight: 700, textDecoration: 'none', border: `1.5px solid ${BORDER}` }}>
-                  Start free trial
+                  Apply for beta
                 </a>
               </div>
             </FadeIn>
