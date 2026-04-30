@@ -21,17 +21,17 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: 'Bookwise',
-  description: 'AI-powered bookkeeping for wellness professionals',
+  description: 'Always know where your money goes. Never get surprised by your tax bill. Financial clarity for coaches, trainers, and bodyworkers.',
   manifest: '/manifest.json',
   openGraph: {
-    title: 'Bookwise',
-    description: 'AI-powered bookkeeping for wellness professionals',
+    title: 'Bookwise — Financial clarity for wellness practitioners',
+    description: 'Track every dollar. See what to save for taxes. Know what to pay yourself. Built for coaches, trainers, and bodyworkers.',
     type: 'website',
   },
   twitter: {
-    card: 'summary',
-    title: 'Bookwise',
-    description: 'AI-powered bookkeeping for wellness professionals',
+    card: 'summary_large_image',
+    title: 'Bookwise — Financial clarity for wellness practitioners',
+    description: 'Track every dollar. See what to save for taxes. Know what to pay yourself.',
   },
 }
 
