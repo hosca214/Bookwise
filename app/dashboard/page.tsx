@@ -167,9 +167,9 @@ export default function DashboardPage() {
       })
       if (!res.ok) throw new Error('Sage unavailable')
       const data = await res.json()
-      setChatMessages(prev => [...prev, { role: 'sage', text: data.insight ?? 'Sage is thinking. Try again in a moment.' }])
+      setChatMessages(prev => [...prev, { role: 'sage', text: data.insight ?? 'Sage AI is thinking. Try again in a moment.' }])
     } catch {
-      setChatMessages(prev => [...prev, { role: 'sage', text: 'Sage is thinking. Try again in a moment.' }])
+      setChatMessages(prev => [...prev, { role: 'sage', text: 'Sage AI is thinking. Try again in a moment.' }])
     } finally {
       setChatLoading(false)
     }
@@ -592,7 +592,7 @@ export default function DashboardPage() {
         {monthIncome === 0 ? (
           <div style={{ ...cardStyle, border: '1.5px dashed var(--color-border)', background: 'var(--color-muted)', textAlign: 'center', padding: '24px 20px', marginBottom: 16 }}>
             <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.6 }}>
-              Add income in your Ledger to see your money plan. Your Growth Fund, Tax Set-Aside, and Operations will appear here.{' '}
+              Add income in your Ledger to see your money plan. Your Growth Fund, Taxes Set Aside, and Operations will appear here.{' '}
               <a href="/ledger" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Add your first entry</a>
             </p>
           </div>
@@ -704,7 +704,7 @@ export default function DashboardPage() {
           </div>
           {showEssentialsInfo && (
             <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 12, lineHeight: 1.6, borderLeft: '3px solid var(--color-border)', paddingLeft: 12 }}>
-              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your Growth Fund and Tax Set-Aside.
+              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your Growth Fund and Taxes Set Aside.
             </p>
           )}
           {essentialBase === 0 ? (
@@ -843,7 +843,7 @@ export default function DashboardPage() {
         <section style={{ ...cardStyle, padding: '24px', marginBottom: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
-              Sage says...
+              Sage AI says...
             </p>
             <button
               onClick={() => profile && loadSage(profile, monthIncome, monthExpenses, bucket)}
@@ -875,12 +875,12 @@ export default function DashboardPage() {
             </p>
           ) : (
             <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
-              Sage is thinking. Try again in a moment.
+              Sage AI is thinking. Try again in a moment.
             </p>
           )}
         </section>
 
-        {/* Ask Sage */}
+        {/* Ask Sage AI */}
         <button
           onClick={() => setShowSageChat(true)}
           style={{
@@ -894,13 +894,13 @@ export default function DashboardPage() {
             fontFamily: 'var(--font-sans)',
           }}
         >
-          Ask Sage a question
+          Ask Sage AI a question
         </button>
 
         {/* Sage Wisdom */}
         <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 0, marginBottom: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
-            Sage Wisdom
+            Sage AI Wisdom
           </p>
           <p className="font-serif" style={{
             fontSize: 22, fontWeight: 600, color: 'var(--color-ink)',
@@ -1015,7 +1015,7 @@ export default function DashboardPage() {
       {/* Sage Chat Drawer */}
       {showSageChat && (
         <div
-          role="dialog" aria-modal="true" aria-label="Ask Sage"
+          role="dialog" aria-modal="true" aria-label="Ask Sage AI"
           style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
           onClick={() => setShowSageChat(false)}
         >
@@ -1024,7 +1024,7 @@ export default function DashboardPage() {
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 12px', borderBottom: '1px solid var(--color-border)' }}>
-              <h3 className="font-serif" style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-ink)', margin: 0 }}>Ask Sage</h3>
+              <h3 className="font-serif" style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-ink)', margin: 0 }}>Ask Sage AI</h3>
               <button onClick={() => setShowSageChat(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}>
                 <X size={20} />
               </button>
@@ -1033,7 +1033,7 @@ export default function DashboardPage() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 120 }}>
               {chatMessages.length === 0 && (
                 <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
-                  Ask about your income, expenses, whether to invest in something, or anything on your mind about your practice. Sage uses your actual numbers.
+                  Ask about your income, expenses, whether to invest in something, or anything on your mind about your practice. Sage AI uses your actual numbers.
                 </p>
               )}
               {chatMessages.map((msg, i) => (

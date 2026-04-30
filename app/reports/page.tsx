@@ -485,13 +485,13 @@ export default function ReportsPage() {
             {yearIncome.filter((m) => m.income > 0).length < 3 ? (
               <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
                 <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.6 }}>
-                  Once you have a few months in, Sage will start spotting patterns in your income. Keep logging.
+                  Once you have a few months in, Sage AI will start spotting patterns in your income. Keep logging.
                 </p>
               </div>
             ) : (
               <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
                 <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', marginBottom: 8 }}>
-                  Sage sees a pattern
+                  Sage AI sees a pattern
                 </p>
                 {seasonLoading ? (
                   <>
@@ -505,7 +505,7 @@ export default function ReportsPage() {
                   </p>
                 ) : (
                   <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
-                    Sage is thinking. Try again in a moment.
+                    Sage AI is thinking. Try again in a moment.
                   </p>
                 )}
               </div>

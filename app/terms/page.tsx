@@ -15,7 +15,7 @@ export default function TermsPage() {
       <p style={{ fontSize: 16, marginBottom: 16 }}>You are responsible for the accuracy of the information you enter. Bookwise organizes your data. You remain responsible for reviewing it with a licensed professional before making financial or tax decisions.</p>
 
       <h2 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: 22, fontWeight: 700, marginBottom: 12, marginTop: 40 }}>Sage AI Insights</h2>
-      <p style={{ fontSize: 16, marginBottom: 16 }}>Sage is an AI tool that observes patterns in your data and shares what it notices. Sage does not give financial advice, tax advice, or legal advice. Nothing Sage says should be treated as a directive. Always work with a licensed CPA before filing your taxes.</p>
+      <p style={{ fontSize: 16, marginBottom: 16 }}>Sage AI is a tool that observes patterns in your data and shares what it notices. Sage AI does not give financial advice, tax advice, or legal advice. Nothing Sage AI says should be treated as a directive. Always work with a licensed CPA before filing your taxes.</p>
 
       <h2 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: 22, fontWeight: 700, marginBottom: 12, marginTop: 40 }}>Limitation of Liability</h2>
       <p style={{ fontSize: 16, marginBottom: 16 }}>Bookwise is provided as-is. We do not guarantee the accuracy of AI-generated insights or tax calculations. The 25% tax set-aside rate is a commonly used guideline. Your actual tax liability depends on your specific situation and should be confirmed with a licensed CPA.</p>

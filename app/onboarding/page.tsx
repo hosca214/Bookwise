@@ -741,7 +741,7 @@ export default function OnboardingPage() {
             }}>
               <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', lineHeight: 1.7, margin: 0 }}>
                 Bookwise organizes your numbers and shows you patterns.
-                Sage, your AI mentor, shares observations. Nothing here is financial
+                Sage AI, your AI mentor, shares observations. Nothing here is financial
                 or legal advice. Always work with a licensed CPA before filing.
               </p>
             </div>

@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <p style={{ fontSize: 16, marginBottom: 16 }}>We collect information you provide directly, including your name, email address, practice details, and financial transaction data you enter or import. When you connect third-party services like Plaid, Stripe, or Google Drive, we receive data from those services as permitted by your authorization.</p>
 
       <h2 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: 22, fontWeight: 700, marginBottom: 12, marginTop: 40 }}>How We Use Your Information</h2>
-      <p style={{ fontSize: 16, marginBottom: 16 }}>We use your information to provide and improve the Bookwise service, generate AI-powered insights through Sage, and enable you to export your financial data. We do not sell your personal information to third parties.</p>
+      <p style={{ fontSize: 16, marginBottom: 16 }}>We use your information to provide and improve the Bookwise service, generate AI-powered insights through Sage AI, and enable you to export your financial data. We do not sell your personal information to third parties.</p>
 
       <h2 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: 22, fontWeight: 700, marginBottom: 12, marginTop: 40 }}>Data Storage and Security</h2>
       <p style={{ fontSize: 16, marginBottom: 16 }}>Your data is stored securely using Supabase with row-level security. Only you can access your records. We use industry-standard encryption for data in transit and at rest.</p>

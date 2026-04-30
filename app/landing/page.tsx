@@ -147,7 +147,7 @@ const FEATURE_SCREENS = [
 
   <PhoneFrame key="tax">
     <div style={{ padding: '0 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif', marginBottom: 2 }}>Tax Set-Aside</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif', marginBottom: 2 }}>Taxes Set Aside</div>
       <div style={{ background: CARD, borderRadius: 10, padding: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', textAlign: 'center' }}>
         <div style={{ fontSize: 10, color: MUTED, marginBottom: 4 }}>Set aside this month</div>
         <div style={{ fontSize: 28, fontWeight: 700, color: GOLD, fontFamily: '"Lora", Georgia, serif' }}>$847.50</div>
@@ -170,7 +170,7 @@ const FEATURE_SCREENS = [
   <PhoneFrame key="sage">
     <div style={{ padding: '0 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>Sage</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>Sage AI</div>
         <RefreshCw size={13} color={MUTED} />
       </div>
       <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', flex: 1 }}>
@@ -199,7 +199,7 @@ const FEATURE_SCREENS = [
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Tap to scan</span>
       </div>
       <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: SAGE, marginBottom: 6 }}>Sage read your receipt</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: SAGE, marginBottom: 6 }}>Sage AI read your receipt</div>
         {[
           { l: 'Vendor', v: 'Massage Warehouse' },
           { l: 'Date', v: 'Apr 22, 2026' },
@@ -310,10 +310,10 @@ const ACCORDION = [
 ]
 
 const FEATURES = [
-  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Tax Set-Aside, Daily Operations, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
-  { icon: <Shield size={22} />,     title: 'Tax Set-Aside',    body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
-  { icon: <MessageCircle size={22} />, title: 'Sage Insights', body: 'Sage reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
-  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt. Sage reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
+  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Taxes Set Aside, Daily Operations, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
+  { icon: <Shield size={22} />,     title: 'Taxes Set Aside',  body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
+  { icon: <MessageCircle size={22} />, title: 'Sage AI Insights', body: 'Sage AI reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
+  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt. Sage AI reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
   { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder. Your records are always backed up and ready for your CPA.' },
   { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line. Dated, categorized, and noted. Your CPA starts from it instead of starting over.' },
 ]
@@ -328,8 +328,8 @@ const STEPS = [
   {
     n: '02',
     icon: <Sparkles size={24} />,
-    title: 'Sage sorts everything',
-    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
+    title: 'Sage AI sorts everything',
+    body: 'Your income flows into Taxes Set Aside, Daily Ops, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
   },
   {
     n: '03',
@@ -346,14 +346,14 @@ const WHO = [
 ]
 
 const PRACTITIONER_FEATURES = [
-  'Money Buckets dashboard', 'Daily Pulse log', 'Sage daily insights',
+  'Money Buckets dashboard', 'Daily Pulse log', 'Sage AI daily insights',
   'Receipt scanning (30/month)', 'Stripe or Plaid import', 'CPA export (CSV)',
   'Google Drive sync', 'Tax deadline countdown',
 ]
 
 const PRO_FEATURES = [
-  'Everything in Practitioner', 'Ask Sage — direct AI questions',
-  'Monthly Sage Report emailed to you', 'Unlimited receipt scanning',
+  'Everything in Practitioner', 'Ask Sage AI — direct AI questions',
+  'Monthly Sage AI Report emailed to you', 'Unlimited receipt scanning',
   'Multiple bank connections', 'Multiple practice profiles',
   'Priority support', 'Unlimited transaction history',
 ]
@@ -477,7 +477,7 @@ export default function LandingPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: 999, background: 'rgba(44,53,40,0.07)', border: `1px solid rgba(44,53,40,0.12)`, fontSize: 13, fontWeight: 600, color: INK, marginBottom: 28 }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: SAGE, display: 'inline-block' }} />
-              Financial clarity for coaches, trainers, and bodyworkers
+              A financial clarity app for coaches, trainers, and bodyworkers
             </motion.div>
 
             {/* headline */}
@@ -559,7 +559,7 @@ export default function LandingPage() {
                     <div style={{ fontSize: 17, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
                     <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
                   </div>
-                  <BucketRow label="Tax Set-Aside" amount="$460" pct={73} color={GOLD}    sub="25%" />
+                  <BucketRow label="Taxes Set Aside" amount="$460" pct={73} color={GOLD}    sub="25%" />
                   <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65%" />
                   <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10%" />
                   <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
@@ -570,7 +570,7 @@ export default function LandingPage() {
                       <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(124,154,126,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <MessageCircle size={12} color={SAGE} />
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: SAGE }}>Sage insight</span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: SAGE }}>Sage AI insight</span>
                     </div>
                     <p style={{ fontSize: 11, color: INK, lineHeight: 1.55, margin: 0 }}>
                       Income is up 18% from last month. Your overhead stayed flat.
@@ -671,6 +671,32 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
+      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <FadeIn>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
+              Made for practitioners, not accountants.
+            </h2>
+          </FadeIn>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
+            {WHO.map((w, i) => (
+              <FadeIn key={i} delay={i * 0.1}>
+                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 18px' }}>
+                    {w.icon}
+                  </div>
+                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{w.title}</h3>
+                  {w.lines.map((ln, j) => (
+                    <p key={j} style={{ fontSize: 15, color: MUTED, margin: '4px 0', lineHeight: 1.5 }}>{ln}</p>
+                  ))}
+                  <p style={{ fontSize: 14, color: SAGE, margin: '16px 0 0', lineHeight: 1.55, fontWeight: 500 }}>{w.value}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
       <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
@@ -733,33 +759,6 @@ export default function LandingPage() {
                     <p style={{ fontSize: 15, color: MUTED, margin: 0, lineHeight: 1.6 }}>{f.body}</p>
                   </div>
                 </motion.div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <FadeIn>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
-              Made for practitioners, not accountants.
-            </h2>
-          </FadeIn>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
-            {WHO.map((w, i) => (
-              <FadeIn key={i} delay={i * 0.1}>
-                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 18px' }}>
-                    {w.icon}
-                  </div>
-                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{w.title}</h3>
-                  {w.lines.map((ln, j) => (
-                    <p key={j} style={{ fontSize: 15, color: MUTED, margin: '4px 0', lineHeight: 1.5 }}>{ln}</p>
-                  ))}
-                  <p style={{ fontSize: 14, color: SAGE, margin: '16px 0 0', lineHeight: 1.55, fontWeight: 500 }}>{w.value}</p>
-                </div>
               </FadeIn>
             ))}
           </div>
@@ -867,7 +866,7 @@ export default function LandingPage() {
                   <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 48, fontWeight: 700, color: CREAM, lineHeight: 1 }}>$49</span>
                   <span style={{ fontSize: 15, color: 'rgba(245,242,236,0.5)' }}>/month</span>
                 </div>
-                <p style={{ fontSize: 14, color: 'rgba(245,242,236,0.6)', margin: '0 0 28px', lineHeight: 1.55 }}>Ask Sage anything. Get your numbers delivered monthly. Run your whole practice.</p>
+                <p style={{ fontSize: 14, color: 'rgba(245,242,236,0.6)', margin: '0 0 28px', lineHeight: 1.55 }}>Ask Sage AI anything. Get your numbers delivered monthly. Run your whole practice.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                   {PRO_FEATURES.map((f, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -973,7 +972,7 @@ export default function LandingPage() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: MUTED, margin: '0 0 4px', lineHeight: 1.6 }}>A product of The Zen Bookkeeper.</p>
-        <p style={{ fontSize: 12, color: MUTED, margin: '0 0 6px', lineHeight: 1.6 }}>Bookwise organizes your financial data. Sage shares observations, not advice. Always work with a licensed CPA before filing.</p>
+        <p style={{ fontSize: 12, color: MUTED, margin: '0 0 6px', lineHeight: 1.6 }}>Bookwise organizes your financial data. Sage AI shares observations, not advice. Always work with a licensed CPA before filing.</p>
         <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>&copy; {new Date().getFullYear()} Bookwise. All rights reserved.</p>
       </footer>
 

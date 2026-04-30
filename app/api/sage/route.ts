@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
   const vocab = IQ_MAPS[context.industry as Industry] ?? IQ_MAPS.coach
 
-  const system = `You are Sage, a warm and direct financial mentor inside the Bookwise app.
+  const system = `You are Sage AI, a warm and direct financial mentor inside the Bookwise app.
 You speak to solo wellness practitioners who run their own practices.
 You use these exact terms for this user's industry: ${JSON.stringify(vocab)}
 You never use: revenue, COGS, accounts receivable, accounts payable, net income, gross margin.
@@ -25,7 +25,7 @@ Never say "Great question" or "I hope this helps".`
     daily_insight: `Practice: ${context.practiceName}
 Industry: ${context.industry}
 This month income: $${context.monthIncome ?? 0}, expenses: $${context.monthExpenses ?? 0}
-Bucket status: Growth Fund ${context.buckets?.profit ?? 0}% funded, Tax Set-Aside ${context.buckets?.tax ?? 0}% funded, Daily Operations ${context.buckets?.ops ?? 0}% funded
+Bucket status: Growth Fund ${context.buckets?.profit ?? 0}% funded, Taxes Set Aside ${context.buckets?.tax ?? 0}% funded, Daily Operations ${context.buckets?.ops ?? 0}% funded
 Write a brief financial insight for this practitioner based on these numbers.`,
 
     pay_guidance: `Practice: ${context.practiceName}
@@ -42,7 +42,7 @@ Answer directly and specifically using the numbers provided.`,
     pay_yourself: `Practice: ${context.practiceName}
 Industry: ${context.industry}
 Growth Fund this month: $${(context.buckets?.profitFunded ?? 0).toFixed(2)}
-Tax Set-Aside this month: $${(context.buckets?.taxFunded ?? 0).toFixed(2)}
+Taxes Set Aside this month: $${(context.buckets?.taxFunded ?? 0).toFixed(2)}
 Operations: $${(context.buckets?.opsFunded ?? 0).toFixed(2)} of $${(context.buckets?.opsTarget ?? 0).toFixed(2)} covered
 Days left in month: ${context.daysLeft ?? 15}
 Net this month: $${(context.netProfit ?? 0).toFixed(2)}

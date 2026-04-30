@@ -906,7 +906,7 @@ export default function SettingsPage() {
           <SectionHeader>About Bookwise</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)' }}>
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
-              Bookwise organizes and presents your financial data. Sage shares observations, not advice. Work with a licensed CPA before filing.
+              Bookwise organizes and presents your financial data. Sage AI shares observations, not advice. Work with a licensed CPA before filing.
             </p>
           </div>
         </section>
