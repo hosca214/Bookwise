@@ -329,7 +329,7 @@ const STEPS = [
     n: '02',
     icon: <Sparkles size={24} />,
     title: 'Sage sorts everything',
-    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Sage reads the patterns and tells you what it sees. Always in plain language.',
+    body: 'Your income flows into Tax Set-Aside, Daily Ops, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
   },
   {
     n: '03',
@@ -672,19 +672,6 @@ export default function LandingPage() {
       </section>
 
 
-      {/* ── PULL QUOTE ──────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 72 : 104}px 24px`, background: SEC }}>
-        <div style={{ maxWidth: 620, margin: '0 auto', textAlign: 'center' }}>
-          <FadeIn>
-            <div style={{ fontSize: 32, color: SAGE, fontFamily: '"Lora", Georgia, serif', lineHeight: 1, marginBottom: 20, opacity: 0.5 }}>"</div>
-            <blockquote style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 24 : 34, fontWeight: 600, lineHeight: 1.42, color: INK, margin: 0, fontStyle: 'italic', letterSpacing: '-0.01em' }}>
-              I used to avoid looking at my numbers. Now I check them every morning.
-            </blockquote>
-            <p style={{ fontSize: 14, color: MUTED, marginTop: 20, fontWeight: 500 }}>Sarah M., massage therapist, 8 years in practice</p>
-          </FadeIn>
-        </div>
-      </section>
-
       {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
       <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -979,6 +966,8 @@ export default function LandingPage() {
             { label: 'Pricing', href: '#pricing' },
             { label: 'Apply for beta', href: '#beta' },
             { label: 'Sign in', href: '/login' },
+            { label: 'Privacy Policy', href: '/privacy' },
+            { label: 'Terms of Service', href: '/terms' },
           ].map(l => (
             <a key={l.label} href={l.href} style={{ fontSize: 13, color: MUTED, textDecoration: 'none', fontWeight: 500 }}>{l.label}</a>
           ))}
