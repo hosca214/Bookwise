@@ -43,14 +43,34 @@ const cardStyle: React.CSSProperties = {
 
 const taxDeadline = getNextTaxDeadline(new Date())
 
-const SAGE_TIPS = [
-  "The month you pay yourself first, even a small amount, is the month your business starts working for you.",
-  "When you know your monthly number, booking clients feels less like chasing and more like choosing.",
-  "Your tax set-aside is not an expense. It is future peace of mind. Moving it the same week you earn it is a habit many practitioners find helpful.",
-  "When your rate reflects your value, your take-home reflects your effort.",
-  "A slow month does not mean a failing business. Many practitioners find a three-month average more telling than a single slow month.",
-  "Your Growth Fund is the first asset your practice owns. Every dollar you add is a vote for what you are building.",
+const SAGE_WISDOM: Array<{ text: string; author?: string }> = [
+  { text: "The month you pay yourself first, even a small amount, is the month your business starts working for you." },
+  { text: "When you know your monthly number, booking clients feels less like chasing and more like choosing." },
+  { text: "A slow month does not mean a failing business. A three-month average tells a more honest story than a single slow week." },
+  { text: "Your Growth Fund is the first asset your practice owns. Every dollar you add is a vote for what you are building." },
+  { text: "The practitioners who burn out are usually the ones who never tracked what they needed to earn. Knowing your number protects your energy." },
+  { text: "Your essentials cost is the floor your practice has to clear. Knowing it turns uncertainty into a target." },
+  { text: "A practice that pays its owner reliably is worth more than one that occasionally pays a lot. Steady is what compounds." },
+  { text: "Price is what you pay. Value is what you get.", author: "Warren Buffett" },
+  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+  { text: "Time is more valuable than money. You can get more money, but you cannot get more time.", author: "Jim Rohn" },
+  { text: "Formal education will make you a living. Self-education will make you a fortune.", author: "Jim Rohn" },
+  { text: "The secret to getting ahead is getting started.", author: "Mark Twain" },
+  { text: "Do the best you can until you know better. Then when you know better, do better.", author: "Maya Angelou" },
+  { text: "It always seems impossible until it is done.", author: "Nelson Mandela" },
 ]
+
+const SUGGESTED_QUESTIONS = [
+  "Am I on track this month?",
+  "Can I pay myself this week?",
+  "Are my expenses in check?",
+  "Is my tax set-aside enough?",
+  "Should I raise my rates?",
+  "How is my Growth Fund looking?",
+]
+
+const FOCUS_AREAS = ['take-home', 'expense-pace', 'bucket-health', 'coverage'] as const
 
 const today = new Date().toISOString().slice(0, 10)
 const currentMonth = today.slice(0, 8) + '01'
@@ -94,7 +114,8 @@ export default function DashboardPage() {
 
   const [insight, setInsight] = useState<string | null>(null)
   const [loadingSage, setLoadingSage] = useState(false)
-  const [tipIndex, setTipIndex] = useState(0)
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * SAGE_WISDOM.length))
+  const [wisdomFading, setWisdomFading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   const [monthlyGoal, setMonthlyGoal] = useState(0)
@@ -122,6 +143,7 @@ export default function DashboardPage() {
       const overBudget = opsTarget > 0 && expenses > opsTarget
       const overAmount = Math.max(0, expenses - opsTarget)
 
+      const focus = FOCUS_AREAS[Math.floor(Math.random() * FOCUS_AREAS.length)]
       const res = await fetch('/api/sage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -133,6 +155,7 @@ export default function DashboardPage() {
             monthIncome: income,
             monthExpenses: expenses,
             buckets: { profit: profitPct, tax: taxPct, ops: opsPct },
+            focus,
             expenseAlert: overBudget
               ? `Actual expenses this month ($${expenses.toFixed(2)}) exceed the ops budget ($${opsTarget.toFixed(2)}) by $${overAmount.toFixed(2)}. This is reducing take-home pay.`
               : null,
@@ -332,6 +355,17 @@ export default function DashboardPage() {
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setWisdomFading(true)
+      setTimeout(() => {
+        setTipIndex(i => (i + 1) % SAGE_WISDOM.length)
+        setWisdomFading(false)
+      }, 250)
+    }, 10000)
+    return () => clearInterval(timer)
   }, [])
 
   async function handleSecurePay() {
@@ -918,7 +952,11 @@ export default function DashboardPage() {
               <div className="skeleton" style={{ height: 16, width: '85%' }} />
             </div>
           ) : insight ? (
-            <p style={{ fontSize: 16, color: 'var(--color-foreground)', lineHeight: 1.75, margin: 0 }}>
+            <p className="font-serif" style={{
+              fontSize: 17, fontStyle: 'italic', color: 'var(--color-ink)',
+              lineHeight: 1.7, margin: 0,
+              paddingLeft: 14, borderLeft: '2px solid var(--color-primary)',
+            }}>
               {insight}
             </p>
           ) : (
@@ -948,16 +986,29 @@ export default function DashboardPage() {
         {/* Sage Wisdom */}
         <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 0, marginBottom: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
-            Sage AI Wisdom
+            Sage Wisdom
           </p>
-          <p className="font-serif" style={{
-            fontSize: 22, fontWeight: 600, color: 'var(--color-ink)',
-            lineHeight: 1.5, margin: '0 0 24px',
-          }}>
-            {SAGE_TIPS[tipIndex]}
-          </p>
+          <div style={{ minHeight: 100, marginBottom: 20, opacity: wisdomFading ? 0 : 1, transition: 'opacity 0.25s ease' }}>
+            <p className="font-serif" style={{
+              fontSize: 21, fontWeight: 600, color: 'var(--color-ink)',
+              lineHeight: 1.5, margin: SAGE_WISDOM[tipIndex].author ? '0 0 10px' : '0',
+            }}>
+              {SAGE_WISDOM[tipIndex].author ? `"${SAGE_WISDOM[tipIndex].text}"` : SAGE_WISDOM[tipIndex].text}
+            </p>
+            {SAGE_WISDOM[tipIndex].author && (
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: 0, fontWeight: 500 }}>
+                {SAGE_WISDOM[tipIndex].author}
+              </p>
+            )}
+          </div>
           <button
-            onClick={() => setTipIndex(i => (i + 1) % SAGE_TIPS.length)}
+            onClick={() => {
+              setWisdomFading(true)
+              setTimeout(() => {
+                setTipIndex(i => (i + 1) % SAGE_WISDOM.length)
+                setWisdomFading(false)
+              }, 250)
+            }}
             style={{
               background: 'none',
               border: '1.5px solid var(--color-border)',
@@ -1080,9 +1131,29 @@ export default function DashboardPage() {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 120 }}>
               {chatMessages.length === 0 && (
-                <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
-                  Ask about your income, expenses, whether to invest in something, or anything on your mind about your practice. Sage AI uses your actual numbers.
-                </p>
+                <div>
+                  <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                    Ask about your income, expenses, or anything on your mind about your practice. Sage uses your actual numbers.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {SUGGESTED_QUESTIONS.map(q => (
+                      <button
+                        key={q}
+                        onClick={() => askSage(q)}
+                        style={{
+                          padding: '7px 14px', borderRadius: 999,
+                          border: '1.5px solid var(--color-border)',
+                          background: 'var(--color-background)',
+                          color: 'var(--color-foreground)',
+                          fontSize: 13, fontWeight: 500,
+                          cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
               {chatMessages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
