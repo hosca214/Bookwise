@@ -6,6 +6,14 @@ function addDays(base: Date, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+function getWeekStart(from: Date): Date {
+  const d = new Date(from)
+  const day = d.getUTCDay()
+  d.setUTCDate(d.getUTCDate() - ((day + 6) % 7))
+  d.setUTCHours(0, 0, 0, 0)
+  return d
+}
+
 export async function POST() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -103,6 +111,25 @@ export async function POST() {
       ops_target: 200.00,    ops_funded: 25.00,
       pay_target: 1500.00,   pay_funded: 0.00 },
   ], { onConflict: 'user_id,month' })
+
+  // Insert 3 past weeks with transferred: true to establish a week streak
+  const curWeekStart = getWeekStart(now)
+  const weekRows = [-21, -14, -7].map(offset => {
+    const ws = new Date(curWeekStart)
+    ws.setUTCDate(ws.getUTCDate() + offset)
+    const we = new Date(ws)
+    we.setUTCDate(we.getUTCDate() + 6)
+    return {
+      user_id: uid,
+      week_start: ws.toISOString().slice(0, 10),
+      week_end: we.toISOString().slice(0, 10),
+      income: 285.00, expenses: 80.00,
+      tax_amount: 71.25, profit_amount: 28.50, ops_amount: 80.00, pay_amount: 105.25,
+      transferred: true,
+      transferred_at: we.toISOString(),
+    }
+  })
+  await supabase.from('weekly_summaries').upsert(weekRows, { onConflict: 'user_id,week_start' })
 
   await supabase.auth.signOut()
   return Response.json({ ok: true, transactions: transactions.length })

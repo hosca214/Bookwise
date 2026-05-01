@@ -92,7 +92,7 @@ await check('Page header shows "My Dash"', async () => {
 await check('Practice name visible', async () => {
   await page.waitForSelector('text=Sage & Stone Bodywork', { timeout: 5000 })
 })
-await check('Win streak badge shows (2+ months)', async () => {
+await check('Win streak badge shows (2+ weeks)', async () => {
   await page.waitForSelector('text=/weeks of consistently paying yourself/i', { timeout: 5000 })
 })
 await check('Take-Home card visible with amount', async () => {
@@ -101,7 +101,7 @@ await check('Take-Home card visible with amount', async () => {
 await check('Money plan tiles visible (Tax, Ops, Growth)', async () => {
   await page.evaluate(() => window.scrollTo(0, 300))
   await page.waitForTimeout(1500)
-  await page.waitForSelector('text=Tax Set-Aside', { timeout: 10000 })
+  await page.waitForSelector('text=/Taxes Set Aside/i', { timeout: 10000 })
   await page.waitForSelector('text=Business Expenses', { timeout: 5000 })
   await page.waitForSelector('text=Growth Fund', { timeout: 5000 })
 })
@@ -125,13 +125,11 @@ await check('Sage insight card visible', async () => {
   await page.waitForSelector('text=Sage AI says', { timeout: 5000 })
 })
 await check('Tax deadline countdown visible', async () => {
-  // The countdown lives behind a "What is this?" toggle on the Tax Set-Aside tile.
-  // Use JS evaluate to click the first such button (avoids actionability issues in headless).
-  await page.locator('button', { hasText: 'What is this?' }).first().waitFor({ state: 'visible', timeout: 8000 })
-  await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'What is this?')
-    if (btn) btn.click()
-  })
+  // The countdown lives behind the second "What is this?" button (index 1).
+  // Index 0 is the Take-Home card; index 1 is the Tax Set-Aside tile.
+  const infoButtons = page.locator('button:has-text("What is this?")')
+  await infoButtons.nth(1).waitFor({ state: 'visible', timeout: 8000 })
+  await infoButtons.nth(1).click()
   await page.waitForSelector('text=days away', { timeout: 5000 })
 })
 await check('BottomNav has 4 tabs', async () => {
@@ -195,7 +193,7 @@ await check('Net profit figure visible', async () => {
   await page.waitForSelector('text=Take-Home', { timeout: 5000 })
 })
 await check('Tax estimate box visible', async () => {
-  await page.waitForSelector('text=/Tax Set-Aside|Tax Estimate/i', { timeout: 5000 })
+  await page.waitForSelector('text=/Taxes Set Aside Estimate|Tax Estimate/i', { timeout: 5000 })
 })
 await check('Bar chart renders', async () => {
   await page.waitForSelector('.recharts-bar, .recharts-rectangle', { timeout: 8000 })

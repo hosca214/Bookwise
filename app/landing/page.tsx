@@ -769,18 +769,22 @@ export default function LandingPage() {
       <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: SEC }}>
         <div style={{ maxWidth: 580, margin: '0 auto', textAlign: 'center' }}>
           <FadeIn>
-            <div style={{ ...iconBox, width: 52, height: 52, margin: '0 auto 22px' }}>
-              <BookOpen size={24} />
+            <div style={{ width: 96, height: 96, borderRadius: '50%', margin: '0 auto 24px', overflow: 'hidden', background: '#C4A882', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {/* Replace src with your photo path once uploaded to /public */}
+              <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 32, fontWeight: 700, color: '#fff', lineHeight: 1 }}>A</span>
             </div>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 14 }}>Built by people who know your work</p>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 14 }}>The person behind the product</p>
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 28 : 38, fontWeight: 700, color: INK, margin: '0 0 22px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
               The Zen Bookkeeper.
             </h2>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: '0 0 18px' }}>
-              After working with hundreds of coaches, trainers, and bodyworkers, the pattern was impossible to miss. Amazing at the work. Completely stressed about the money side.
+              I have a master&apos;s degree in accounting and spent ten years doing corporate audits. The work was interesting, but it kept me far from the people I actually wanted to help.
+            </p>
+            <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: '0 0 18px' }}>
+              The wellness professionals I worked with along the way changed my life. Coaches, trainers, bodyworkers. I wanted to give something back to them. So I left corporate and opened my own bookkeeping firm built specifically for this community.
             </p>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: 0 }}>
-              We built Bookwise because we wanted every practitioner to have what our best clients have. A clear picture of their money all year long.
+              I built Bookwise because I wanted every practitioner to have their own tool. Something that makes the numbers feel manageable and puts you back in control of your business.
             </p>
           </FadeIn>
         </div>
