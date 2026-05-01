@@ -190,3 +190,58 @@ test.describe('Settings', () => {
     await expect(page.getByText(/licensed CPA/i)).toBeVisible()
   })
 })
+
+// ── Persistent View State ─────────────────────────────────────────────────────
+test.describe('Persistent view state', () => {
+  test('dashboard: weekly/monthly toggle persists across navigation', async ({ page }) => {
+    await login(page)
+    await page.goto('/dashboard')
+    await page.getByRole('button', { name: /monthly/i }).click()
+    await page.goto('/ledger')
+    await page.goto('/dashboard')
+    await expect(page.getByRole('button', { name: /monthly/i })).toBeVisible()
+  })
+
+  test('reports: last month selection persists across navigation', async ({ page }) => {
+    await login(page)
+    await page.goto('/reports')
+    await page.getByRole('button', { name: /last month/i }).click()
+    await page.goto('/dashboard')
+    await page.goto('/reports')
+    await expect(page.getByRole('button', { name: /last month/i })).toBeVisible()
+  })
+
+  test('ledger: type filter persists across navigation', async ({ page }) => {
+    await login(page)
+    await page.goto('/ledger')
+    await page.getByRole('button', { name: /^expenses$/i }).click()
+    await page.goto('/dashboard')
+    await page.goto('/ledger')
+    await expect(page.getByRole('button', { name: /^expenses$/i })).toBeVisible()
+  })
+
+  test('ledger: reset filters button appears when filter is active', async ({ page }) => {
+    await login(page)
+    await page.goto('/ledger')
+    await page.getByRole('button', { name: /^expenses$/i }).click()
+    await expect(page.getByRole('button', { name: /reset filters/i })).toBeVisible()
+  })
+
+  test('ledger: reset filters clears active view and hides reset button', async ({ page }) => {
+    await login(page)
+    await page.goto('/ledger')
+    await page.getByRole('button', { name: /^expenses$/i }).click()
+    await page.getByRole('button', { name: /reset filters/i }).click()
+    await expect(page.getByRole('button', { name: /reset filters/i })).not.toBeVisible()
+  })
+
+  test('ledger: reset does not wipe localStorage — navigating back restores last filter', async ({ page }) => {
+    await login(page)
+    await page.goto('/ledger')
+    await page.getByRole('button', { name: /^expenses$/i }).click()
+    await page.getByRole('button', { name: /reset filters/i }).click()
+    await page.goto('/dashboard')
+    await page.goto('/ledger')
+    await expect(page.getByRole('button', { name: /reset filters/i })).toBeVisible()
+  })
+})
