@@ -132,7 +132,7 @@ export default function LedgerPage() {
   const rowFileRef = useRef<HTMLInputElement>(null)
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
-  const [hoveredReceiptId, setHoveredReceiptId] = useState<string | null>(null)
+  const [receiptModalTx, setReceiptModalTx] = useState<Transaction | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
@@ -442,9 +442,9 @@ export default function LedgerPage() {
               href={`https://drive.google.com/drive/folders/${driveFolderId}`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
             >
-              <FolderOpen size={14} />
+              <FolderOpen size={16} />
               Receipts
             </a>
           )}
@@ -677,24 +677,13 @@ export default function LedgerPage() {
 
                   {/* receipt icon */}
                   {tx.receipt_url ? (
-                    <div
-                      style={{ position: 'relative', flexShrink: 0 }}
-                      onMouseEnter={() => setHoveredReceiptId(tx.id)}
-                      onMouseLeave={() => setHoveredReceiptId(null)}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setReceiptModalTx(tx) }}
+                      title="View receipt"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', flexShrink: 0 }}
                     >
-                      <button
-                        onClick={(e) => { e.stopPropagation(); window.open(tx.receipt_url!, '_blank', 'noopener,noreferrer') }}
-                        title="Open receipt"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}
-                      >
-                        <Receipt size={14} />
-                      </button>
-                      {hoveredReceiptId === tx.id && (
-                        <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 50, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', pointerEvents: 'none' }}>
-                          <img src={getReceiptPreviewUrl(tx.receipt_url!)} alt="Receipt preview" style={{ width: 280, height: 'auto', maxHeight: 400, objectFit: 'contain', borderRadius: 4, display: 'block' }} />
-                        </div>
-                      )}
-                    </div>
+                      <Receipt size={14} />
+                    </button>
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
@@ -1064,6 +1053,57 @@ export default function LedgerPage() {
           </button>
         </div>
       </div>
+
+
+      {/* Receipt modal */}
+      {receiptModalTx && (() => {
+        const driveMatch = receiptModalTx.receipt_url?.match(/\/d\/([a-zA-Z0-9_-]+)\/view/)
+        const fileId = driveMatch?.[1] ?? null
+        const downloadUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : receiptModalTx.receipt_url!
+        return (
+          <>
+            <div onClick={() => setReceiptModalTx(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100 }} />
+            <div style={{ position: 'fixed', inset: '0 0 0 0', zIndex: 101, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <div style={{ background: 'var(--color-card)', borderRadius: 14, width: '100%', maxWidth: 420, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.25)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)', fontFamily: 'var(--font-serif)' }}>Receipt</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <a
+                      href={downloadUrl}
+                      download={receiptModalTx.receipt_filename ?? 'receipt'}
+                      style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', padding: '6px 12px', borderRadius: 8, border: '1.5px solid var(--color-primary)', lineHeight: 1 }}
+                    >
+                      Download
+                    </a>
+                    <button onClick={() => setReceiptModalTx(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', fontSize: 20, lineHeight: 1, fontFamily: 'var(--font-sans)' }}>
+                      &times;
+                    </button>
+                  </div>
+                </div>
+                <div style={{ overflowY: 'auto', flex: 1, padding: 12 }}>
+                  <img
+                    src={getReceiptPreviewUrl(receiptModalTx.receipt_url!)}
+                    alt="Receipt"
+                    style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
+                  />
+                </div>
+                {driveFolderId && (
+                  <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-border)', flexShrink: 0, textAlign: 'center' }}>
+                    <a
+                      href={`https://drive.google.com/drive/folders/${driveFolderId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+                    >
+                      View all receipts in Drive
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       <BottomNav />
     </div>
