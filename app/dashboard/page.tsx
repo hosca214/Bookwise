@@ -574,7 +574,9 @@ export default function DashboardPage() {
   const overAmount = Math.max(0, opsActual - opsTarget)
   const takeHome = Math.max(0, monthIncome * (1 - taxFrac - profitFrac) - opsActual)
 
-  const weekTakeHome = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
+  const weekTakeHome = monthIncome > 0
+    ? (Math.min(weekIncome, monthIncome) / monthIncome) * takeHome
+    : 0
   const weekTaxAmount = weekIncome * taxFrac
   const weekProfitAmount = weekIncome * profitFrac
   const weekOpsActual = weekExpenses
@@ -598,6 +600,12 @@ export default function DashboardPage() {
   const displayOpsTarget = payPeriod === 'week' ? weekOpsTarget : opsTarget
   const displayOverBudget = payPeriod === 'week' ? weekOverBudget : overBudget
   const displayOverAmount = payPeriod === 'week' ? weekOverAmount : overAmount
+
+  const displayGoal = payPeriod === 'week' ? monthlyGoal / 4.33 : monthlyGoal
+  const displayEssentialBase = payPeriod === 'week' ? essentialBase / 4.33 : essentialBase
+  const displayEssentialCoverage = displayEssentialBase > 0
+    ? Math.round((displayIncome / displayEssentialBase) * 100)
+    : 0
 
 
   if (loadError) {
@@ -727,16 +735,16 @@ export default function DashboardPage() {
             </span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '4px 0 10px' }}>
               <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-primary)', margin: 0, lineHeight: 1 }}>
-                ${monthIncome.toFixed(0)}
+                ${displayIncome.toFixed(0)}
               </p>
-              <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>of ${monthlyGoal.toFixed(0)} goal</span>
+              <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>of ${displayGoal.toFixed(0)} {payPeriod === 'week' ? 'weekly' : 'monthly'} goal</span>
             </div>
             <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (monthIncome / monthlyGoal) * 100)}%`, background: monthIncome >= monthlyGoal ? 'var(--color-profit)' : 'var(--color-primary)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, (displayIncome / displayGoal) * 100)}%`, background: displayIncome >= displayGoal ? 'var(--color-profit)' : 'var(--color-primary)', borderRadius: 3, transition: 'width 1.2s ease' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-              <span>{Math.round((monthIncome / monthlyGoal) * 100)}% there</span>
-              <span>${Math.max(0, monthlyGoal - monthIncome).toFixed(0)} to go</span>
+              <span>{Math.round((displayIncome / displayGoal) * 100)}% there</span>
+              <span>${Math.max(0, displayGoal - displayIncome).toFixed(0)} to go</span>
             </div>
           </section>
         )}
@@ -874,43 +882,61 @@ export default function DashboardPage() {
           ) : (
             <>
               {(() => {
-                const breakEvenColor = essentialCoverage >= 100
-                  ? 'var(--color-profit)'
-                  : essentialCoverage >= 85
-                    ? 'var(--color-primary)'
-                    : essentialCoverage >= 50
-                      ? '#C4A882'
-                      : 'var(--color-danger)'
-                const breakEvenLabel = essentialCoverage >= 100
-                  ? 'Your practice is paying for itself this month.'
-                  : essentialCoverage >= 85
-                    ? `Almost there — ${essentialCoverage}% of your costs are covered.`
-                    : essentialCoverage >= 50
-                      ? `Getting closer — ${essentialCoverage}% covered this month.`
-                      : `Your income covers ${essentialCoverage}% of what it costs to show up.`
+                const isUnder = displayEssentialCoverage < 100
+                const periodLabel = payPeriod === 'week' ? 'this week' : 'this month'
+                const breakEvenLabel = displayEssentialCoverage >= 100
+                  ? `Your practice is paying for itself ${periodLabel}.`
+                  : `Your income covers ${displayEssentialCoverage}% of what it costs to show up.`
+                const maxScale = Math.max(displayIncome, displayEssentialBase) * 1.1 || 1
+                const breakEvenPos = Math.min(100, (displayEssentialBase / maxScale) * 100)
+                const incomeFill = Math.min(100, (displayIncome / maxScale) * 100)
+                const coveredFill = Math.min(incomeFill, breakEvenPos)
+                const surplusFill = Math.max(0, incomeFill - breakEvenPos)
                 return (
                   <>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: breakEvenColor, margin: '0 0 12px' }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: isUnder ? 'var(--color-danger)' : 'var(--color-profit)', margin: '0 0 12px' }}>
                       {breakEvenLabel}
                     </p>
-                    <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.min(100, essentialCoverage)}%`,
-                        background: breakEvenColor,
-                        borderRadius: 99,
-                        transition: 'width 0.8s ease-out',
-                      }} />
+                    <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden', display: 'flex' }}>
+                      {isUnder ? (
+                        <div style={{
+                          width: `${coveredFill}%`,
+                          background: 'var(--color-danger)',
+                          borderRadius: 99,
+                          transition: 'width 0.8s ease-out',
+                          flexShrink: 0,
+                        }} />
+                      ) : (
+                        <>
+                          <div style={{
+                            width: `${breakEvenPos}%`,
+                            background: 'var(--color-primary-dark)',
+                            transition: 'width 0.8s ease-out',
+                            flexShrink: 0,
+                          }} />
+                          {surplusFill > 0 && (
+                            <>
+                              <div style={{ width: 3, background: 'var(--color-card)', flexShrink: 0 }} />
+                              <div style={{
+                                width: `${surplusFill}%`,
+                                background: 'var(--color-accent)',
+                                transition: 'width 0.8s ease-out',
+                                flexShrink: 0,
+                              }} />
+                            </>
+                          )}
+                        </>
+                      )}
                     </div>
                   </>
                 )
               })()}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Income ${monthIncome.toFixed(2)}
+                  Income ${displayIncome.toFixed(2)}
                 </span>
                 <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Cost to show up ${essentialBase.toFixed(2)}
+                  Cost to show up ${displayEssentialBase.toFixed(2)}
                 </span>
               </div>
               <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 10, marginBottom: 0 }}>
