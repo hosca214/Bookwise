@@ -93,7 +93,7 @@ await check('Practice name visible', async () => {
   await page.waitForSelector('text=Sage & Stone Bodywork', { timeout: 5000 })
 })
 await check('Win streak badge shows (2+ months)', async () => {
-  await page.waitForSelector('text=/months strong/i', { timeout: 5000 })
+  await page.waitForSelector('text=/weeks of consistently paying yourself/i', { timeout: 5000 })
 })
 await check('Take-Home card visible with amount', async () => {
   await page.waitForSelector('text=Take-Home', { timeout: 5000 })
@@ -115,7 +115,7 @@ await check('Make a Transfer modal opens', async () => {
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.waitForTimeout(300)
   await page.click('button:has-text("Make a Transfer")')
-  await page.waitForSelector('text=Move your money', { timeout: 8000 })
+  await page.waitForSelector('text=This week\'s transfers', { timeout: 8000 })
   await page.keyboard.press('Escape')
 })
 await check('Daily Pulse section visible', async () => {
