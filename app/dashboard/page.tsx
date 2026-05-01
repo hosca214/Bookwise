@@ -432,7 +432,7 @@ export default function DashboardPage() {
     const taxTarget = monthIncome * taxFrac
     const wTax = weekIncome * taxFrac
     const wProfit = weekIncome * profitFrac
-    const wPay = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
+    const wPay = monthIncome > 0 ? (Math.min(weekIncome, monthIncome) / monthIncome) * takeHome : 0
 
     const { error: bucketError } = await supabase
       .from('buckets')
@@ -1161,7 +1161,7 @@ export default function DashboardPage() {
               ))}
             </div>
             {(() => {
-              const wTakeHome = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
+              const wTakeHome = monthIncome > 0 ? (Math.min(weekIncome, monthIncome) / monthIncome) * takeHome : 0
               const wTax = weekIncome * taxFrac
               const wProfit = weekIncome * profitFrac
               const wOps = weekExpenses
