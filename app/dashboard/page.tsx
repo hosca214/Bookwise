@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePersistentState } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -100,21 +99,21 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
-  const [payPeriod, setPayPeriod] = usePersistentState<'week' | 'month'>('dashboard.payPeriod', 'week')
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
   const [dailyStreak, setDailyStreak] = useState(0)
   const [currentWeekSummary, setCurrentWeekSummary] = useState<WeeklySummary | null>(null)
   const [showOwnerPayInfo, setShowOwnerPayInfo] = useState(false)
-  const [showGrowthInfo, setShowGrowthInfo] = useState(false)
-  const [showTaxInfo, setShowTaxInfo] = useState(false)
-  const [showOpsInfo, setShowOpsInfo] = useState(false)
-  const [showEssentialsInfo, setShowEssentialsInfo] = useState(false)
   const [showPulseInfo, setShowPulseInfo] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationNote, setCelebrationNote] = useState('')
   const [savingCelebration, setSavingCelebration] = useState(false)
+
+  const [openPlanRow, setOpenPlanRow] = useState<'tax' | 'ops' | 'growth' | null>(null)
+  const [showBreakevenDetail, setShowBreakevenDetail] = useState(false)
+  const [pulseCalendarOpen, setPulseCalendarOpen] = useState(false)
+  const [modalPayPeriod, setModalPayPeriod] = useState<'week' | 'month'>('week')
 
   const CELEBRATION_CHIPS = ['A long bath', 'A nice meal out', 'A morning off', 'A new book']
 
@@ -133,7 +132,6 @@ export default function DashboardPage() {
   const [wisdomFading, setWisdomFading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const [monthlyGoal, setMonthlyGoal] = useState(0)
   const [recentTransactions, setRecentTransactions] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
   const [needsReviewTxs, setNeedsReviewTxs] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
 
@@ -254,7 +252,6 @@ export default function DashboardPage() {
         setProfile(profileData)
         if (profileData.industry) setIndustry(profileData.industry)
         setVibe(profileData.vibe ?? 'sage')
-        setMonthlyGoal(Number(profileData.monthly_income_goal) || 0)
 
         let income = 0
         let expenses = 0
