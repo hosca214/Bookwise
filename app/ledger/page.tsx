@@ -5,7 +5,7 @@ import { usePersistentState } from '@/lib/hooks'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { Camera, X, RefreshCw, ExternalLink, FolderOpen } from 'lucide-react'
+import { Camera, X, RefreshCw, FolderOpen, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction, Service } from '@/lib/supabase'
 
@@ -126,6 +126,7 @@ export default function LedgerPage() {
   const rowFileRef = useRef<HTMLInputElement>(null)
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
+  const [hoveredReceiptId, setHoveredReceiptId] = useState<string | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
@@ -665,30 +666,38 @@ export default function LedgerPage() {
                 {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
               </div>
 
-              {/* view receipt */}
-              {tx.receipt_url && (
-                <a
-                  href={tx.receipt_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="View receipt"
-                  style={{ padding: 4, color: 'var(--color-primary)', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+              {/* receipt icon — shows existing receipt or upload prompt */}
+              {tx.receipt_url ? (
+                <div
+                  style={{ position: 'relative', flexShrink: 0 }}
+                  onMouseEnter={() => setHoveredReceiptId(tx.id)}
+                  onMouseLeave={() => setHoveredReceiptId(null)}
                 >
-                  <ExternalLink size={14} />
-                </a>
+                  <button
+                    onClick={() => window.open(tx.receipt_url!, '_blank', 'noopener,noreferrer')}
+                    title="Open receipt"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-primary)', display: 'flex', alignItems: 'center' }}
+                  >
+                    <Receipt size={14} />
+                  </button>
+                  {hoveredReceiptId === tx.id && (
+                    <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 50, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', pointerEvents: 'none' }}>
+                      <img src={tx.receipt_url} alt="Receipt preview" style={{ width: 160, height: 'auto', borderRadius: 4, display: 'block' }} />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
+                  title="Attach receipt"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
+                >
+                  {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
+                  {tx.type === 'expense' && (
+                    <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
+                  )}
+                </button>
               )}
-
-              {/* receipt camera */}
-              <button
-                onClick={() => { setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
-                title={tx.receipt_url ? 'Replace receipt' : 'Scan receipt'}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: tx.receipt_url ? 'var(--color-primary)' : 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
-              >
-                {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
-                {tx.type === 'expense' && !tx.receipt_url && (
-                  <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
-                )}
-              </button>
 
               {/* personal toggle */}
               <button
