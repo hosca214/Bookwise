@@ -48,26 +48,26 @@ const SAGE_WISDOM: Array<{ text: string; author?: string }> = [
   { text: "When you know your monthly number, booking clients feels less like chasing and more like choosing." },
   { text: "A slow month does not mean a failing business. A three-month average tells a more honest story than a single slow week." },
   { text: "Your Growth Fund is the first asset your practice owns. Every dollar you add is a vote for what you are building." },
-  { text: "The practitioners who burn out are usually the ones who never tracked what they needed to earn. Knowing your number protects your energy." },
+  { text: "Knowing what you need to earn each month is how you stop undercharging and start choosing your clients." },
   { text: "Your essentials cost is the floor your practice has to clear. Knowing it turns uncertainty into a target." },
   { text: "A practice that pays its owner reliably is worth more than one that occasionally pays a lot. Steady is what compounds." },
+  { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
+  { text: "Working hard for something we don't care about is called stress. Working hard for something we love is called passion.", author: "Simon Sinek" },
+  { text: "Everything is figureoutable.", author: "Marie Forleo" },
+  { text: "Self-care is not self-indulgence, it is self-preservation.", author: "Audre Lorde" },
+  { text: "Take care of your body. It is the only place you have to live.", author: "Jim Rohn" },
   { text: "Price is what you pay. Value is what you get.", author: "Warren Buffett" },
-  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
   { text: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
-  { text: "Time is more valuable than money. You can get more money, but you cannot get more time.", author: "Jim Rohn" },
-  { text: "Formal education will make you a living. Self-education will make you a fortune.", author: "Jim Rohn" },
-  { text: "The secret to getting ahead is getting started.", author: "Mark Twain" },
   { text: "Do the best you can until you know better. Then when you know better, do better.", author: "Maya Angelou" },
-  { text: "It always seems impossible until it is done.", author: "Nelson Mandela" },
 ]
 
 const SUGGESTED_QUESTIONS = [
-  "Am I on track this month?",
-  "Can I pay myself this week?",
-  "Are my expenses in check?",
-  "Is my tax set-aside enough?",
+  "How much can I pay myself right now?",
+  "What's eating into my take-home?",
+  "Am I setting aside enough for taxes?",
+  "Is my practice covering its costs?",
   "Should I raise my rates?",
-  "How is my Growth Fund looking?",
+  "What would one more client a week do for my income?",
 ]
 
 const FOCUS_AREAS = ['take-home', 'expense-pace', 'bucket-health', 'coverage'] as const
@@ -986,7 +986,7 @@ export default function DashboardPage() {
         {/* Sage Wisdom */}
         <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 0, marginBottom: 0 }}>
           <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
-            Sage Wisdom
+            Sage AI Wisdom
           </p>
           <div style={{ minHeight: 100, marginBottom: 20, opacity: wisdomFading ? 0 : 1, transition: 'opacity 0.25s ease' }}>
             <p className="font-serif" style={{

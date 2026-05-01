@@ -127,6 +127,10 @@ export default function LedgerPage() {
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
   const [personalHintDismissed, setPersonalHintDismissed] = useState(true)
+  const [practiceName, setPracticeName] = useState<string | null>(null)
+  const [profileIndustry, setProfileIndustry] = useState<string | null>(null)
+  const [ledgerInsight, setLedgerInsight] = useState<string | null>(null)
+  const [loadingLedgerInsight, setLoadingLedgerInsight] = useState(false)
 
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
@@ -157,13 +161,14 @@ export default function LedgerPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data, error: err }, { data: svcData }] = await Promise.all([
-          supabase.from('profiles').select('industry').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, practice_name').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id)
             .order('date', { ascending: false }).order('created_at', { ascending: false }),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true),
         ])
 
-        if (profile?.industry) setIndustry(profile.industry)
+        if (profile?.industry) { setIndustry(profile.industry); setProfileIndustry(profile.industry) }
+        if (profile?.practice_name) setPracticeName(profile.practice_name)
         if (err) throw err
         setTransactions(data ?? [])
         setServices(svcData ?? [])
@@ -176,6 +181,54 @@ export default function LedgerPage() {
     }
     load()
   }, [])
+
+  async function loadLedgerInsight(txList: typeof transactions, month: string, industry: string, name: string) {
+    if (!txList.length) return
+    setLoadingLedgerInsight(true)
+    setLedgerInsight(null)
+    const business = txList.filter(tx => !tx.is_personal && tx.date.startsWith(month))
+    const expenseMap = new Map<string, number>()
+    business.filter(tx => tx.type === 'expense').forEach(tx => {
+      expenseMap.set(tx.category_key, (expenseMap.get(tx.category_key) ?? 0) + tx.amount)
+    })
+    const topExpenses = Array.from(expenseMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([category, total]) => ({ category: t(category), total }))
+    const totalIncome = business.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
+    const totalExpenses = business.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
+    try {
+      const res = await fetch('/api/sage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'ledger_insight',
+          context: {
+            industry,
+            practiceName: name,
+            period: month,
+            totalIncome,
+            totalExpenses,
+            topExpenses,
+            transactionCount: business.length,
+          },
+        }),
+      })
+      if (!res.ok) throw new Error('unavailable')
+      const data = await res.json()
+      setLedgerInsight(data.insight ?? null)
+    } catch {
+      setLedgerInsight(null)
+    } finally {
+      setLoadingLedgerInsight(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!loading && transactions.length > 0 && profileIndustry && practiceName !== null) {
+      loadLedgerInsight(transactions, monthFilter, profileIndustry, practiceName)
+    }
+  }, [loading, monthFilter, profileIndustry])
 
   function openSheet() {
     setTxDate(today)
@@ -602,6 +655,41 @@ export default function LedgerPage() {
           ))
         )}
       </div>
+
+      {/* Sage AI Analysis */}
+      {!loading && transactions.length > 0 && (
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '16px 20px 100px' }}>
+          <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '20px 20px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
+                Sage AI Analysis
+              </p>
+              <button
+                onClick={() => profileIndustry && practiceName !== null && loadLedgerInsight(transactions, monthFilter, profileIndustry, practiceName)}
+                disabled={loadingLedgerInsight}
+                aria-label="Regenerate analysis"
+                style={{ background: 'none', border: 'none', color: 'var(--color-muted-foreground)', cursor: loadingLedgerInsight ? 'not-allowed' : 'pointer', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}
+              >
+                <RefreshCw size={14} style={{ opacity: loadingLedgerInsight ? 0.4 : 1 }} />
+              </button>
+            </div>
+            {loadingLedgerInsight ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="skeleton" style={{ height: 14 }} />
+                <div className="skeleton" style={{ height: 14, width: '80%' }} />
+              </div>
+            ) : ledgerInsight ? (
+              <p className="font-serif" style={{ fontSize: 16, fontStyle: 'italic', color: 'var(--color-ink)', lineHeight: 1.65, margin: 0, paddingLeft: 12, borderLeft: '2px solid var(--color-primary)' }}>
+                {ledgerInsight}
+              </p>
+            ) : (
+              <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', margin: 0 }}>
+                Sage AI is thinking. Try again in a moment.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Floating + button */}
       {!sheetOpen && (
