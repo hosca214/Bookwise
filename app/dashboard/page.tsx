@@ -736,45 +736,49 @@ export default function DashboardPage() {
         </section>
 
 
-        {/* Money Plan Tiles */}
+        {/* Money Plan */}
         {monthIncome === 0 ? (
           <div style={{ ...cardStyle, border: '1.5px dashed var(--color-border)', background: 'var(--color-muted)', textAlign: 'center', padding: '24px 20px', marginBottom: 16 }}>
             <p style={{ fontSize: 15, color: 'var(--color-muted-foreground)', margin: 0, lineHeight: 1.6 }}>
-              Add income in your Ledger to see your money plan. Your Growth Fund, Taxes Set Aside, and Operations will appear here.{' '}
+              Add income in your Ledger to see your money plan.{' '}
               <a href="/ledger" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Add your first entry</a>
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          <section style={{ ...cardStyle, marginBottom: 16 }}>
+            <div style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600, marginBottom: 10 }}>
+              Money Plan
+            </div>
 
-            {/* Tax Set-Aside */}
-            <div style={{ ...cardStyle, marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-                  {t('Tax Bucket')}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(taxFrac * 100)}% of income</span>
+            {/* Tax Set-Aside row */}
+            <div style={{ paddingBottom: 10, marginBottom: 10, borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{t('Tax Bucket')}</span>
+                  <button onClick={() => setOpenPlanRow(openPlanRow === 'tax' ? null : 'tax')}
+                    style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: '50%', width: 16, height: 16, fontSize: 9, cursor: 'pointer', color: 'var(--color-muted-foreground)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'var(--font-sans)' }}
+                  >?</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 64, height: 4, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${taxTarget > 0 ? Math.min(100, (taxFunded / taxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99 }} />
+                  </div>
+                  <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-tax)', minWidth: 56, textAlign: 'right' as const }}>
+                    ${taxFunded.toFixed(0)}
+                  </span>
+                </div>
               </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-tax)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${displayTaxAmount.toFixed(2)}
-              </p>
-              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${displayTaxTarget > 0 ? Math.min(100, (displayTaxAmount / displayTaxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99, transition: 'width 1.2s ease' }} />
-              </div>
-              <button onClick={() => setOpenPlanRow(prev => prev === 'tax' ? null : 'tax')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {openPlanRow === 'tax' ? 'Hide' : 'What is this?'}
-              </button>
               {openPlanRow === 'tax' && (
-                <div style={{ marginTop: 8 }}>
-                  <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 10px', lineHeight: 1.6 }}>
-                    Set this aside so you are never surprised at tax time. Keep it in a dedicated savings account, separate from your spending, so it is ready when your quarterly payment is due. Always confirm your payment amount with a licensed CPA.
+                <div style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginTop: 4 }}>
+                  <p style={{ margin: '0 0 8px' }}>
+                    Set this aside so you are never surprised at tax time. Keep it in a dedicated savings account, separate from your spending.
                   </p>
-                  <div style={{ paddingTop: 10, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-background)', borderRadius: 8, padding: '8px 12px' }}>
                     <div>
                       <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 2px' }}>{taxDeadline.name}</p>
                       <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: 0 }}>Due {taxDeadline.label}</p>
                     </div>
-                    <div style={{ background: 'var(--color-background)', borderRadius: 8, padding: '4px 10px', textAlign: 'center' }}>
+                    <div style={{ textAlign: 'center' as const }}>
                       <p className="font-serif" style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-ink)', margin: 0, lineHeight: 1 }}>{taxDeadline.days}</p>
                       <p style={{ fontSize: 9, color: 'var(--color-muted-foreground)', margin: 0, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>days away</p>
                     </div>
@@ -786,60 +790,63 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Business Expenses */}
-            <div style={{ ...cardStyle, marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-                  {t('Operations Bucket')}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>Budget: ${opsTarget.toFixed(0)}</span>
+            {/* Business Expenses row */}
+            <div style={{ paddingBottom: 10, marginBottom: 10, borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{t('Operations Bucket')}</span>
+                  <button onClick={() => setOpenPlanRow(openPlanRow === 'ops' ? null : 'ops')}
+                    style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: '50%', width: 16, height: 16, fontSize: 9, cursor: 'pointer', color: 'var(--color-muted-foreground)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'var(--font-sans)' }}
+                  >?</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 64, height: 4, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${opsTarget > 0 ? Math.min(100, (opsActual / opsTarget) * 100) : 0}%`, background: overBudget ? 'var(--color-danger)' : opsActual >= opsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99 }} />
+                  </div>
+                  <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: overBudget ? 'var(--color-danger)' : 'var(--color-ops)', minWidth: 56, textAlign: 'right' as const }}>
+                    ${opsActual.toFixed(0)}
+                  </span>
+                </div>
               </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: displayOverBudget ? 'var(--color-danger)' : 'var(--color-ops)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${displayOpsActual.toFixed(2)}
-              </p>
-              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
-                <div style={{ height: '100%', width: `${displayOpsTarget > 0 ? Math.min(100, (displayOpsActual / displayOpsTarget) * 100) : 0}%`, background: displayOpsActual >= displayOpsTarget ? 'var(--color-danger)' : displayOpsActual >= displayOpsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99, transition: 'width 1.2s ease' }} />
-              </div>
-              {displayOverBudget && (
-                <p style={{ fontSize: 13, color: 'var(--color-danger)', margin: '0 0 6px', lineHeight: 1.5 }}>
-                  Over budget by ${displayOverAmount.toFixed(2)}, which is coming directly out of your take-home.
-                </p>
-              )}
-              <button onClick={() => setOpenPlanRow(prev => prev === 'ops' ? null : 'ops')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {openPlanRow === 'ops' ? 'Hide' : 'What is this?'}
-              </button>
               {openPlanRow === 'ops' && (
-                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
-                  This is your monthly budget for business costs — supplies, rent, software, insurance, and anything else it takes to run your practice. Your budget is based on the typical overhead for your type of practice. When your actual spending stays within this amount, your take-home pay stays predictable. Spending above this budget comes directly out of what you pocket.
-                </p>
+                <div style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginTop: 4 }}>
+                  {overBudget && (
+                    <p style={{ color: 'var(--color-danger)', margin: '0 0 6px', fontWeight: 600 }}>
+                      Over budget by ${overAmount.toFixed(2)}, which is coming directly out of your take-home.
+                    </p>
+                  )}
+                  <p style={{ margin: 0 }}>
+                    This is your monthly budget for business costs. Budget: ${opsTarget.toFixed(0)} ({Math.round(opsFrac * 100)}% of income). When your actual spending stays within this amount, your take-home pay stays predictable.
+                  </p>
+                </div>
               )}
             </div>
 
-            {/* Growth Fund */}
-            <div style={{ ...cardStyle, marginBottom: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-                  {t('Profit Bucket')}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(profitFrac * 100)}% of income</span>
+            {/* Growth Fund row */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)' }}>{t('Profit Bucket')}</span>
+                  <button onClick={() => setOpenPlanRow(openPlanRow === 'growth' ? null : 'growth')}
+                    style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: '50%', width: 16, height: 16, fontSize: 9, cursor: 'pointer', color: 'var(--color-muted-foreground)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'var(--font-sans)' }}
+                  >?</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 64, height: 4, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${profitTarget > 0 ? Math.min(100, (profitFunded / profitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99 }} />
+                  </div>
+                  <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-profit)', minWidth: 56, textAlign: 'right' as const }}>
+                    ${profitFunded.toFixed(0)}
+                  </span>
+                </div>
               </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${displayProfitAmount.toFixed(2)}
-              </p>
-              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${displayProfitTarget > 0 ? Math.min(100, (displayProfitAmount / displayProfitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
-              </div>
-              <button onClick={() => setOpenPlanRow(prev => prev === 'growth' ? null : 'growth')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {openPlanRow === 'growth' ? 'Hide' : 'What is this?'}
-              </button>
               {openPlanRow === 'growth' && (
-                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
-                  This is your practice reinvestment fund. Each month, set this amount aside in a dedicated savings account. Use it for continuing education and training, new equipment, or saving toward bigger goals like expanding your space or adding a second location. Moving this money consistently is what separates a practice that grows from one that stays stuck.
+                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginTop: 8, marginBottom: 0 }}>
+                  This is your practice reinvestment fund ({Math.round(profitFrac * 100)}% of income). Set this amount aside each month for continuing education, new equipment, or saving toward bigger goals.
                 </p>
               )}
             </div>
-
-          </div>
+          </section>
         )}
 
 
