@@ -476,22 +476,6 @@ export default function LedgerPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['income', 'expense'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(typeFilter === t ? 'all' : t)}
-                style={{ height: 36, padding: '0 16px', borderRadius: 8, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', flex: 1,
-                  borderColor: typeFilter === t ? (t === 'income' ? 'var(--color-profit)' : 'var(--color-danger)') : 'var(--color-border)',
-                  background: typeFilter === t ? (t === 'income' ? 'color-mix(in srgb, var(--color-profit) 12%, var(--color-card))' : 'color-mix(in srgb, var(--color-danger) 10%, var(--color-card))') : 'var(--color-card)',
-                  color: typeFilter === t ? (t === 'income' ? 'var(--color-profit)' : 'var(--color-danger)') : 'var(--color-muted-foreground)',
-                }}
-              >
-                {t === 'income' ? 'Income' : 'Expenses'}
-              </button>
-            ))}
-          </div>
-
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowCategoryPicker((v) => !v)}
@@ -557,9 +541,9 @@ export default function LedgerPage() {
       {/* Totals strip */}
       {!loading && !error && transactions.length > 0 && (
         <div style={{ display: 'flex', background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)', maxWidth: 480, margin: '0 auto' }}>
-          <div style={totalColStyle}><div style={totalLabelStyle}>Income</div><div style={{ ...totalValueStyle, color: 'var(--color-profit)' }}>+${totalIncome.toFixed(2)}</div></div>
+          <button onClick={() => setTypeFilter(typeFilter === 'income' ? 'all' : 'income')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'income' ? 'color-mix(in srgb, var(--color-profit) 10%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'income' ? '2px solid var(--color-profit)' : '2px solid transparent' }}><div style={totalLabelStyle}>Income</div><div style={{ ...totalValueStyle, color: 'var(--color-profit)' }}>+${totalIncome.toFixed(2)}</div></button>
           <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
-          <div style={totalColStyle}><div style={totalLabelStyle}>Expenses</div><div style={{ ...totalValueStyle, color: 'var(--color-danger)' }}>-${totalExpenses.toFixed(2)}</div></div>
+          <button onClick={() => setTypeFilter(typeFilter === 'expense' ? 'all' : 'expense')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'expense' ? 'color-mix(in srgb, var(--color-danger) 8%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'expense' ? '2px solid var(--color-danger)' : '2px solid transparent' }}><div style={totalLabelStyle}>Expenses</div><div style={{ ...totalValueStyle, color: 'var(--color-danger)' }}>-${totalExpenses.toFixed(2)}</div></button>
           <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
           <div style={totalColStyle}><div style={totalLabelStyle}>Net</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>${netTotal.toFixed(2)}</div></div>
         </div>
