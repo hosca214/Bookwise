@@ -88,3 +88,18 @@ export type Service = {
   duration_minutes: number | null
   is_active: boolean
 }
+
+export type WeeklySummary = {
+  id: string
+  user_id: string
+  week_start: string
+  week_end: string
+  income: number
+  expenses: number
+  tax_amount: number
+  profit_amount: number
+  ops_amount: number
+  pay_amount: number
+  transferred: boolean
+  transferred_at: string | null
+}

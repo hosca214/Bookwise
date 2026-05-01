@@ -6,7 +6,8 @@ import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
 import { generateCPAExport, downloadCSV } from '@/lib/csv'
 import { SCHEDULE_C_MAP } from '@/lib/iqMaps'
-import type { Transaction } from '@/lib/supabase'
+import type { Transaction, WeeklySummary } from '@/lib/supabase'
+import { formatWeekRange } from '@/lib/weekUtils'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -135,6 +136,7 @@ export default function ReportsPage() {
   const [payTargetForReports, setPayTargetForReports] = useState(0)
 
   const [yearIncome, setYearIncome] = useState<YearMonth[]>([])
+  const [weeklySummaries, setWeeklySummaries] = useState<WeeklySummary[]>([])
   const [seasonInsight, setSeasonInsight] = useState<string | null>(null)
   const [seasonLoading, setSeasonLoading] = useState(false)
 
@@ -149,12 +151,13 @@ export default function ReportsPage() {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
         const sixMonthStart = sixMonthsAgo.toISOString().slice(0, 8) + '01'
 
-        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }, { data: yearTxns }] = await Promise.all([
+        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }, { data: yearTxns }, { data: weeklyData }] = await Promise.all([
           supabase.from('profiles').select('industry, practice_name, pay_target').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd).order('date', { ascending: true }),
           supabase.from('transactions').select('date, amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', sixMonthStart).order('date', { ascending: true }),
           supabase.from('buckets').select('month, pay_funded, celebration_note').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
           supabase.from('transactions').select('date, amount').eq('user_id', user.id).eq('is_personal', false).eq('type', 'income').gte('date', THIS_YEAR).order('date', { ascending: true }),
+          supabase.from('weekly_summaries').select('*').eq('user_id', user.id).order('week_start', { ascending: false }).limit(52),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
@@ -163,6 +166,7 @@ export default function ReportsPage() {
         if (txErr) throw txErr
         setTransactions(txns ?? [])
         setWins(winsData ?? [])
+        setWeeklySummaries(weeklyData ?? [])
 
         const monthMap: Record<string, { income: number; expenses: number }> = {}
         for (const tx of trendTxns ?? []) {
@@ -239,6 +243,27 @@ export default function ReportsPage() {
 
   const incomeGroups = groupByCategory(businessTxns, 'income')
   const expenseGroups = groupByCategory(businessTxns, 'expense')
+
+  function downloadWeeklyCSV() {
+    const header = 'Week Start,Week End,Income,Tax,Expenses,Growth,Pay Myself,Transferred,Transferred At\n'
+    const rows = weeklySummaries.map(w =>
+      [
+        w.week_start, w.week_end,
+        w.income.toFixed(2), w.tax_amount.toFixed(2),
+        w.expenses.toFixed(2), w.profit_amount.toFixed(2),
+        w.pay_amount.toFixed(2),
+        w.transferred ? 'Yes' : 'No',
+        w.transferred_at ? w.transferred_at.slice(0, 10) : '',
+      ].join(',')
+    ).join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bookwise-weekly-transfers-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   function handleExport() {
     const csv = generateCPAExport(transactions, practiceName, formatMonthLabel(rangeStart))
@@ -657,6 +682,49 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+
+        {/* Weekly Transfer History */}
+        {weeklySummaries.length > 0 && (
+          <div style={{ background: 'var(--color-card)', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', margin: 0 }}>
+                Weekly Transfer History
+              </p>
+              <button
+                onClick={downloadWeeklyCSV}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-card)', color: 'var(--color-primary)',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Download
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {weeklySummaries.map(w => (
+                <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--color-border)' }}>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-foreground)', margin: '0 0 2px' }}>
+                      {formatWeekRange(new Date(w.week_start + 'T12:00:00'))}
+                    </p>
+                    <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0 }}>
+                      Income ${w.income.toFixed(2)} &middot; Pay Myself ${w.pay_amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <span style={{
+                    fontSize: 12, fontWeight: 600, borderRadius: 999, padding: '3px 10px',
+                    background: w.transferred ? 'var(--color-muted)' : 'transparent',
+                    color: w.transferred ? 'var(--color-primary)' : 'var(--color-muted-foreground)',
+                    border: w.transferred ? 'none' : '1px solid var(--color-border)',
+                  }}>
+                    {w.transferred ? 'Transferred' : 'Saved'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Disclaimer */}
         <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', textAlign: 'center', padding: '8px 0 16px', lineHeight: 1.5 }}>

@@ -158,5 +158,14 @@ BEGIN
     pay_target     = EXCLUDED.pay_target,
     pay_funded     = EXCLUDED.pay_funded;
 
+  -- ── Weekly Summaries ───────────────────────────────────────────────────────
+  DELETE FROM weekly_summaries WHERE user_id = demo_id;
+
+  INSERT INTO weekly_summaries (user_id, week_start, week_end, income, expenses, tax_amount, profit_amount, ops_amount, pay_amount, transferred, transferred_at) VALUES
+    (demo_id, cur_month - 21, cur_month - 15, 285.00,  80.00,  71.25, 28.50,  80.00, 105.25, true,  (cur_month - 15)::timestamptz + interval '18 hours'),
+    (demo_id, cur_month - 14, cur_month -  8, 440.00,  35.00, 110.00, 44.00,  35.00, 251.00, true,  (cur_month -  8)::timestamptz + interval '17 hours'),
+    (demo_id, cur_month -  7, cur_month -  1, 165.00,  45.00,  41.25, 16.50,  45.00,  62.25, true,  (cur_month -  1)::timestamptz + interval '16 hours'),
+    (demo_id, cur_month,      cur_month +  6, 285.00, 835.00,  71.25, 28.50, 835.00,   0.00, false, NULL);
+
   RAISE NOTICE 'Demo seed complete for user: %', demo_id;
 END $$;

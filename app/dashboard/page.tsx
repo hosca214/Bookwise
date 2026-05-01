@@ -10,7 +10,8 @@ import { BottomNav } from '@/components/ui/BottomNav'
 import toast from 'react-hot-toast'
 import { RefreshCw, SendHorizonal, X } from 'lucide-react'
 import { PulseCalendar } from '@/components/dashboard/PulseCalendar'
-import type { Profile, Bucket } from '@/lib/supabase'
+import type { Profile, Bucket, WeeklySummary } from '@/lib/supabase'
+import { getWeekStart, getWeekEnd, toDateStr, formatWeekRange, formatMonthLabel } from '@/lib/weekUtils'
 
 const supabase = createClient()
 const MS_PER_DAY = 86_400_000
@@ -74,6 +75,12 @@ const FOCUS_AREAS = ['take-home', 'expense-pace', 'bucket-health', 'coverage'] a
 
 const today = new Date().toISOString().slice(0, 10)
 const currentMonth = today.slice(0, 8) + '01'
+const _weekStart = getWeekStart(new Date())
+const _weekEnd = getWeekEnd(_weekStart)
+const WEEK_START_STR = toDateStr(_weekStart)
+const WEEK_END_STR = toDateStr(_weekEnd)
+const WEEK_RANGE_LABEL = formatWeekRange(_weekStart)
+const MONTH_LABEL = formatMonthLabel(currentMonth)
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -89,7 +96,11 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
-  const [payPeriod, setPayPeriod] = useState<'monthly' | 'weekly'>('monthly')
+  const [payPeriod, setPayPeriod] = useState<'week' | 'month'>('week')
+  const [weekIncome, setWeekIncome] = useState(0)
+  const [weekExpenses, setWeekExpenses] = useState(0)
+  const [weekStreak, setWeekStreak] = useState(0)
+  const [currentWeekSummary, setCurrentWeekSummary] = useState<WeeklySummary | null>(null)
   const [showOwnerPayInfo, setShowOwnerPayInfo] = useState(false)
   const [showGrowthInfo, setShowGrowthInfo] = useState(false)
   const [showTaxInfo, setShowTaxInfo] = useState(false)
@@ -110,7 +121,6 @@ export default function DashboardPage() {
   const [pulseLog, setPulseLog] = useState<Record<string, boolean>>({})
   const [selectedDate, setSelectedDate] = useState(today)
 
-  const [winStreak, setWinStreak] = useState(0)
 
   const [insight, setInsight] = useState<string | null>(null)
   const [loadingSage, setLoadingSage] = useState(false)
@@ -215,17 +225,21 @@ export default function DashboardPage() {
         const [
           { data: profileData },
           { data: txns },
+          { data: weekTxns },
           { data: pulseData },
           { data: monthPulse },
-          { data: winsData },
           { data: existingBucket },
+          { data: existingWeekSummary },
+          { data: pastWeeks },
         ] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('transactions').select('amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
+          supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', WEEK_START_STR).lte('date', WEEK_END_STR),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', currentMonth).lte('date', today),
-          supabase.from('buckets').select('month').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
           supabase.from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle(),
+          supabase.from('weekly_summaries').select('*').eq('user_id', user.id).eq('week_start', WEEK_START_STR).maybeSingle(),
+          supabase.from('weekly_summaries').select('week_start, transferred').eq('user_id', user.id).lt('week_start', WEEK_START_STR).order('week_start', { ascending: false }).limit(12),
         ])
 
         if (!profileData) { setLoading(false); router.push('/login'); return }
@@ -244,6 +258,16 @@ export default function DashboardPage() {
         })
         setMonthIncome(income)
         setMonthExpenses(expenses)
+
+        let wIncome = 0
+        let wExpenses = 0
+        weekTxns?.forEach(tx => {
+          if (tx.type === 'income') wIncome += Number(tx.amount)
+          else wExpenses += Number(tx.amount)
+        })
+        setWeekIncome(wIncome)
+        setWeekExpenses(wExpenses)
+
         setRecentTransactions((txns ?? []).slice(0, 10).map(tx => ({
           date: tx.date,
           amount: Number(tx.amount),
@@ -299,17 +323,13 @@ export default function DashboardPage() {
         for (const row of monthPulse ?? []) log[row.date] = true
         setPulseLog(log)
 
-        if (winsData && winsData.length >= 2) {
-          let streak = 1
-          for (let i = 1; i < winsData.length; i++) {
-            const [ay, am] = winsData[i - 1].month.slice(0, 7).split('-').map(Number)
-            const prev = new Date(ay, am - 1, 1)
-            prev.setMonth(prev.getMonth() - 1)
-            const [by, bm] = winsData[i].month.slice(0, 7).split('-').map(Number)
-            if (prev.getFullYear() === by && prev.getMonth() + 1 === bm) streak++
+        if (pastWeeks && pastWeeks.length > 0) {
+          let streak = 0
+          for (const row of pastWeeks) {
+            if (row.transferred) streak++
             else break
           }
-          if (streak >= 2) setWinStreak(streak)
+          setWeekStreak(streak)
         }
 
         const profitFrac = (profileData.profit_pct ?? 10) / 100
@@ -337,6 +357,35 @@ export default function DashboardPage() {
             .insert({ user_id: user.id, month: currentMonth, profit_target: profitTarget, profit_funded: 0, tax_target: taxTarget, tax_funded: 0, ops_target: opsTarget, ops_funded: 0 })
             .select().single()
             .then(({ data }) => { if (data) setBucket(data) })
+        }
+
+        // Auto-archive current week in background
+        const wTaxAmt = wIncome * ((profileData.tax_pct ?? 25) / 100)
+        const wProfitAmt = wIncome * ((profileData.profit_pct ?? 10) / 100)
+        const wPayAmt = Math.max(0, wIncome * (1 - (profileData.tax_pct ?? 25) / 100 - (profileData.profit_pct ?? 10) / 100) - wExpenses)
+        if (!existingWeekSummary) {
+          supabase.from('weekly_summaries').upsert({
+            user_id: user.id,
+            week_start: WEEK_START_STR,
+            week_end: WEEK_END_STR,
+            income: wIncome,
+            expenses: wExpenses,
+            tax_amount: wTaxAmt,
+            profit_amount: wProfitAmt,
+            ops_amount: wExpenses,
+            pay_amount: wPayAmt,
+            transferred: false,
+          }, { onConflict: 'user_id,week_start' }).then(() => {})
+        } else {
+          setCurrentWeekSummary(existingWeekSummary)
+          supabase.from('weekly_summaries').update({
+            income: wIncome,
+            expenses: wExpenses,
+            tax_amount: wTaxAmt,
+            profit_amount: wProfitAmt,
+            ops_amount: wExpenses,
+            pay_amount: wPayAmt,
+          }).eq('id', existingWeekSummary.id).then(() => {})
         }
 
         loadSage(profileData, income, expenses, bucketRecord)
@@ -374,8 +423,11 @@ export default function DashboardPage() {
 
     const profitTarget = monthIncome * profitFrac
     const taxTarget = monthIncome * taxFrac
+    const wTax = weekIncome * taxFrac
+    const wProfit = weekIncome * profitFrac
+    const wPay = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
 
-    const { error } = await supabase
+    const { error: bucketError } = await supabase
       .from('buckets')
       .update({
         profit_funded: profitTarget,
@@ -388,11 +440,25 @@ export default function DashboardPage() {
       })
       .eq('id', bucket.id)
 
-    if (error) {
+    if (bucketError) {
       toast.error('Could not save. Try again.')
       setSecuring(false)
       return
     }
+
+    await supabase.from('weekly_summaries').upsert({
+      user_id: profile.id,
+      week_start: WEEK_START_STR,
+      week_end: WEEK_END_STR,
+      income: weekIncome,
+      expenses: weekExpenses,
+      tax_amount: wTax,
+      profit_amount: wProfit,
+      ops_amount: weekExpenses,
+      pay_amount: wPay,
+      transferred: true,
+      transferred_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,week_start' })
 
     setBucket(prev => prev ? {
       ...prev,
@@ -404,7 +470,7 @@ export default function DashboardPage() {
       ops_target: opsTarget,
       pay_funded: takeHome,
     } : prev)
-
+    setWeekStreak(s => s + 1)
     setShowPayModal(false)
     setConfettiTrigger(n => n + 1)
     setCelebrationNote('')
@@ -501,8 +567,31 @@ export default function DashboardPage() {
   const overAmount = Math.max(0, opsActual - opsTarget)
   const takeHome = Math.max(0, monthIncome * (1 - taxFrac - profitFrac) - opsActual)
 
+  const weekTakeHome = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
+  const weekTaxAmount = weekIncome * taxFrac
+  const weekProfitAmount = weekIncome * profitFrac
+  const weekOpsActual = weekExpenses
+  const weekOpsTarget = weekIncome * opsFrac
+  const weekOverBudget = weekOpsTarget > 0 && weekOpsActual > weekOpsTarget
+  const weekOverAmount = Math.max(0, weekOpsActual - weekOpsTarget)
+
   const payTarget = profile?.pay_target ?? 0
   const payProgress = payTarget > 0 ? Math.min(100, (takeHome / payTarget) * 100) : 0
+
+  const displayIncome = payPeriod === 'week' ? weekIncome : monthIncome
+  const displayTakeHome = payPeriod === 'week' ? weekTakeHome : takeHome
+  const displayPayTarget = payPeriod === 'week' ? payTarget / 4.33 : payTarget
+  const displayPayProgress = displayPayTarget > 0 ? Math.min(100, (displayTakeHome / displayPayTarget) * 100) : 0
+
+  const displayTaxAmount = payPeriod === 'week' ? weekTaxAmount : taxFunded
+  const displayTaxTarget = payPeriod === 'week' ? weekTaxAmount : taxTarget
+  const displayProfitAmount = payPeriod === 'week' ? weekProfitAmount : profitFunded
+  const displayProfitTarget = payPeriod === 'week' ? weekProfitAmount : profitTarget
+  const displayOpsActual = payPeriod === 'week' ? weekOpsActual : opsActual
+  const displayOpsTarget = payPeriod === 'week' ? weekOpsTarget : opsTarget
+  const displayOverBudget = payPeriod === 'week' ? weekOverBudget : overBudget
+  const displayOverAmount = payPeriod === 'week' ? weekOverAmount : overAmount
+
 
   if (loadError) {
     return (
@@ -539,25 +628,36 @@ export default function DashboardPage() {
       <Confetti trigger={confettiTrigger} />
 
       <header style={{
-        padding: '20px 24px 16px',
+        padding: '16px 24px 14px',
         borderBottom: '1px solid var(--color-border)',
         background: 'var(--color-background)',
         position: 'sticky', top: 0, zIndex: 30,
       }}>
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1.1, margin: 0 }}>
-            My Dash
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
-            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: 0 }}>
-              {profile?.practice_name ?? 'My Practice'}
-            </p>
-            {winStreak >= 2 && (
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'var(--color-muted)', borderRadius: 999, padding: '2px 10px' }}>
-                🔥 {winStreak} months strong
-              </span>
-            )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1.1, margin: 0 }}>
+              My Dash
+            </h1>
+            <div style={{ display: 'flex', background: 'var(--color-muted)', borderRadius: 999, padding: 3, gap: 2 }}>
+              {(['week', 'month'] as const).map(p => (
+                <button key={p} onClick={() => setPayPeriod(p)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                    border: 'none', cursor: 'pointer',
+                    background: payPeriod === p ? 'var(--color-card)' : 'transparent',
+                    color: payPeriod === p ? 'var(--color-ink)' : 'var(--color-muted-foreground)',
+                    boxShadow: payPeriod === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'background 0.15s', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {p === 'week' ? 'This Week' : 'This Month'}
+                </button>
+              ))}
+            </div>
           </div>
+          <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '4px 0 0' }}>
+            {profile?.practice_name ?? 'My Practice'} &middot; {payPeriod === 'week' ? WEEK_RANGE_LABEL : MONTH_LABEL}
+          </p>
         </div>
       </header>
 
@@ -565,40 +665,31 @@ export default function DashboardPage() {
 
         {/* My Take-Home Pay */}
         <section style={{ ...cardStyle, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <div style={{ marginBottom: 4 }}>
             <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
               My Take-Home Pay
             </span>
-            <div style={{ display: 'flex', background: 'var(--color-muted)', borderRadius: 999, padding: 2, gap: 2 }}>
-              {(['monthly', 'weekly'] as const).map(p => (
-                <button key={p} onClick={() => setPayPeriod(p)}
-                  style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer', background: payPeriod === p ? 'var(--color-card)' : 'transparent', color: payPeriod === p ? 'var(--color-ink)' : 'var(--color-muted-foreground)', boxShadow: payPeriod === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none', transition: 'background 0.15s', fontFamily: 'var(--font-sans)' }}
-                >
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ))}
-            </div>
           </div>
           {monthIncome > 0 ? (
             <>
-              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: takeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
-                ${(payPeriod === 'weekly' ? takeHome / 4.33 : takeHome).toFixed(2)}
+              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: displayTakeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
+                ${displayTakeHome.toFixed(2)}
               </p>
               <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '0 0 8px', lineHeight: 1.4 }}>
                 After Taxes Set Aside, Business Expenses, and Growth Fund
               </p>
-              {takeHome === 0 ? (
+              {displayTakeHome === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontStyle: 'italic' }}>
-                  Your expenses exceeded your income this month.
+                  {payPeriod === 'week' ? 'Expenses exceeded income this week.' : 'Your expenses exceeded your income this month.'}
                 </p>
-              ) : payTarget > 0 ? (
+              ) : displayPayTarget > 0 ? (
                 <>
                   <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                    <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+                    <div style={{ height: '100%', width: `${displayPayProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                    <span>${(payPeriod === 'weekly' ? takeHome / 4.33 : takeHome).toFixed(0)} this month</span>
-                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${(payPeriod === 'weekly' ? payTarget / 4.33 : payTarget).toFixed(0)}{payPeriod === 'monthly' ? '/mo' : '/wk'}</strong></span>
+                    <span>${displayTakeHome.toFixed(0)} {payPeriod === 'week' ? 'this week' : 'this month'}</span>
+                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${displayPayTarget.toFixed(0)}{payPeriod === 'month' ? '/mo' : '/wk'}</strong></span>
                   </div>
                 </>
               ) : null}
@@ -663,10 +754,10 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(taxFrac * 100)}% of income</span>
               </div>
               <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-tax)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${taxFunded.toFixed(2)}
+                ${displayTaxAmount.toFixed(2)}
               </p>
               <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${taxTarget > 0 ? Math.min(100, (taxFunded / taxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99, transition: 'width 1.2s ease' }} />
+                <div style={{ height: '100%', width: `${displayTaxTarget > 0 ? Math.min(100, (displayTaxAmount / displayTaxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
               <button onClick={() => setShowTaxInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
                 {showTaxInfo ? 'Hide' : 'What is this?'}
@@ -701,15 +792,15 @@ export default function DashboardPage() {
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>Budget: ${opsTarget.toFixed(0)}</span>
               </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: overBudget ? 'var(--color-danger)' : 'var(--color-ops)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${opsActual.toFixed(2)}
+              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: displayOverBudget ? 'var(--color-danger)' : 'var(--color-ops)', margin: '0 0 8px', lineHeight: 1 }}>
+                ${displayOpsActual.toFixed(2)}
               </p>
               <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
-                <div style={{ height: '100%', width: `${opsTarget > 0 ? Math.min(100, (opsActual / opsTarget) * 100) : 0}%`, background: opsActual >= opsTarget ? 'var(--color-danger)' : opsActual >= opsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99, transition: 'width 1.2s ease' }} />
+                <div style={{ height: '100%', width: `${displayOpsTarget > 0 ? Math.min(100, (displayOpsActual / displayOpsTarget) * 100) : 0}%`, background: displayOpsActual >= displayOpsTarget ? 'var(--color-danger)' : displayOpsActual >= displayOpsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
-              {overBudget && (
+              {displayOverBudget && (
                 <p style={{ fontSize: 13, color: 'var(--color-danger)', margin: '0 0 6px', lineHeight: 1.5 }}>
-                  Over budget by $${overAmount.toFixed(2)}, which is coming directly out of your take-home.
+                  Over budget by ${displayOverAmount.toFixed(2)}, which is coming directly out of your take-home.
                 </p>
               )}
               <button onClick={() => setShowOpsInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
@@ -731,10 +822,10 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(profitFrac * 100)}% of income</span>
               </div>
               <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-profit)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${profitFunded.toFixed(2)}
+                ${displayProfitAmount.toFixed(2)}
               </p>
               <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${profitTarget > 0 ? Math.min(100, (profitFunded / profitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
+                <div style={{ height: '100%', width: `${displayProfitTarget > 0 ? Math.min(100, (displayProfitAmount / displayProfitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
               <button onClick={() => setShowGrowthInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
                 {showGrowthInfo ? 'Hide' : 'What is this?'}
@@ -834,15 +925,21 @@ export default function DashboardPage() {
                 color: 'var(--color-primary-foreground)',
                 border: 'none', borderRadius: 12,
                 fontSize: 18, fontWeight: 700,
-                cursor: 'pointer', marginBottom: 8,
+                cursor: 'pointer', marginBottom: 4,
                 fontFamily: 'var(--font-serif)',
               }}
             >
               Make a Transfer
             </button>
-            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 32, lineHeight: 1.5 }}>
-              Every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong>, open your bank app and move each amount to its own account. Tap when you are done.
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 8px', lineHeight: 1.5 }}>
+              Tap to track your transfer streak.
             </p>
+            {weekStreak >= 2 && (
+              <p className="font-serif" style={{ textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--color-muted-foreground)', margin: '0 0 24px' }}>
+                {weekStreak} weeks of consistently paying yourself.
+              </p>
+            )}
+            {weekStreak < 2 && <div style={{ marginBottom: 24 }} />}
           </>
         )}
 
@@ -1035,25 +1132,37 @@ export default function DashboardPage() {
           <div style={{ background: 'var(--color-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 8, marginTop: 0 }}>
-              Move your money
+            <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 4, marginTop: 0 }}>
+              This week's transfers
             </h3>
-            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', marginBottom: 24, lineHeight: 1.5 }}>
-              Open your banking app and move each amount to its own account. Come back when you are done.
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
+              {WEEK_RANGE_LABEL} — these amounts will reset when you tap &ldquo;I did it.&rdquo;
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {[
-                { label: 'My Take-Home Pay',      amount: takeHome,               color: 'var(--color-pay)' },
-                { label: t('Tax Bucket'),         amount: monthIncome * taxFrac,  color: 'var(--color-tax)' },
-                { label: t('Profit Bucket'),      amount: monthIncome * profitFrac, color: 'var(--color-profit)' },
-                { label: t('Operations Bucket'), amount: opsTarget,              color: 'var(--color-ops)' },
+                { label: 'Pay Myself',            amount: weekTakeHome,     color: 'var(--color-pay)' },
+                { label: t('Tax Bucket'),         amount: weekTaxAmount,    color: 'var(--color-tax)' },
+                { label: t('Profit Bucket'),      amount: weekProfitAmount, color: 'var(--color-profit)' },
+                { label: t('Operations Bucket'), amount: weekOpsActual,    color: 'var(--color-ops)' },
               ].map(({ label, amount, color }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-background)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
                   <span style={{ fontSize: 15, color: 'var(--color-foreground)' }}>{label}</span>
-                  <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>${amount.toFixed(2)}</span>
+                  <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>
+                    {amount <= 0
+                      ? <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>$0.00</span>
+                      : `$${amount.toFixed(2)}`}
+                  </span>
                 </div>
               ))}
             </div>
+            {weekTakeHome === 0 && (
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.5, fontStyle: 'italic' }}>
+                Expenses exceeded income this week. Nothing to pay yourself.
+              </p>
+            )}
+            <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
+              We have already saved these numbers. You can find them in Reports.
+            </p>
             <button onClick={handleSecurePay} disabled={securing}
               style={{ width: '100%', minHeight: 52, background: securing ? 'var(--color-muted)' : 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: securing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
             >
