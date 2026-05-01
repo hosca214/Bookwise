@@ -422,16 +422,7 @@ export default function DashboardPage() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setWisdomFading(true)
-      setTimeout(() => {
-        setTipIndex(i => (i + 1) % SAGE_WISDOM.length)
-        setWisdomFading(false)
-      }, 250)
-    }, 10000)
-    return () => clearInterval(timer)
-  }, [])
+
 
   async function handleSecurePay() {
     if (!profile || !bucket) return
@@ -1043,7 +1034,7 @@ export default function DashboardPage() {
         <section style={{ ...cardStyle, padding: '24px', marginBottom: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
-              Sage AI says...
+              Sage AI Insights
             </p>
             <button
               onClick={() => profile && loadSage(profile, monthIncome, monthExpenses, bucket)}
@@ -1103,10 +1094,31 @@ export default function DashboardPage() {
 
         {/* Sage Wisdom */}
         <section style={{ ...cardStyle, padding: '28px 24px', marginTop: 0, marginBottom: 0 }}>
-          <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: '0 0 16px' }}>
-            Sage AI Wisdom
-          </p>
-          <div style={{ minHeight: 100, marginBottom: 20, opacity: wisdomFading ? 0 : 1, transition: 'opacity 0.25s ease' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
+              Sage AI Wisdom
+            </p>
+            <button
+              onClick={() => {
+                setWisdomFading(true)
+                setTimeout(() => {
+                  setTipIndex(i => (i + 1) % SAGE_WISDOM.length)
+                  setWisdomFading(false)
+                }, 250)
+              }}
+              aria-label="Next wisdom"
+              style={{
+                background: 'none', border: 'none',
+                color: 'var(--color-muted-foreground)',
+                cursor: 'pointer',
+                padding: 4, borderRadius: 6,
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+          <div style={{ minHeight: 100, opacity: wisdomFading ? 0 : 1, transition: 'opacity 0.25s ease' }}>
             <p className="font-serif" style={{
               fontSize: 21, fontWeight: 600, color: 'var(--color-ink)',
               lineHeight: 1.5, margin: SAGE_WISDOM[tipIndex].author ? '0 0 10px' : '0',
@@ -1119,27 +1131,6 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <button
-            onClick={() => {
-              setWisdomFading(true)
-              setTimeout(() => {
-                setTipIndex(i => (i + 1) % SAGE_WISDOM.length)
-                setWisdomFading(false)
-              }, 250)
-            }}
-            style={{
-              background: 'none',
-              border: '1.5px solid var(--color-border)',
-              borderRadius: 8,
-              padding: '8px 20px',
-              fontSize: 14, fontWeight: 600,
-              color: 'var(--color-primary)',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-            }}
-          >
-            Next
-          </button>
         </section>
 
       </main>
