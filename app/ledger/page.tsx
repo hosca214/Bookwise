@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { Camera, X, RefreshCw } from 'lucide-react'
+import { Camera, X, RefreshCw, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction, Service } from '@/lib/supabase'
 
@@ -611,6 +611,19 @@ export default function LedgerPage() {
               }}>
                 {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
               </div>
+
+              {/* view receipt */}
+              {tx.receipt_url && (
+                <a
+                  href={tx.receipt_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View receipt"
+                  style={{ padding: 4, color: 'var(--color-primary)', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
 
               {/* receipt camera */}
               <button
