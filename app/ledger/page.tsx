@@ -131,9 +131,11 @@ export default function LedgerPage() {
   const [ocrLoading, setOcrLoading] = useState(false)
 
   const rowFileRef = useRef<HTMLInputElement>(null)
+  const rowCameraRef = useRef<HTMLInputElement>(null)
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
   const [receiptModalTx, setReceiptModalTx] = useState<Transaction | null>(null)
+  const [cameraMenuTxId, setCameraMenuTxId] = useState<string | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
@@ -684,14 +686,32 @@ export default function LedgerPage() {
                       <Receipt size={14} />
                     </button>
                   ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
-                      title="Attach receipt"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
-                    >
-                      {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
-                      <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
-                    </button>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCameraMenuTxId(cameraMenuTxId === tx.id ? null : tx.id) }}
+                        title="Attach receipt"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
+                      >
+                        {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
+                        <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
+                      </button>
+                      {cameraMenuTxId === tx.id && (
+                        <div style={{ position: 'absolute', right: 0, top: '100%', zIndex: 50, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', overflow: 'hidden', minWidth: 160 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setCameraMenuTxId(null); setRowReceiptTarget(tx.id); rowCameraRef.current?.click() }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 16px', background: 'none', border: 'none', fontSize: 13, fontWeight: 500, color: 'var(--color-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                          >
+                            Take photo
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setCameraMenuTxId(null); setRowReceiptTarget(tx.id); rowFileRef.current?.click() }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 16px', background: 'none', border: 'none', fontSize: 13, fontWeight: 500, color: 'var(--color-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)', borderTop: '1px solid var(--color-border)' }}
+                          >
+                            Upload file
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -963,6 +983,13 @@ export default function LedgerPage() {
             <input
               type="file"
               ref={rowFileRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleRowReceiptCapture}
+            />
+            <input
+              type="file"
+              ref={rowCameraRef}
               accept="image/*"
               capture="environment"
               style={{ display: 'none' }}
