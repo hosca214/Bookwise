@@ -7,7 +7,6 @@ import { BottomNav } from '@/components/ui/BottomNav'
 import { Camera, X, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction, Service } from '@/lib/supabase'
-import { SCHEDULE_C_MAP } from '@/lib/iqMaps'
 
 const INCOME_CATS = [
   'Session Income', 'Package Income', 'Retainer Income', 'Tip Income', 'Other Income',
@@ -546,20 +545,6 @@ export default function LedgerPage() {
                     </span>
                   )}
                 </div>
-                {SCHEDULE_C_MAP[tx.category_key] && (
-                  <div style={{ marginTop: 3 }}>
-                    <span style={{
-                      fontSize: 10,
-                      color: 'var(--color-muted-foreground)',
-                      padding: '1px 6px',
-                      borderRadius: 999,
-                      border: '1px solid var(--color-border)',
-                      letterSpacing: '0.02em',
-                    }}>
-                      {SCHEDULE_C_MAP[tx.category_key].label}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* amount */}
@@ -784,11 +769,6 @@ export default function LedgerPage() {
                 <option key={cat} value={cat}>{t(cat)}</option>
               ))}
             </select>
-            {SCHEDULE_C_MAP[txCategory] && (
-              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 6, lineHeight: 1.4 }}>
-                For your taxes, this goes under: {SCHEDULE_C_MAP[txCategory].label} (Schedule C)
-              </p>
-            )}
           </div>
 
           {/* Amount */}
