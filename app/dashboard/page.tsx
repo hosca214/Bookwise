@@ -702,14 +702,14 @@ export default function DashboardPage() {
                   <div style={{ marginTop: 10, background: 'var(--color-background)', borderRadius: 8, padding: '10px 12px' }}>
                     <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden', display: 'flex' }}>
                       {isUnder ? (
-                        <div style={{ width: `${coveredFill}%`, background: 'var(--color-danger)', borderRadius: 99, transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                        <div style={{ width: `${coveredFill}%`, background: '#f97316', borderRadius: 99, transition: 'width 0.8s ease-out', flexShrink: 0 }} />
                       ) : (
                         <>
-                          <div style={{ width: `${breakEvenPos}%`, background: 'var(--color-primary-dark)', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                          <div style={{ width: `${breakEvenPos}%`, background: 'color-mix(in srgb, var(--color-profit) 45%, var(--color-card))', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
                           {surplusFill > 0 && (
                             <>
                               <div style={{ width: 3, background: 'var(--color-card)', flexShrink: 0 }} />
-                              <div style={{ width: `${surplusFill}%`, background: '#22c55e', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                              <div style={{ width: `${surplusFill}%`, background: 'var(--color-profit)', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
                             </>
                           )}
                         </>
