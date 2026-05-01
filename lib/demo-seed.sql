@@ -68,16 +68,13 @@ BEGIN
     (demo_id, cur_month + 18, 165.00, 'income', 'Session Income', '90-min session - S. Torres',  'manual'),
     (demo_id, cur_month + 20, 120.00, 'income', 'Session Income', '60-min session - R. Chen',    'manual');
 
-  -- Current month expenses (8 transactions, total $1,210)
+  -- Current month expenses (5 transactions, total $935)
   INSERT INTO transactions (user_id, date, amount, type, category_key, notes, source) VALUES
-    (demo_id, cur_month +  0, 800.00, 'expense', 'Rent',                 'Treatment room',            'manual'),
-    (demo_id, cur_month +  2,  35.00, 'expense', 'Insurance',            'Liability insurance',       'manual'),
-    (demo_id, cur_month +  4,  25.00, 'expense', 'Software',             'Booking software',          'manual'),
-    (demo_id, cur_month +  7,  65.00, 'expense', 'Equipment',            'Oils and aromatherapy',     'manual'),
-    (demo_id, cur_month +  9,  45.00, 'expense', 'Supplies',             'Linens',                    'manual'),
-    (demo_id, cur_month + 12, 150.00, 'expense', 'Continuing Education', 'Myofascial release workshop','manual'),
-    (demo_id, cur_month + 14,  60.00, 'expense', 'Marketing',            'Instagram promotion',       'manual'),
-    (demo_id, cur_month + 19,  30.00, 'expense', 'Supplies',             'Massage cream refill',      'manual');
+    (demo_id, cur_month +  0, 800.00, 'expense', 'Rent',      'Treatment room',       'manual'),
+    (demo_id, cur_month +  2,  35.00, 'expense', 'Insurance', 'Liability insurance',  'manual'),
+    (demo_id, cur_month +  4,  25.00, 'expense', 'Software',  'Booking software',     'manual'),
+    (demo_id, cur_month +  9,  45.00, 'expense', 'Supplies',  'Linens',               'manual'),
+    (demo_id, cur_month + 19,  30.00, 'expense', 'Supplies',  'Massage cream refill', 'manual');
 
   -- Previous month income (8 transactions, total $1,315)
   INSERT INTO transactions (user_id, date, amount, type, category_key, notes, source) VALUES
