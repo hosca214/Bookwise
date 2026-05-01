@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePersistentState } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -100,7 +99,6 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
-  const [payPeriod, setPayPeriod] = usePersistentState<'week' | 'month'>('dashboard.payPeriod', 'week')
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
@@ -584,36 +582,6 @@ export default function DashboardPage() {
   const payTarget = profile?.pay_target ?? 0
   const payProgress = payTarget > 0 ? Math.min(100, (takeHome / payTarget) * 100) : 0
 
-  const weekTakeHome = monthIncome > 0
-    ? (Math.min(weekIncome, monthIncome) / monthIncome) * takeHome
-    : 0
-  const weekTaxAmount = weekIncome * taxFrac
-  const weekProfitAmount = weekIncome * profitFrac
-  const weekOpsActual = weekExpenses
-  const weekOpsTarget = weekIncome * opsFrac
-  const weekOverBudget = weekOpsTarget > 0 && weekOpsActual > weekOpsTarget
-  const weekOverAmount = Math.max(0, weekOpsActual - weekOpsTarget)
-
-  const monthlyGoal = 0
-  const displayIncome = payPeriod === 'week' ? weekIncome : monthIncome
-  const displayTakeHome = payPeriod === 'week' ? weekTakeHome : takeHome
-  const displayPayTarget = payPeriod === 'week' ? payTarget / 4.33 : payTarget
-  const displayPayProgress = displayPayTarget > 0 ? Math.min(100, (displayTakeHome / displayPayTarget) * 100) : 0
-
-  const displayTaxAmount = payPeriod === 'week' ? weekTaxAmount : taxFunded
-  const displayTaxTarget = payPeriod === 'week' ? weekTaxAmount : taxTarget
-  const displayProfitAmount = payPeriod === 'week' ? weekProfitAmount : profitFunded
-  const displayProfitTarget = payPeriod === 'week' ? weekProfitAmount : profitTarget
-  const displayOpsActual = payPeriod === 'week' ? weekOpsActual : opsActual
-  const displayOpsTarget = payPeriod === 'week' ? weekOpsTarget : opsTarget
-  const displayOverBudget = payPeriod === 'week' ? weekOverBudget : overBudget
-  const displayOverAmount = payPeriod === 'week' ? weekOverAmount : overAmount
-
-  const displayGoal = payPeriod === 'week' ? payTarget / 4.33 : payTarget
-  const displayEssentialBase = payPeriod === 'week' ? essentialBase / 4.33 : essentialBase
-  const displayEssentialCoverage = displayEssentialBase > 0
-    ? Math.round((displayIncome / displayEssentialBase) * 100)
-    : 0
 
 
 
