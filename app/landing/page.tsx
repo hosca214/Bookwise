@@ -593,29 +593,19 @@ export default function LandingPage() {
                     <div style={{ fontSize: 17, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
                     <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
                   </div>
-                  <BucketRow label="Taxes Set Aside" amount="$460" pct={73} color={GOLD}    sub="25%" />
-                  <BucketRow label="Business Expenses"     amount="$196" pct={31} color="#4E6E52" sub="65%" />
-                  <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10%" />
+                  <div style={{ background: CARD, borderRadius: 12, padding: '14px 14px 12px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginBottom: 4 }}>My Take-Home Pay</div>
+                    <div style={{ fontSize: 32, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif', lineHeight: 1 }}>$2,376</div>
+                    <div style={{ fontSize: 9, color: MUTED, marginTop: 3, marginBottom: 8 }}>After Taxes Set Aside, expenses, and Growth Fund</div>
+                    <div style={{ height: 5, background: BORDER, borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: '68%', background: SAGE, borderRadius: 99 }} />
+                    </div>
+                    <div style={{ fontSize: 9, color: MUTED, marginTop: 4 }}>68% of $3,500 goal</div>
+                  </div>
+                  <BucketRow label="Taxes Set Aside" amount="$460" pct={73} color={GOLD} sub="25%" />
+                  <BucketRow label="Growth Fund"     amount="$264" pct={42} color={SAGE} sub="10%" />
                   <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
-                  </div>
-                  <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(124,154,126,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MessageCircle size={12} color={SAGE} />
-                      </div>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: SAGE }}>Sage AI insight</span>
-                    </div>
-                    <p style={{ fontSize: 11, color: INK, lineHeight: 1.55, margin: 0 }}>
-                      Income is up 18% from last month. Your overhead stayed flat.
-                    </p>
-                  </div>
-                  <div style={{ background: CARD, borderRadius: 10, padding: 12, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, marginBottom: 6 }}>Today's Pulse</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12, color: INK }}>4 appointments</span>
-                      <span style={{ fontSize: 12, color: INK }}>5.5 hrs</span>
-                    </div>
                   </div>
                 </div>
               </PhoneFrame>
@@ -833,13 +823,13 @@ export default function LandingPage() {
       <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: SEC }}>
         <div style={{ maxWidth: 580, margin: '0 auto', textAlign: 'center' }}>
           <FadeIn>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 14 }}>The person behind the product</p>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 28 : 38, fontWeight: 700, color: INK, margin: '0 0 28px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+              The Zen Bookkeeper.
+            </h2>
             <div style={{ width: 380, height: 380, borderRadius: '50%', margin: '0 auto 32px', overflow: 'hidden', flexShrink: 0 }}>
               <img src="/IMG_0111.jpeg" alt="Founder of The Zen Bookkeeper" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '72% 50%', transform: 'scale(1.5)', transformOrigin: '65% 75%' }} />
             </div>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 14 }}>The person behind the product</p>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 28 : 38, fontWeight: 700, color: INK, margin: '0 0 14px', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-              The Zen Bookkeeper.
-            </h2>
             <p style={{ fontSize: isMobile ? 17 : 18, lineHeight: 1.6, color: INK, fontWeight: 600, margin: '0 0 20px' }}>
               Hi, I&apos;m Aya, founder and designer of the Bookwise app.
             </p>
@@ -847,7 +837,9 @@ export default function LandingPage() {
               I have a master&apos;s degree in accounting and spent ten years doing corporate audits. The work was interesting, but it kept me far from the people I actually wanted to help.
             </p>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: '0 0 18px' }}>
-              The wellness professionals I worked with along the way changed my life. Coaches, trainers, bodyworkers. I wanted to give something back to them. So I left corporate and opened my own bookkeeping firm built specifically for this community.
+              The wellness professionals I worked with along the way changed my life. Coaches, trainers, bodyworkers. I wanted to give something back to them. So I left corporate and opened{' '}
+              <a href="https://thezenbookkeeper.net" target="_blank" rel="noopener noreferrer" style={{ color: INK, textDecoration: 'underline', textUnderlineOffset: 3 }}>The Zen Bookkeeper</a>
+              , a bookkeeping firm built specifically for this community.
             </p>
             <p style={{ fontSize: isMobile ? 16 : 17, lineHeight: 1.75, color: MUTED, margin: 0 }}>
               I built Bookwise because I wanted every practitioner to have their own tool. Something that makes the numbers feel manageable and puts you back in control of your business.
