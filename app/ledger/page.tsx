@@ -145,24 +145,28 @@ export default function LedgerPage() {
 
   const [savedSearch, setSavedSearch] = usePersistentState('ledger.search', '')
   const [savedCategoryFilter, setSavedCategoryFilter] = usePersistentState<string[]>('ledger.categoryFilter', [])
+  const [savedTypeFilter, setSavedTypeFilter] = usePersistentState<'all' | 'income' | 'expense'>('ledger.typeFilter', 'all')
   const [savedMonthFilter, setSavedMonthFilter] = usePersistentState('ledger.monthFilter', currentMonth)
   const [isReset, setIsReset] = useState(false)
 
   const search = isReset ? '' : savedSearch
   const categoryFilter: string[] = isReset ? [] : savedCategoryFilter
   const monthFilter = isReset ? currentMonth : savedMonthFilter
+  const typeFilter = isReset ? 'all' : savedTypeFilter
+  const setTypeFilter = (val: 'all' | 'income' | 'expense') => { setSavedTypeFilter(val); setIsReset(false) }
 
   const setSearch = (val: string) => { setSavedSearch(val); setIsReset(false) }
   const setCategoryFilter = (val: string[]) => { setSavedCategoryFilter(val); setIsReset(false) }
   const setMonthFilter = (val: string) => { setSavedMonthFilter(val); setIsReset(false) }
   const handleResetFilters = () => setIsReset(true)
-  const hasActiveFilters = search !== '' || categoryFilter.length > 0 || monthFilter !== currentMonth
+  const hasActiveFilters = search !== '' || categoryFilter.length > 0 || monthFilter !== currentMonth || typeFilter !== 'all'
 
   const [expandedTxId, setExpandedTxId] = useState<string | null>(null)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
 
   const filtered = useMemo(() => transactions.filter((tx) => {
+    if (typeFilter !== 'all' && tx.type !== typeFilter) return false
     if (categoryFilter.length > 0 && !categoryFilter.includes(tx.category_key)) return false
     if (monthFilter !== 'all' && !tx.date.startsWith(monthFilter)) return false
     if (search.trim()) {
@@ -170,7 +174,7 @@ export default function LedgerPage() {
       if (!t(tx.category_key).toLowerCase().includes(q) && !(tx.notes ?? '').toLowerCase().includes(q)) return false
     }
     return true
-  }), [transactions, categoryFilter, monthFilter, search, t])
+  }), [transactions, typeFilter, categoryFilter, monthFilter, search, t])
 
   const businessFiltered = filtered.filter((tx) => !tx.is_personal)
   const totalIncome = businessFiltered.filter((tx) => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
@@ -470,6 +474,22 @@ export default function LedgerPage() {
               placeholder="Search entries..."
               style={{ width: '100%', height: 36, borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'var(--color-card)', padding: '0 10px 0 30px', fontSize: 13, color: 'var(--color-foreground)', fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }}
             />
+          </div>
+
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['income', 'expense'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(typeFilter === t ? 'all' : t)}
+                style={{ height: 36, padding: '0 16px', borderRadius: 8, border: '1.5px solid', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', flex: 1,
+                  borderColor: typeFilter === t ? (t === 'income' ? 'var(--color-profit)' : 'var(--color-danger)') : 'var(--color-border)',
+                  background: typeFilter === t ? (t === 'income' ? 'color-mix(in srgb, var(--color-profit) 12%, var(--color-card))' : 'color-mix(in srgb, var(--color-danger) 10%, var(--color-card))') : 'var(--color-card)',
+                  color: typeFilter === t ? (t === 'income' ? 'var(--color-profit)' : 'var(--color-danger)') : 'var(--color-muted-foreground)',
+                }}
+              >
+                {t === 'income' ? 'Income' : 'Expenses'}
+              </button>
+            ))}
           </div>
 
           <div style={{ position: 'relative' }}>
