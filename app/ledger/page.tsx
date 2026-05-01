@@ -72,7 +72,7 @@ function formatDate(d: string) {
 
 function getReceiptPreviewUrl(receiptUrl: string): string {
   const driveMatch = receiptUrl.match(/\/d\/([a-zA-Z0-9_-]+)\/view/)
-  if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w800`
+  if (driveMatch) return `/api/drive/image?id=${driveMatch[1]}`
   return receiptUrl
 }
 
@@ -695,9 +695,6 @@ export default function LedgerPage() {
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
                     >
                       {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
-                      {tx.type === 'expense' && (
-                        <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
-                      )}
                     </button>
                   )}
                 </div>
