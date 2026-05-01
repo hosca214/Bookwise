@@ -638,7 +638,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Daily Operations */}
+            {/* Business Expenses */}
             <div style={{ ...cardStyle, marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>

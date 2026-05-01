@@ -129,7 +129,7 @@ const FEATURE_SCREENS = [
         <div style={{ fontSize: 10, color: MUTED }}>Hands and Heart Massage</div>
       </div>
       <BucketRow label="Taxes"          amount="$460" pct={73} color={GOLD}    sub="25% of income" />
-      <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65% of income" />
+      <BucketRow label="Business Expenses"     amount="$196" pct={31} color="#4E6E52" sub="65% of income" />
       <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10% of income" />
       <BucketRow label="Owner Pay"     amount="$318" pct={58} color={DANGER}  sub="paid this month" />
       <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
@@ -310,7 +310,7 @@ const ACCORDION = [
 ]
 
 const FEATURES = [
-  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Taxes Set Aside, Daily Operations, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
+  { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Taxes Set Aside, Business Expenses, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
   { icon: <Shield size={22} />,     title: 'Taxes Set Aside',  body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
   { icon: <MessageCircle size={22} />, title: 'Sage AI Insights', body: 'Sage AI reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
   { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt. Sage AI reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
@@ -329,7 +329,7 @@ const STEPS = [
     n: '02',
     icon: <Sparkles size={24} />,
     title: 'Sage AI sorts everything',
-    body: 'Your income flows into Taxes Set Aside, Daily Ops, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
+    body: 'Your income flows into Taxes Set Aside, Business Expenses, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
   },
   {
     n: '03',
@@ -560,7 +560,7 @@ export default function LandingPage() {
                     <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
                   </div>
                   <BucketRow label="Taxes Set Aside" amount="$460" pct={73} color={GOLD}    sub="25%" />
-                  <BucketRow label="Daily Ops"     amount="$196" pct={31} color="#4E6E52" sub="65%" />
+                  <BucketRow label="Business Expenses"     amount="$196" pct={31} color="#4E6E52" sub="65%" />
                   <BucketRow label="Growth Fund"   amount="$264" pct={42} color={SAGE}    sub="10%" />
                   <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>

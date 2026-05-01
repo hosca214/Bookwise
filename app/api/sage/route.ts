@@ -25,7 +25,7 @@ Never say "Great question" or "I hope this helps".`
     daily_insight: `Practice: ${context.practiceName}
 Industry: ${context.industry}
 This month income: $${context.monthIncome ?? 0}, expenses: $${context.monthExpenses ?? 0}
-Bucket status: Growth Fund ${context.buckets?.profit ?? 0}% funded, Taxes Set Aside ${context.buckets?.tax ?? 0}% funded, Daily Operations ${context.buckets?.ops ?? 0}% funded
+Bucket status: Growth Fund ${context.buckets?.profit ?? 0}% funded, Taxes Set Aside ${context.buckets?.tax ?? 0}% funded, Business Expenses ${context.buckets?.ops ?? 0}% funded
 Write a brief financial insight for this practitioner based on these numbers.`,
 
     pay_guidance: `Practice: ${context.practiceName}
