@@ -72,7 +72,7 @@ function formatDate(d: string) {
 
 function getReceiptPreviewUrl(receiptUrl: string): string {
   const driveMatch = receiptUrl.match(/\/d\/([a-zA-Z0-9_-]+)\/view/)
-  if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w400`
+  if (driveMatch) return `https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w800`
   return receiptUrl
 }
 
@@ -691,7 +691,7 @@ export default function LedgerPage() {
                       </button>
                       {hoveredReceiptId === tx.id && (
                         <div style={{ position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 50, background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', pointerEvents: 'none' }}>
-                          <img src={getReceiptPreviewUrl(tx.receipt_url!)} alt="Receipt preview" style={{ width: 160, height: 'auto', borderRadius: 4, display: 'block' }} />
+                          <img src={getReceiptPreviewUrl(tx.receipt_url!)} alt="Receipt preview" style={{ width: 280, height: 'auto', maxHeight: 400, objectFit: 'contain', borderRadius: 4, display: 'block' }} />
                         </div>
                       )}
                     </div>
