@@ -77,20 +77,12 @@ if (buildState !== 'READY') {
 
 console.log('Build READY. Seeding demo account...')
 try {
-  const seedSecret = process.env.SEED_DEMO_SECRET
-  if (seedSecret) {
-    const seedRes = await fetch(`${deployUrl}/api/seed-demo`, {
-      method: 'POST',
-      headers: { 'x-seed-secret': seedSecret, 'Content-Type': 'application/json' },
-    })
-    const seedBody = await seedRes.json().catch(() => ({}))
-    if (seedRes.ok) {
-      console.log(`Demo seed OK — ${seedBody.transactions ?? '?'} transactions written.`)
-    } else {
-      console.warn(`Demo seed returned ${seedRes.status}: ${JSON.stringify(seedBody)} — continuing anyway.`)
-    }
+  const seedRes = await fetch(`${deployUrl}/api/seed-demo`, { method: 'POST' })
+  const seedBody = await seedRes.json().catch(() => ({}))
+  if (seedRes.ok) {
+    console.log(`Demo seed OK — ${seedBody.transactions ?? '?'} transactions written.`)
   } else {
-    console.warn('SEED_DEMO_SECRET not set — skipping demo seed.')
+    console.warn(`Demo seed returned ${seedRes.status}: ${JSON.stringify(seedBody)} — continuing anyway.`)
   }
 } catch (e) {
   console.warn('Demo seed request failed:', e.message, '— continuing anyway.')

@@ -6,12 +6,7 @@ function addDays(base: Date, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function POST(req: Request) {
-  const secret = req.headers.get('x-seed-secret')
-  if (!secret || secret !== process.env.SEED_DEMO_SECRET) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
+export async function POST() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
