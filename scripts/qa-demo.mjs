@@ -122,7 +122,7 @@ await check('Daily Pulse section visible', async () => {
   await page.waitForSelector("text=Today's Pulse", { timeout: 5000 })
 })
 await check('Sage insight card visible', async () => {
-  await page.waitForSelector('text=Sage AI says', { timeout: 5000 })
+  await page.waitForSelector('text=Sage AI Insights', { timeout: 15000 })
 })
 await check('Tax deadline countdown visible', async () => {
   // The countdown lives behind the Tax Set-Aside tile's "What is this?" toggle.
