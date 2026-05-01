@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePersistentState } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -99,6 +100,7 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
+  const [payPeriod, setPayPeriod] = usePersistentState<'week' | 'month'>('dashboard.payPeriod', 'week')
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
@@ -582,6 +584,38 @@ export default function DashboardPage() {
   const payTarget = profile?.pay_target ?? 0
   const payProgress = payTarget > 0 ? Math.min(100, (takeHome / payTarget) * 100) : 0
 
+  const weekTakeHome = monthIncome > 0
+    ? (Math.min(weekIncome, monthIncome) / monthIncome) * takeHome
+    : 0
+  const weekTaxAmount = weekIncome * taxFrac
+  const weekProfitAmount = weekIncome * profitFrac
+  const weekOpsActual = weekExpenses
+  const weekOpsTarget = weekIncome * opsFrac
+  const weekOverBudget = weekOpsTarget > 0 && weekOpsActual > weekOpsTarget
+  const weekOverAmount = Math.max(0, weekOpsActual - weekOpsTarget)
+
+  const monthlyGoal = 0
+  const displayIncome = payPeriod === 'week' ? weekIncome : monthIncome
+  const displayTakeHome = payPeriod === 'week' ? weekTakeHome : takeHome
+  const displayPayTarget = payPeriod === 'week' ? payTarget / 4.33 : payTarget
+  const displayPayProgress = displayPayTarget > 0 ? Math.min(100, (displayTakeHome / displayPayTarget) * 100) : 0
+
+  const displayTaxAmount = payPeriod === 'week' ? weekTaxAmount : taxFunded
+  const displayTaxTarget = payPeriod === 'week' ? weekTaxAmount : taxTarget
+  const displayProfitAmount = payPeriod === 'week' ? weekProfitAmount : profitFunded
+  const displayProfitTarget = payPeriod === 'week' ? weekProfitAmount : profitTarget
+  const displayOpsActual = payPeriod === 'week' ? weekOpsActual : opsActual
+  const displayOpsTarget = payPeriod === 'week' ? weekOpsTarget : opsTarget
+  const displayOverBudget = payPeriod === 'week' ? weekOverBudget : overBudget
+  const displayOverAmount = payPeriod === 'week' ? weekOverAmount : overAmount
+
+  const displayGoal = payPeriod === 'week' ? payTarget / 4.33 : payTarget
+  const displayEssentialBase = payPeriod === 'week' ? essentialBase / 4.33 : essentialBase
+  const displayEssentialCoverage = displayEssentialBase > 0
+    ? Math.round((displayIncome / displayEssentialBase) * 100)
+    : 0
+
+
 
 
   if (loadError) {
@@ -625,29 +659,11 @@ export default function DashboardPage() {
         position: 'sticky', top: 0, zIndex: 30,
       }}>
         <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1.1, margin: 0 }}>
-              My Dash
-            </h1>
-            <div style={{ display: 'flex', background: 'var(--color-muted)', borderRadius: 999, padding: 3, gap: 2 }}>
-              {(['week', 'month'] as const).map(p => (
-                <button key={p} onClick={() => setPayPeriod(p)}
-                  style={{
-                    padding: '5px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-                    border: 'none', cursor: 'pointer',
-                    background: payPeriod === p ? 'var(--color-card)' : 'transparent',
-                    color: payPeriod === p ? 'var(--color-ink)' : 'var(--color-muted-foreground)',
-                    boxShadow: payPeriod === p ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    transition: 'background 0.15s', fontFamily: 'var(--font-sans)',
-                  }}
-                >
-                  {p === 'week' ? 'This Week' : 'This Month'}
-                </button>
-              ))}
-            </div>
-          </div>
+          <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', lineHeight: 1.1, margin: 0 }}>
+            My Dash
+          </h1>
           <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '4px 0 0' }}>
-            {profile?.practice_name ?? 'My Practice'} &middot; {payPeriod === 'week' ? WEEK_RANGE_LABEL : MONTH_LABEL}
+            {profile?.practice_name ?? 'My Practice'} &middot; {MONTH_LABEL}
           </p>
         </div>
       </header>
@@ -656,34 +672,92 @@ export default function DashboardPage() {
 
         {/* My Take-Home Pay */}
         <section style={{ ...cardStyle, marginBottom: 16 }}>
-          <div style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
               My Take-Home Pay
             </span>
+            <button onClick={() => setShowOwnerPayInfo(v => !v)}
+              style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}
+            >
+              {showOwnerPayInfo ? 'Hide' : 'What is this?'}
+            </button>
           </div>
+          {showOwnerPayInfo && (
+            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 10, lineHeight: 1.6 }}>
+              This is what you actually pocket — your income after Taxes Set Aside, Business Expenses, and your Growth Fund are accounted for. When your expenses stay within budget, this number is predictable. When expenses run over, this number drops.
+            </p>
+          )}
           {monthIncome > 0 ? (
             <>
-              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: displayTakeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
-                ${displayTakeHome.toFixed(2)}
+              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: takeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
+                ${takeHome.toFixed(2)}
               </p>
-              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '0 0 8px', lineHeight: 1.4 }}>
-                After Taxes Set Aside, Business Expenses, and Growth Fund
-              </p>
-              {displayTakeHome === 0 ? (
+              {takeHome === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontStyle: 'italic' }}>
-                  {payPeriod === 'week' ? 'Expenses exceeded income this week.' : 'Your expenses exceeded your income this month.'}
+                  Your expenses exceeded your income this month.
                 </p>
-              ) : displayPayTarget > 0 ? (
+              ) : payTarget > 0 ? (
                 <>
                   <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                    <div style={{ height: '100%', width: `${displayPayProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+                    <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                    <span>${displayTakeHome.toFixed(0)} {payPeriod === 'week' ? 'this week' : 'this month'}</span>
-                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${displayPayTarget.toFixed(0)}{payPeriod === 'month' ? '/mo' : '/wk'}</strong></span>
+                    <span>${takeHome.toFixed(0)} this month</span>
+                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${payTarget.toFixed(0)}/mo</strong></span>
                   </div>
                 </>
               ) : null}
+              {essentialBase > 0 && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: essentialCoverage >= 100 ? '#22c55e' : 'var(--color-danger)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: 'var(--color-foreground)', fontWeight: 600, flex: 1 }}>
+                    {essentialCoverage >= 100
+                      ? 'Your business is paying for itself.'
+                      : `Your income covers ${essentialCoverage}% of what it costs to show up.`}
+                  </span>
+                  <button
+                    onClick={() => setShowBreakevenDetail(v => !v)}
+                    style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' as const }}
+                  >
+                    {showBreakevenDetail ? 'Hide' : 'See more'}
+                  </button>
+                </div>
+              )}
+              {showBreakevenDetail && essentialBase > 0 && (() => {
+                const maxScale = Math.max(monthIncome, essentialBase) * 1.1 || 1
+                const breakEvenPos = Math.min(100, (essentialBase / maxScale) * 100)
+                const incomeFill = Math.min(100, (monthIncome / maxScale) * 100)
+                const coveredFill = Math.min(incomeFill, breakEvenPos)
+                const surplusFill = Math.max(0, incomeFill - breakEvenPos)
+                const isUnder = essentialCoverage < 100
+                return (
+                  <div style={{ marginTop: 10, background: 'var(--color-background)', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden', display: 'flex' }}>
+                      {isUnder ? (
+                        <div style={{ width: `${coveredFill}%`, background: 'var(--color-danger)', borderRadius: 99, transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                      ) : (
+                        <>
+                          <div style={{ width: `${breakEvenPos}%`, background: 'var(--color-primary-dark)', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                          {surplusFill > 0 && (
+                            <>
+                              <div style={{ width: 3, background: 'var(--color-card)', flexShrink: 0 }} />
+                              <div style={{ width: `${surplusFill}%`, background: '#22c55e', transition: 'width 0.8s ease-out', flexShrink: 0 }} />
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--color-muted-foreground)' }}>
+                      <span>Income ${monthIncome.toFixed(2)}</span>
+                      <span>Cost to show up ${essentialBase.toFixed(2)}</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0 }}>
+                      Need to update this?{' '}
+                      <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Settings</a>
+                    </p>
+                  </div>
+                )
+              })()}
             </>
           ) : (
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: '8px 0 0' }}>
@@ -691,39 +765,8 @@ export default function DashboardPage() {
               <a href="/ledger" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Ledger</a>
             </p>
           )}
-          <button onClick={() => setShowOwnerPayInfo(v => !v)}
-            style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: '8px 0 0', textDecoration: 'underline', fontFamily: 'var(--font-sans)' }}
-          >
-            {showOwnerPayInfo ? 'Hide' : 'What is this?'}
-          </button>
-          {showOwnerPayInfo && (
-            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 6, lineHeight: 1.6 }}>
-              This is what you actually pocket — your income after Taxes Set Aside, Business Expenses, and your Growth Fund are accounted for. When your expenses stay within budget, this number is predictable. When expenses run over, this number drops. Keeping an eye on it each month is how you make sure your practice is actually paying you.
-            </p>
-          )}
         </section>
 
-        {/* Monthly Income Goal */}
-        {monthlyGoal > 0 && (
-          <section style={{ ...cardStyle, marginBottom: 16 }}>
-            <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-              Income Goal
-            </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '4px 0 10px' }}>
-              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-primary)', margin: 0, lineHeight: 1 }}>
-                ${displayIncome.toFixed(0)}
-              </p>
-              <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>of ${displayGoal.toFixed(0)} {payPeriod === 'week' ? 'weekly' : 'monthly'} goal</span>
-            </div>
-            <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (displayIncome / displayGoal) * 100)}%`, background: displayIncome >= displayGoal ? 'var(--color-profit)' : 'var(--color-primary)', borderRadius: 3, transition: 'width 1.2s ease' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-              <span>{Math.round((displayIncome / displayGoal) * 100)}% there</span>
-              <span>${Math.max(0, displayGoal - displayIncome).toFixed(0)} to go</span>
-            </div>
-          </section>
-        )}
 
         {/* Money Plan Tiles */}
         {monthIncome === 0 ? (
@@ -750,10 +793,10 @@ export default function DashboardPage() {
               <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
                 <div style={{ height: '100%', width: `${displayTaxTarget > 0 ? Math.min(100, (displayTaxAmount / displayTaxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
-              <button onClick={() => setShowTaxInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {showTaxInfo ? 'Hide' : 'What is this?'}
+              <button onClick={() => setOpenPlanRow(prev => prev === 'tax' ? null : 'tax')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
+                {openPlanRow === 'tax' ? 'Hide' : 'What is this?'}
               </button>
-              {showTaxInfo && (
+              {openPlanRow === 'tax' && (
                 <div style={{ marginTop: 8 }}>
                   <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 10px', lineHeight: 1.6 }}>
                     Set this aside so you are never surprised at tax time. Keep it in a dedicated savings account, separate from your spending, so it is ready when your quarterly payment is due. Always confirm your payment amount with a licensed CPA.
@@ -794,10 +837,10 @@ export default function DashboardPage() {
                   Over budget by ${displayOverAmount.toFixed(2)}, which is coming directly out of your take-home.
                 </p>
               )}
-              <button onClick={() => setShowOpsInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {showOpsInfo ? 'Hide' : 'What is this?'}
+              <button onClick={() => setOpenPlanRow(prev => prev === 'ops' ? null : 'ops')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
+                {openPlanRow === 'ops' ? 'Hide' : 'What is this?'}
               </button>
-              {showOpsInfo && (
+              {openPlanRow === 'ops' && (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
                   This is your monthly budget for business costs — supplies, rent, software, insurance, and anything else it takes to run your practice. Your budget is based on the typical overhead for your type of practice. When your actual spending stays within this amount, your take-home pay stays predictable. Spending above this budget comes directly out of what you pocket.
                 </p>
@@ -818,10 +861,10 @@ export default function DashboardPage() {
               <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
                 <div style={{ height: '100%', width: `${displayProfitTarget > 0 ? Math.min(100, (displayProfitAmount / displayProfitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
-              <button onClick={() => setShowGrowthInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
-                {showGrowthInfo ? 'Hide' : 'What is this?'}
+              <button onClick={() => setOpenPlanRow(prev => prev === 'growth' ? null : 'growth')} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
+                {openPlanRow === 'growth' ? 'Hide' : 'What is this?'}
               </button>
-              {showGrowthInfo && (
+              {openPlanRow === 'growth' && (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
                   This is your practice reinvestment fund. Each month, set this amount aside in a dedicated savings account. Use it for continuing education and training, new equipment, or saving toward bigger goals like expanding your space or adding a second location. Moving this money consistently is what separates a practice that grows from one that stays stuck.
                 </p>
@@ -831,97 +874,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Cost to Show Up */}
-        <section style={{ ...cardStyle, marginBottom: 28 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-muted-foreground)', margin: 0 }}>
-              Cost to Show Up
-            </p>
-            <button
-              onClick={() => setShowEssentialsInfo(v => !v)}
-              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)' }}
-            >
-              {showEssentialsInfo ? 'Hide' : 'What is this?'}
-            </button>
-          </div>
-          {showEssentialsInfo && (
-            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 12, lineHeight: 1.6, borderLeft: '3px solid var(--color-border)', paddingLeft: 12 }}>
-              This shows whether your income covers what it costs to show up each month. When you reach 100%, your practice is paying for itself. Every dollar above this builds your Growth Fund and Taxes Set Aside.
-            </p>
-          )}
-          {essentialBase === 0 ? (
-            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6 }}>
-              Add what it costs to show up in{' '}
-              <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Settings</a>{' '}
-              and we will show you how your income covers it.
-            </p>
-          ) : (
-            <>
-              {(() => {
-                const isUnder = displayEssentialCoverage < 100
-                const periodLabel = payPeriod === 'week' ? 'this week' : 'this month'
-                const breakEvenLabel = displayEssentialCoverage >= 100
-                  ? `Your practice is paying for itself ${periodLabel}.`
-                  : `Your income covers ${displayEssentialCoverage}% of what it costs to show up.`
-                const maxScale = Math.max(displayIncome, displayEssentialBase) * 1.1 || 1
-                const breakEvenPos = Math.min(100, (displayEssentialBase / maxScale) * 100)
-                const incomeFill = Math.min(100, (displayIncome / maxScale) * 100)
-                const coveredFill = Math.min(incomeFill, breakEvenPos)
-                const surplusFill = Math.max(0, incomeFill - breakEvenPos)
-                return (
-                  <>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: isUnder ? 'var(--color-danger)' : 'var(--color-profit)', margin: '0 0 12px' }}>
-                      {breakEvenLabel}
-                    </p>
-                    <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden', display: 'flex' }}>
-                      {isUnder ? (
-                        <div style={{
-                          width: `${coveredFill}%`,
-                          background: 'var(--color-danger)',
-                          borderRadius: 99,
-                          transition: 'width 0.8s ease-out',
-                          flexShrink: 0,
-                        }} />
-                      ) : (
-                        <>
-                          <div style={{
-                            width: `${breakEvenPos}%`,
-                            background: 'var(--color-primary-dark)',
-                            transition: 'width 0.8s ease-out',
-                            flexShrink: 0,
-                          }} />
-                          {surplusFill > 0 && (
-                            <>
-                              <div style={{ width: 3, background: 'var(--color-card)', flexShrink: 0 }} />
-                              <div style={{
-                                width: `${surplusFill}%`,
-                                background: '#22c55e',
-                                transition: 'width 0.8s ease-out',
-                                flexShrink: 0,
-                              }} />
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </>
-                )
-              })()}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Income ${displayIncome.toFixed(2)}
-                </span>
-                <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                  Cost to show up ${displayEssentialBase.toFixed(2)}
-                </span>
-              </div>
-              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 10, marginBottom: 0 }}>
-                Need to update this?{' '}
-                <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Settings</a>
-              </p>
-            </>
-          )}
-        </section>
 
         {/* Transfer Done */}
         {monthIncome > 0 && (
