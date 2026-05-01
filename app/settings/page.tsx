@@ -76,6 +76,8 @@ export default function SettingsPage() {
   const { vibe, setVibe } = useVibe()
 
   const [userId, setUserId] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const isDemo = userEmail === 'demo@bookwise.app'
   const [confirmReset, setConfirmReset] = useState(false)
   const [services, setServices] = useState<Service[]>([])
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({})
@@ -132,6 +134,7 @@ export default function SettingsPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
         setUserId(user.id)
+        setUserEmail(user.email ?? null)
 
         const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
           supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, ops_pct, monthly_essential_cost, monthly_income_goal, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
@@ -964,26 +967,31 @@ export default function SettingsPage() {
                     Connected
                   </span>
                   <button
-                    onClick={() => { window.location.href = '/api/auth/google-drive?from=settings' }}
+                    onClick={() => { if (!isDemo) window.location.href = '/api/auth/google-drive?from=settings' }}
+                    disabled={isDemo}
+                    title={isDemo ? 'Locked on demo account' : undefined}
                     style={{
                       padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                       border: 'none', background: 'transparent',
-                      color: 'var(--color-primary)',
-                      cursor: 'pointer',
+                      color: isDemo ? 'var(--color-muted-foreground)' : 'var(--color-primary)',
+                      cursor: isDemo ? 'not-allowed' : 'pointer',
                       fontFamily: 'var(--font-sans)',
+                      opacity: isDemo ? 0.5 : 1,
                     }}
                   >
                     Log in again
                   </button>
                   <button
                     onClick={disconnectDrive}
-                    disabled={disconnectingDrive}
+                    disabled={disconnectingDrive || isDemo}
+                    title={isDemo ? 'Locked on demo account' : undefined}
                     style={{
                       padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                       border: 'none', background: 'transparent',
-                      color: disconnectingDrive ? 'var(--color-muted-foreground)' : 'var(--color-danger)',
-                      cursor: disconnectingDrive ? 'not-allowed' : 'pointer',
+                      color: disconnectingDrive || isDemo ? 'var(--color-muted-foreground)' : 'var(--color-danger)',
+                      cursor: disconnectingDrive || isDemo ? 'not-allowed' : 'pointer',
                       fontFamily: 'var(--font-sans)',
+                      opacity: isDemo ? 0.5 : 1,
                     }}
                   >
                     {disconnectingDrive ? 'Disconnecting...' : 'Disconnect'}
@@ -991,12 +999,17 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => { window.location.href = '/api/auth/google-drive?from=settings' }}
+                  onClick={() => { if (!isDemo) window.location.href = '/api/auth/google-drive?from=settings' }}
+                  disabled={isDemo}
+                  title={isDemo ? 'Locked on demo account' : undefined}
                   style={{
                     padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                     border: '1.5px solid var(--color-primary)',
-                    background: 'transparent', color: 'var(--color-primary)', cursor: 'pointer',
+                    background: 'transparent',
+                    color: isDemo ? 'var(--color-muted-foreground)' : 'var(--color-primary)',
+                    cursor: isDemo ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--font-sans)',
+                    opacity: isDemo ? 0.5 : 1,
                   }}
                 >
                   Connect
