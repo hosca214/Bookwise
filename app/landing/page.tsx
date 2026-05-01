@@ -636,9 +636,58 @@ export default function LandingPage() {
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 32 : 50, fontWeight: 700, color: CREAM, margin: '0 0 28px', lineHeight: 1.18, letterSpacing: '-0.02em' }}>
               Knowing your numbers is good for your nervous system.
             </h2>
-            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 52px' }}>
+            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 32px' }}>
               Most wellness practitioners spend more energy avoiding their numbers than understanding them. That avoidance has a quiet cost. Bookwise is a 60-second daily check-in, not a quarterly scramble. Log your sessions. See your income update. Know exactly what is set aside. When you know your numbers, your nervous system can relax.
             </p>
+
+            {/* notification + sage loop */}
+            <FadeIn delay={0.1}>
+              <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                alignItems: isMobile ? 'stretch' : 'center',
+                gap: isMobile ? 10 : 12,
+                maxWidth: 560,
+                margin: '0 auto 40px',
+              }}>
+                <div style={{
+                  flex: 1,
+                  background: 'rgba(245,242,236,0.07)',
+                  border: '1px solid rgba(245,242,236,0.12)',
+                  borderRadius: 16,
+                  padding: '14px 18px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Bell size={15} color={SAGE} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: CREAM, flex: 1 }}>Bookwise</span>
+                    <span style={{ fontSize: 11, color: 'rgba(245,242,236,0.4)' }}>now</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'rgba(245,242,236,0.75)', lineHeight: 1.55, margin: 0 }}>
+                    Your 5 PM check-in is ready. Sixty seconds and you&apos;re done. How did today go?
+                  </p>
+                </div>
+
+                {!isMobile && (
+                  <ArrowRight size={16} color='rgba(245,242,236,0.3)' style={{ flexShrink: 0 }} />
+                )}
+
+                <div style={{
+                  flex: 1,
+                  background: 'rgba(245,242,236,0.07)',
+                  border: '1px solid rgba(245,242,236,0.12)',
+                  borderRadius: 16,
+                  padding: '14px 18px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <MessageCircle size={13} color={SAGE} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: SAGE }}>Sage AI insight</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: CREAM, lineHeight: 1.55, margin: 0 }}>
+                    Income up 12% this week. Your busiest Tuesday yet.
+                  </p>
+                </div>
+              </div>
+            </FadeIn>
 
             {/* habit chips */}
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 14, justifyContent: 'center' }}>
