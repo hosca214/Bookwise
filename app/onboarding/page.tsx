@@ -64,6 +64,7 @@ export default function OnboardingPage() {
   const [vibeLocal, setVibeLocal] = useState<Vibe>('sage')
   const [profitPct, setProfitPct] = useState(10)
   const [taxPct, setTaxPct] = useState(25)
+  const [opsPct, setOpsPct] = useState(27)
   const [hour, setHour] = useState(17)
   const [minute, setMinute] = useState(0)
   const [payTarget, setPayTarget] = useState('')
@@ -77,7 +78,8 @@ export default function OnboardingPage() {
   const { setIndustry, t } = useIQ()
   const { setVibe } = useVibe()
 
-  const opsPct = 100 - profitPct - taxPct
+  const takeHomePct = Math.max(0, 100 - profitPct - taxPct - opsPct)
+  const OPS_DEFAULTS: Record<Industry, number> = { coach: 20, trainer: 27, bodyworker: 32 }
   const ampm = hour >= 12 ? 'PM' : 'AM'
   const displayH = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
   const payTargetNum = parseFloat(payTarget.replace(/[^0-9.]/g, '')) || 0
@@ -108,6 +110,7 @@ export default function OnboardingPage() {
         if (d.vibeLocal) { setVibeLocal(d.vibeLocal); setVibe(d.vibeLocal) }
         if (d.profitPct != null) setProfitPct(d.profitPct)
         if (d.taxPct != null) setTaxPct(d.taxPct)
+        if (d.opsPct != null) setOpsPct(d.opsPct)
         if (d.hour != null) setHour(d.hour)
         if (d.minute != null) setMinute(d.minute)
         if (d.payTarget) setPayTarget(d.payTarget)
@@ -126,6 +129,7 @@ export default function OnboardingPage() {
   function handleIndustrySelect(ind: Industry) {
     setIndustryLocal(ind)
     setIndustry(ind)
+    setOpsPct(OPS_DEFAULTS[ind])
     next()
   }
 
@@ -135,13 +139,18 @@ export default function OnboardingPage() {
   }
 
   function handleProfitSlider(v: number) {
-    setProfitPct(v)
-    if (v + taxPct > 100) setTaxPct(100 - v)
+    const max = 100 - taxPct - opsPct
+    setProfitPct(Math.min(v, Math.max(0, max)))
   }
 
   function handleTaxSlider(v: number) {
-    setTaxPct(v)
-    if (profitPct + v > 100) setProfitPct(100 - v)
+    const max = 100 - profitPct - opsPct
+    setTaxPct(Math.min(v, Math.max(0, max)))
+  }
+
+  function handleOpsSlider(v: number) {
+    const max = 100 - profitPct - taxPct
+    setOpsPct(Math.min(v, Math.max(0, max)))
   }
 
   function handleHourInput(val: string) {
@@ -169,6 +178,7 @@ export default function OnboardingPage() {
         daily_pulse_time: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
         profit_pct: profitPct,
         tax_pct: taxPct,
+        ops_pct: opsPct,
         pay_target: payTargetNum,
         transfer_day: transferDay,
         monthly_essential_cost: essentialCostNum,
@@ -386,33 +396,30 @@ export default function OnboardingPage() {
 
       // ── Step 5: Bucket sliders ────────────────────────────────────────────
       case 5: {
-        const buckets = [
-          {
-            key: 'Profit Bucket',
-            pct: profitPct,
-            maxPct: 100 - taxPct,
-            onSlider: handleProfitSlider,
-            color: 'var(--color-profit)',
-            headline: 'This is your future.',
-            desc: 'Reinvest in your practice.',
-          },
+        const rows = [
           {
             key: 'Tax Bucket',
             pct: taxPct,
-            maxPct: 100 - profitPct,
+            maxPct: 100 - profitPct - opsPct,
             onSlider: handleTaxSlider,
             color: 'var(--color-tax)',
-            headline: 'Set it aside now.',
-            desc: '25% is a widely used starting point for quarterly estimated taxes. Your actual rate may vary. Always confirm with your CPA.',
+            desc: '25% is a widely used starting point for quarterly estimated taxes. Confirm your rate with your CPA.',
           },
           {
             key: 'Operations Bucket',
             pct: opsPct,
-            maxPct: 100,
-            onSlider: null,
+            maxPct: 100 - profitPct - taxPct,
+            onSlider: handleOpsSlider,
             color: 'var(--color-ops)',
-            headline: 'Everything it takes to show up.',
-            desc: 'Rent, supplies, software, insurance. This is what it costs to keep your practice running each month.',
+            desc: 'Rent, supplies, software, insurance. Adjusted to a typical starting point for your practice type.',
+          },
+          {
+            key: 'Profit Bucket',
+            pct: profitPct,
+            maxPct: 100 - taxPct - opsPct,
+            onSlider: handleProfitSlider,
+            color: 'var(--color-profit)',
+            desc: 'Reinvest in your practice. Continuing education, new equipment, or saving toward bigger goals.',
           },
         ]
 
@@ -421,44 +428,44 @@ export default function OnboardingPage() {
             <h2 className="font-serif" style={{ fontSize: 28, color: 'var(--color-ink)', marginBottom: 8, lineHeight: 1.1 }}>
               How do you want to split your income?
             </h2>
-            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 28, lineHeight: 1.5 }}>
-              Every dollar you earn gets a job. Adjust Growth and Tax. Your day-to-day costs cover what remains.
+            <p style={{ fontSize: 16, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
+              Every dollar you earn gets a job. Adjust any row. Your take-home updates live.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
-              {buckets.map(({ key, pct, maxPct, onSlider, color, headline, desc }) => (
-                <div key={key} style={{
-                  background: 'var(--color-card)',
-                  borderRadius: 12,
-                  border: '1px solid var(--color-border)',
-                  padding: '18px 20px',
-                }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+              {rows.map(({ key, pct, maxPct, onSlider, color, desc }) => (
+                <div key={key} style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>{t(key)}</span>
                     <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color }}>{pct}%</span>
                   </div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-ink)', marginBottom: 4, lineHeight: 1.4 }}>
-                    {headline}
-                  </p>
-                  <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.5, marginBottom: 12 }}>
+                  <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.5, marginBottom: 10 }}>
                     {desc}
                   </p>
-                  {onSlider ? (
-                    <input
-                      type="range"
-                      min={0}
-                      max={maxPct}
-                      value={pct}
-                      onChange={e => onSlider(Number(e.target.value))}
-                      style={{ width: '100%', accentColor: color, cursor: 'pointer', display: 'block', height: 4 }}
-                    />
-                  ) : (
-                    <div style={{ height: 4, borderRadius: 2, background: 'var(--color-muted)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, borderRadius: 2, background: color, transition: 'width 0.2s' }} />
-                    </div>
-                  )}
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0, maxPct)}
+                    value={pct}
+                    onChange={e => onSlider(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: color, cursor: 'pointer', display: 'block', height: 4 }}
+                  />
                 </div>
               ))}
+
+              {/* Take-Home — read only */}
+              <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)' }}>Take-Home</span>
+                  <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-pay)' }}>{takeHomePct}%</span>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.5 }}>
+                  What you pocket after Taxes Set Aside, Business Expenses, and Growth Fund.
+                </p>
+                <div style={{ height: 4, borderRadius: 2, background: 'var(--color-muted)', overflow: 'hidden', marginTop: 10 }}>
+                  <div style={{ height: '100%', width: `${takeHomePct}%`, borderRadius: 2, background: 'var(--color-pay)', transition: 'width 0.2s' }} />
+                </div>
+              </div>
             </div>
 
             <button onClick={next} style={primaryBtn}>Continue</button>
@@ -530,7 +537,7 @@ export default function OnboardingPage() {
                       try {
                         sessionStorage.setItem('onboarding_draft', JSON.stringify({
                           practiceName, hasBizAccount, industryLocal, vibeLocal,
-                          profitPct, taxPct, hour, minute, payTarget, essentialCost, transferDay,
+                          profitPct, taxPct, opsPct, hour, minute, payTarget, essentialCost, transferDay,
                         }))
                       } catch {}
                       window.location.href = '/api/auth/google-drive?from=onboarding'

@@ -111,14 +111,16 @@ export default function DashboardPage() {
     try {
       const profitFrac = (p.profit_pct ?? 10) / 100
       const taxFrac = (p.tax_pct ?? 25) / 100
-      const opsFrac = 1 - profitFrac - taxFrac
+      const opsFrac = (p.ops_pct ?? 27) / 100
       const profitTarget = income * profitFrac
       const taxTarget = income * taxFrac
       const opsTarget = income * opsFrac
 
       const profitPct = profitTarget > 0 && b ? Math.round((b.profit_funded / profitTarget) * 100) : 0
       const taxPct = taxTarget > 0 && b ? Math.round((b.tax_funded / taxTarget) * 100) : 0
-      const opsPct = opsTarget > 0 && b ? Math.round((b.ops_funded / opsTarget) * 100) : 0
+      const opsPct = opsTarget > 0 ? Math.min(100, Math.round((expenses / opsTarget) * 100)) : 0
+      const overBudget = opsTarget > 0 && expenses > opsTarget
+      const overAmount = Math.max(0, expenses - opsTarget)
 
       const res = await fetch('/api/sage', {
         method: 'POST',
@@ -131,6 +133,9 @@ export default function DashboardPage() {
             monthIncome: income,
             monthExpenses: expenses,
             buckets: { profit: profitPct, tax: taxPct, ops: opsPct },
+            expenseAlert: overBudget
+              ? `Actual expenses this month ($${expenses.toFixed(2)}) exceed the ops budget ($${opsTarget.toFixed(2)}) by $${overAmount.toFixed(2)}. This is reducing take-home pay.`
+              : null,
           },
         }),
       })
@@ -286,7 +291,7 @@ export default function DashboardPage() {
 
         const profitFrac = (profileData.profit_pct ?? 10) / 100
         const taxFrac = (profileData.tax_pct ?? 25) / 100
-        const opsFrac = 1 - profitFrac - taxFrac
+        const opsFrac = (profileData.ops_pct ?? 27) / 100
         const profitTarget = income * profitFrac
         const taxTarget = income * taxFrac
         const opsTarget = income * opsFrac
@@ -335,7 +340,6 @@ export default function DashboardPage() {
 
     const profitTarget = monthIncome * profitFrac
     const taxTarget = monthIncome * taxFrac
-    const opsTarget = monthIncome * opsFrac
 
     const { error } = await supabase
       .from('buckets')
@@ -344,8 +348,9 @@ export default function DashboardPage() {
         profit_target: profitTarget,
         tax_funded: taxTarget,
         tax_target: taxTarget,
-        ops_funded: opsTarget,
+        ops_funded: opsActual,
         ops_target: opsTarget,
+        pay_funded: takeHome,
       })
       .eq('id', bucket.id)
 
@@ -361,8 +366,9 @@ export default function DashboardPage() {
       profit_target: profitTarget,
       tax_funded: taxTarget,
       tax_target: taxTarget,
-      ops_funded: opsTarget,
+      ops_funded: opsActual,
       ops_target: opsTarget,
+      pay_funded: takeHome,
     } : prev)
 
     setShowPayModal(false)
@@ -454,11 +460,15 @@ export default function DashboardPage() {
     : 0
   const profitFrac = (profile?.profit_pct ?? 10) / 100
   const taxFrac = (profile?.tax_pct ?? 25) / 100
-  const opsFrac = 1 - profitFrac - taxFrac
+  const opsFrac = (profile?.ops_pct ?? 27) / 100
+
+  const opsActual = monthExpenses
+  const overBudget = opsTarget > 0 && opsActual > opsTarget
+  const overAmount = Math.max(0, opsActual - opsTarget)
+  const takeHome = Math.max(0, monthIncome * (1 - taxFrac - profitFrac) - opsActual)
 
   const payTarget = profile?.pay_target ?? 0
-  const payActual = Math.min(monthIncome, payTarget)
-  const payProgress = payTarget > 0 ? Math.min(100, (payActual / payTarget) * 100) : 0
+  const payProgress = payTarget > 0 ? Math.min(100, (takeHome / payTarget) * 100) : 0
 
   if (loadError) {
     return (
@@ -519,11 +529,11 @@ export default function DashboardPage() {
 
       <main style={{ padding: '32px 24px', maxWidth: 480, margin: '0 auto' }}>
 
-        {/* Owner's Pay */}
+        {/* My Take-Home Pay */}
         <section style={{ ...cardStyle, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
-              {t('Take-Home')}
+              My Take-Home Pay
             </span>
             <div style={{ display: 'flex', background: 'var(--color-muted)', borderRadius: 999, padding: 2, gap: 2 }}>
               {(['monthly', 'weekly'] as const).map(p => (
@@ -535,33 +545,44 @@ export default function DashboardPage() {
               ))}
             </div>
           </div>
-          {payTarget > 0 ? (
+          {monthIncome > 0 ? (
             <>
-              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: 'var(--color-pay)', margin: '4px 0 10px', lineHeight: 1 }}>
-                ${(payPeriod === 'weekly' ? payActual / 4.33 : payActual).toFixed(2)}
+              <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: takeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
+                ${(payPeriod === 'weekly' ? takeHome / 4.33 : takeHome).toFixed(2)}
               </p>
-              <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
-                <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                <span>${(payPeriod === 'weekly' ? payActual / 4.33 : payActual).toFixed(0)} so far</span>
-                <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${(payPeriod === 'weekly' ? payTarget / 4.33 : payTarget).toFixed(0)}{payPeriod === 'monthly' ? '/mo' : '/wk'}</strong></span>
-              </div>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '0 0 8px', lineHeight: 1.4 }}>
+                After Taxes Set Aside, expenses, and Growth Fund
+              </p>
+              {takeHome === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontStyle: 'italic' }}>
+                  Your expenses exceeded your income this month.
+                </p>
+              ) : payTarget > 0 ? (
+                <>
+                  <div style={{ height: 6, background: 'var(--color-border)', borderRadius: 3, overflow: 'hidden', marginBottom: 4 }}>
+                    <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
+                    <span>${(payPeriod === 'weekly' ? takeHome / 4.33 : takeHome).toFixed(0)} this month</span>
+                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${(payPeriod === 'weekly' ? payTarget / 4.33 : payTarget).toFixed(0)}{payPeriod === 'monthly' ? '/mo' : '/wk'}</strong></span>
+                  </div>
+                </>
+              ) : null}
             </>
           ) : (
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', margin: '8px 0 0' }}>
-              Set a monthly pay goal to track your take-home.{' '}
-              <a href="/settings" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Settings</a>
+              Add income in your Ledger to see your take-home pay.{' '}
+              <a href="/ledger" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Go to Ledger</a>
             </p>
           )}
           <button onClick={() => setShowOwnerPayInfo(v => !v)}
             style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: '8px 0 0', textDecoration: 'underline', fontFamily: 'var(--font-sans)' }}
           >
-            {showOwnerPayInfo ? 'Hide' : "What is Owner's Pay?"}
+            {showOwnerPayInfo ? 'Hide' : 'What is this?'}
           </button>
           {showOwnerPayInfo && (
             <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 6, lineHeight: 1.6 }}>
-              This is your monthly take-home target — the amount you want to move from your business account to your personal account. As income comes in, this card shows how close you are. Adjust your goal anytime in Settings.
+              This is what you actually pocket — your income after Taxes Set Aside, Business Expenses, and your Growth Fund are accounted for. When your expenses stay within budget, this number is predictable. When expenses run over, this number drops. Keeping an eye on it each month is how you make sure your practice is actually paying you.
             </p>
           )}
         </section>
@@ -644,20 +665,25 @@ export default function DashboardPage() {
                 <span style={{ fontSize: 11, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--color-muted-foreground)', fontWeight: 600 }}>
                   {t('Operations Bucket')}
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>{Math.round(opsFrac * 100)}% of income</span>
+                <span style={{ fontSize: 11, color: 'var(--color-muted-foreground)' }}>Budget: ${opsTarget.toFixed(0)}</span>
               </div>
-              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ops)', margin: '0 0 8px', lineHeight: 1 }}>
-                ${opsFunded.toFixed(2)}
+              <p className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: overBudget ? 'var(--color-danger)' : 'var(--color-ops)', margin: '0 0 8px', lineHeight: 1 }}>
+                ${opsActual.toFixed(2)}
               </p>
-              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 8 }}>
-                <div style={{ height: '100%', width: `${opsTarget > 0 ? Math.min(100, (opsFunded / opsTarget) * 100) : 0}%`, background: 'var(--color-ops)', borderRadius: 99, transition: 'width 1.2s ease' }} />
+              <div style={{ height: 5, background: 'var(--color-border)', borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+                <div style={{ height: '100%', width: `${opsTarget > 0 ? Math.min(100, (opsActual / opsTarget) * 100) : 0}%`, background: opsActual >= opsTarget ? 'var(--color-danger)' : opsActual >= opsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99, transition: 'width 1.2s ease' }} />
               </div>
+              {overBudget && (
+                <p style={{ fontSize: 13, color: 'var(--color-danger)', margin: '0 0 6px', lineHeight: 1.5 }}>
+                  You are ${overAmount.toFixed(2)} over your expense budget. Your take-home is reduced by ${overAmount.toFixed(2)}.
+                </p>
+              )}
               <button onClick={() => setShowOpsInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
                 {showOpsInfo ? 'Hide' : 'What is this?'}
               </button>
               {showOpsInfo && (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
-                  Covers your everyday business costs: supplies, rent, software, insurance.
+                  This is your monthly budget for business costs — supplies, rent, software, insurance, and anything else it takes to run your practice. Your budget is based on the typical overhead for your type of practice. When your actual spending stays within this amount, your take-home pay stays predictable. Spending above this budget comes directly out of what you pocket.
                 </p>
               )}
             </div>
@@ -962,10 +988,10 @@ export default function DashboardPage() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
               {[
-                { label: t('Take-Home'),         amount: payTarget,              color: 'var(--color-pay)' },
+                { label: 'My Take-Home Pay',      amount: takeHome,               color: 'var(--color-pay)' },
                 { label: t('Tax Bucket'),         amount: monthIncome * taxFrac,  color: 'var(--color-tax)' },
                 { label: t('Profit Bucket'),      amount: monthIncome * profitFrac, color: 'var(--color-profit)' },
-                { label: t('Operations Bucket'), amount: monthIncome * opsFrac,  color: 'var(--color-ops)' },
+                { label: t('Operations Bucket'), amount: opsTarget,              color: 'var(--color-ops)' },
               ].map(({ label, amount, color }) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-background)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
                   <span style={{ fontSize: 15, color: 'var(--color-foreground)' }}>{label}</span>

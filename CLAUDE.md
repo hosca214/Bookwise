@@ -85,6 +85,7 @@ create table profiles (
   -- money plan
   profit_pct numeric default 10,
   tax_pct numeric default 25,
+  ops_pct numeric default 27,
   -- pay settings
   pay_target numeric default 0,
   transfer_day text default 'Monday',
@@ -292,22 +293,22 @@ Route `/onboarding`. Framer Motion slide transitions. 10 steps total (`TOTAL_STE
 - **Step 2:** Practice name input + business account education card. Asks if user has a dedicated business account (Yes/Not yet). Either path continues.
 - **Step 3:** Three full-width tap cards for industry. Coach/Briefcase. Trainer/Activity. Bodyworker/Heart. Tapping activates IQ Engine immediately and advances to next step.
 - **Step 4:** Vibe picker — scrollable horizontal row of 140px cards (bg + swatches + name). Tap = live preview via VibeContext.
-- **Step 5:** Bucket sliders — Growth Fund (profit %, adjustable), Tax Set-Aside (tax %, adjustable, defaults 25%), Daily Operations (remainder, display only). Sliders are range inputs with `accentColor`.
+- **Step 5:** Bucket sliders — four rows: Taxes Set Aside (tax %, adjustable, default 25%), Expense Coverage (ops_pct, adjustable, industry default: coach 20/trainer 27/bodyworker 32), Growth Fund (profit %, adjustable, default 10%), Take-Home (calculated remainder, read-only, live-updating). Sliders are range inputs with `accentColor`. `setOpsPct(OPS_DEFAULTS[industry])` fires when industry is selected in Step 3.
 - **Step 6:** Integrations — Google Drive (real OAuth via `/api/auth/google-drive?from=onboarding`, saves state to `sessionStorage` before redirect and restores on return). Stripe and Plaid shown as "Coming soon."
 - **Step 7:** Pay target + essential cost — two large text inputs (`inputMode="numeric"`, Lora 40px). Monthly pay goal and monthly "cost to show up."
 - **Step 8:** Transfer day — 7 full-width day buttons, one selected at a time. Defaults to Monday.
 - **Step 9:** Pulse time — hour/minute text inputs (`inputMode="numeric"`) + AM/PM toggle buttons. Default 5:00 PM.
 - **Step 10:** Non-skippable disclaimer. "Bookwise organizes your numbers and shows you patterns. Sage, your AI mentor, shares observations. Nothing here is financial or legal advice. Always work with a licensed CPA before filing." Button: "I understand. Let's go." — triggers `handleComplete()` which upserts all collected fields to `profiles` and redirects to `/dashboard`.
 
-**Onboarding upsert fields:** `practice_name`, `industry`, `vibe`, `daily_pulse_time`, `profit_pct`, `tax_pct`, `pay_target`, `transfer_day`, `monthly_essential_cost`, `onboarding_complete: true`.
+**Onboarding upsert fields:** `practice_name`, `industry`, `vibe`, `daily_pulse_time`, `profit_pct`, `tax_pct`, `ops_pct`, `pay_target`, `transfer_day`, `monthly_essential_cost`, `onboarding_complete: true`.
 
 ### Phase 3: Dashboard ✅
 Route `/dashboard`. Header "My Dash" (Lora 28px). Sub-header: practice name + win streak badge (shows when user has paid themselves 2+ consecutive months).
 
 Cards in order:
 
-- **Take-Home card** — shows `payActual` progress toward `pay_target`. Monthly/Weekly toggle (pill segmented control). Progress bar. "What is Owner's Pay?" expandable explainer.
-- **Money Plan tiles** — shown only when `monthIncome > 0`. Three inline cards: Tax Set-Aside (`var(--color-tax)`), Daily Operations (`var(--color-ops)`), Growth Fund (`var(--color-profit)`). Each shows funded amount (Lora 28px), a 5px progress bar, and "What is this?" expandable. Tax card includes next quarterly deadline name + days-away counter.
+- **My Take-Home Pay card** — shows `takeHome = max(0, monthIncome × (1 - taxFrac - profitFrac) - opsActual)`. Monthly/Weekly toggle. Progress bar vs `pay_target` (motivational goal). Sublabel "After Taxes Set Aside, expenses, and Growth Fund". When $0 shows "Your expenses exceeded your income this month." "What is this?" expandable.
+- **Money Plan tiles** — shown only when `monthIncome > 0`. Three inline cards: Taxes Set Aside (`var(--color-tax)`), Business Expenses (`var(--color-ops)`), Growth Fund (`var(--color-profit)`). Each shows funded/actual amount (Lora 28px), a 5px progress bar, and "What is this?" expandable. Tax card includes next quarterly deadline name + days-away counter. Business Expenses tile shows `opsActual` (= `monthExpenses`) vs `opsTarget` (= `monthIncome × opsFrac`). Bar color: green under 85%, amber 85-99%, red 100%+. Overage alert shown in red when over budget.
 - **Empty state** — when `monthIncome === 0`, shows dashed prompt card instead of the three tiles.
 - **Cost to Show Up card** — shows `monthIncome / essentialBase` as a percentage coverage bar. "Your practice is paying for itself" when ≥ 100%.
 - **Make a Transfer button** — full-width primary, opens modal listing all four bucket amounts (Take-Home, Tax, Growth, Ops). Confirm → updates `buckets` row → fires Confetti → opens Celebration modal.
@@ -372,7 +373,7 @@ Route `/settings`.
 
 **Pay Settings:** Pay target (monthly take-home goal), transfer day select, monthly essential cost. Saves to `profiles`.
 
-**Money Plan:** Growth Fund % and Tax Set-Aside % steppers (+/- 1%). Operations = remainder (display only). Saves to `profiles`.
+**Money Plan:** Taxes Set Aside %, Business Expenses %, Growth Fund % — all three adjustable steppers (+/- 1%). Take-Home = `100 - tax - ops - profit` (read-only calculated remainder). Shows "Industry default: X%" helper under Business Expenses. Validation warning + disabled Save if allocations exceed 100%. Saves `profit_pct`, `tax_pct`, `ops_pct` to `profiles`.
 
 **Connected Apps:**
 - Google Drive — real OAuth via `/api/auth/google-drive`. Shows Connected / Connect button based on `profiles.google_drive_folder_id`.

@@ -20,6 +20,7 @@ export type Profile = {
   created_at: string
   profit_pct: number | null
   tax_pct: number | null
+  ops_pct: number | null
   pay_target: number
   transfer_day: string
   monthly_essential_cost: number | null

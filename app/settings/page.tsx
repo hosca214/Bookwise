@@ -71,7 +71,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { t, setIndustry } = useIQ()
+  const { t, setIndustry, industry } = useIQ()
   const { vibe, setVibe } = useVibe()
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -108,8 +108,13 @@ export default function SettingsPage() {
   // money plan
   const [profitPct, setProfitPct] = useState(10)
   const [taxPct, setTaxPct] = useState(25)
+  const [opsPct, setOpsPct] = useState(27)
   const [savingPlan, setSavingPlan] = useState(false)
-  const opsPct = 100 - profitPct - taxPct
+  const takeHomePct = Math.max(0, 100 - profitPct - taxPct - opsPct)
+  const overAllocated = profitPct + taxPct + opsPct > 100
+
+  const OPS_DEFAULTS: Record<string, number> = { coach: 20, trainer: 27, bodyworker: 32 }
+  const opsDefault = OPS_DEFAULTS[industry ?? ''] ?? 27
 
   // add service form
   const [addOpen, setAddOpen] = useState(false)
@@ -126,7 +131,7 @@ export default function SettingsPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data: svcData }, { data: bookings }] = await Promise.all([
-          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, monthly_essential_cost, monthly_income_goal, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, vibe, pay_target, transfer_day, profit_pct, tax_pct, ops_pct, monthly_essential_cost, monthly_income_goal, google_drive_folder_id, plaid_item_id').eq('id', user.id).single(),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true).order('name'),
           supabase.from('transactions').select('service_id').eq('user_id', user.id).not('service_id', 'is', null),
         ])
@@ -140,6 +145,7 @@ export default function SettingsPage() {
         if (profile?.transfer_day) setTransferDay(profile.transfer_day)
         if (profile?.profit_pct != null) setProfitPct(profile.profit_pct)
         if (profile?.tax_pct != null) setTaxPct(profile.tax_pct)
+        if (profile?.ops_pct != null) setOpsPct(profile.ops_pct)
         if (profile?.monthly_essential_cost != null) setEssentialCost(String(profile.monthly_essential_cost))
         if (profile?.monthly_income_goal != null) setMonthlyGoal(String(profile.monthly_income_goal))
         if (profile?.google_drive_folder_id) setDriveConnected(true)
@@ -221,7 +227,7 @@ export default function SettingsPage() {
     if (!userId) return
     setSavingPlan(true)
     try {
-      await supabase.from('profiles').update({ profit_pct: profitPct, tax_pct: taxPct }).eq('id', userId)
+      await supabase.from('profiles').update({ profit_pct: profitPct, tax_pct: taxPct, ops_pct: opsPct }).eq('id', userId)
       toast.success('Your money plan is set.')
     } catch {
       toast.error('Could not save. Try again.')
@@ -230,15 +236,19 @@ export default function SettingsPage() {
     }
   }
 
-  function adjustBucket(bucket: 'profit' | 'tax', delta: number) {
+  function adjustBucket(bucket: 'profit' | 'tax' | 'ops', delta: number) {
     if (bucket === 'profit') {
       const next = profitPct + delta
-      if (next < 0 || opsPct - delta < 0) return
+      if (next < 0 || takeHomePct - delta < 0) return
       setProfitPct(next)
-    } else {
+    } else if (bucket === 'tax') {
       const next = taxPct + delta
-      if (next < 0 || opsPct - delta < 0) return
+      if (next < 0 || takeHomePct - delta < 0) return
       setTaxPct(next)
+    } else {
+      const next = opsPct + delta
+      if (next < 0 || takeHomePct - delta < 0) return
+      setOpsPct(next)
     }
   }
 
@@ -359,24 +369,37 @@ export default function SettingsPage() {
 
   const buckets = [
     {
-      key: 'Profit Bucket' as const,
-      pct: profitPct,
-      color: 'var(--color-profit)',
-      subtitle: 'Reinvest in your practice',
-      onMinus: () => adjustBucket('profit', -5),
-      onPlus: () => adjustBucket('profit', 5),
-      minusDisabled: profitPct <= 0,
-      plusDisabled: opsPct <= 0,
-    },
-    {
       key: 'Tax Bucket' as const,
       pct: taxPct,
       color: 'var(--color-tax)',
       subtitle: 'Ready when your quarterly payment is due',
-      onMinus: () => adjustBucket('tax', -5),
-      onPlus: () => adjustBucket('tax', 5),
+      onMinus: () => adjustBucket('tax', -1),
+      onPlus: () => adjustBucket('tax', 1),
       minusDisabled: taxPct <= 0,
-      plusDisabled: opsPct <= 0,
+      plusDisabled: takeHomePct <= 0,
+      helper: null,
+    },
+    {
+      key: 'Operations Bucket' as const,
+      pct: opsPct,
+      color: 'var(--color-ops)',
+      subtitle: 'Your monthly expense budget',
+      onMinus: () => adjustBucket('ops', -1),
+      onPlus: () => adjustBucket('ops', 1),
+      minusDisabled: opsPct <= 0,
+      plusDisabled: takeHomePct <= 0,
+      helper: `Industry default: ${opsDefault}%`,
+    },
+    {
+      key: 'Profit Bucket' as const,
+      pct: profitPct,
+      color: 'var(--color-profit)',
+      subtitle: 'Reinvest in your practice',
+      onMinus: () => adjustBucket('profit', -1),
+      onPlus: () => adjustBucket('profit', 1),
+      minusDisabled: profitPct <= 0,
+      plusDisabled: takeHomePct <= 0,
+      helper: null,
     },
   ]
 
@@ -536,13 +559,14 @@ export default function SettingsPage() {
 
           {/* Stacked bar */}
           <div style={{ height: 10, borderRadius: 999, overflow: 'hidden', display: 'flex', marginBottom: 12 }}>
-            <div style={{ width: `${profitPct}%`, background: 'var(--color-profit)', transition: 'width 0.25s ease' }} />
             <div style={{ width: `${taxPct}%`, background: 'var(--color-tax)', transition: 'width 0.25s ease' }} />
             <div style={{ width: `${opsPct}%`, background: 'var(--color-ops)', transition: 'width 0.25s ease' }} />
+            <div style={{ width: `${profitPct}%`, background: 'var(--color-profit)', transition: 'width 0.25s ease' }} />
+            <div style={{ width: `${takeHomePct}%`, background: 'var(--color-pay)', transition: 'width 0.25s ease' }} />
           </div>
 
           <div style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
-            {buckets.map(({ key, pct, color, subtitle, onMinus, onPlus, minusDisabled, plusDisabled }) => (
+            {buckets.map(({ key, pct, color, subtitle, onMinus, onPlus, minusDisabled, plusDisabled, helper }) => (
               <div key={key} style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -550,6 +574,7 @@ export default function SettingsPage() {
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', lineHeight: 1.2 }}>{t(key)}</div>
                       <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 2 }}>{subtitle}</div>
+                      {helper && <div style={{ fontSize: 11, color: 'var(--color-muted-foreground)', marginTop: 2, fontStyle: 'italic' }}>{helper}</div>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -565,25 +590,31 @@ export default function SettingsPage() {
               </div>
             ))}
 
-            {/* Operations row — read only */}
+            {/* Take-Home row — read only */}
             <div style={{ padding: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--color-ops)', flexShrink: 0 }} />
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--color-pay)', flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-muted-foreground)', lineHeight: 1.2 }}>{t('Operations Bucket')}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 2 }}>Covers your costs to show up</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-muted-foreground)', lineHeight: 1.2 }}>Take-Home</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginTop: 2 }}>What you pocket</div>
                   </div>
                 </div>
-                <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ops)', minWidth: 52, textAlign: 'right' }}>{opsPct}%</span>
+                <span className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-pay)', minWidth: 52, textAlign: 'right' }}>{takeHomePct}%</span>
               </div>
             </div>
           </div>
 
+          {overAllocated && (
+            <p style={{ fontSize: 13, color: 'var(--color-danger)', marginTop: 8 }}>
+              Your allocations exceed 100%. Reduce one to continue.
+            </p>
+          )}
+
           <button
             onClick={savePlan}
-            disabled={savingPlan}
-            style={{ width: '100%', minHeight: 48, borderRadius: 10, background: 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', marginTop: 12 }}
+            disabled={savingPlan || overAllocated}
+            style={{ width: '100%', minHeight: 48, borderRadius: 10, background: overAllocated ? 'var(--color-muted)' : 'var(--color-primary)', color: overAllocated ? 'var(--color-muted-foreground)' : 'var(--color-primary-foreground)', border: 'none', fontSize: 15, fontWeight: 700, cursor: overAllocated ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)', marginTop: 12 }}
           >
             {savingPlan ? 'Saving...' : 'Save Money Plan'}
           </button>
