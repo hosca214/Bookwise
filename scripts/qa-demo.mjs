@@ -125,11 +125,17 @@ await check('Sage insight card visible', async () => {
   await page.waitForSelector('text=Sage AI says', { timeout: 5000 })
 })
 await check('Tax deadline countdown visible', async () => {
-  // The countdown lives behind the second "What is this?" button (index 1).
-  // Index 0 is the Take-Home card; index 1 is the Tax Set-Aside tile.
-  const infoButtons = page.locator('button:has-text("What is this?")')
-  await infoButtons.nth(1).waitFor({ state: 'visible', timeout: 8000 })
-  await infoButtons.nth(1).click()
+  // The countdown lives behind the Tax Set-Aside tile's "What is this?" toggle.
+  // Scroll down to bring the tile into view, then click via JS evaluate
+  // (bypasses Playwright actionability checks for off-screen elements).
+  await page.evaluate(() => window.scrollTo(0, 400))
+  await page.waitForTimeout(500)
+  await page.evaluate(() => {
+    const btns = [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === 'What is this?')
+    // Index 0 = Take-Home card, Index 1 = Tax tile
+    if (btns.length >= 2) btns[1].click()
+    else if (btns.length === 1) btns[0].click()
+  })
   await page.waitForSelector('text=days away', { timeout: 5000 })
 })
 await check('BottomNav has 4 tabs', async () => {

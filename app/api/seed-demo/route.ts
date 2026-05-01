@@ -129,7 +129,7 @@ export async function POST() {
       transferred_at: we.toISOString(),
     }
   })
-  await supabase.from('weekly_summaries').upsert(weekRows, { onConflict: 'user_id,week_start' })
+  await supabase.from('weekly_summaries').insert(weekRows)
 
   await supabase.auth.signOut()
   return Response.json({ ok: true, transactions: transactions.length })
