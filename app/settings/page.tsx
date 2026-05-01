@@ -84,6 +84,8 @@ export default function SettingsPage() {
   const [plaidConnected, setPlaidConnected] = useState(false)
   const [plaidLinking, setPlaidLinking] = useState(false)
   const [plaidLinkToken, setPlaidLinkToken] = useState<string | null>(null)
+  const [disconnectingPlaid, setDisconnectingPlaid] = useState(false)
+  const [disconnectingDrive, setDisconnectingDrive] = useState(false)
 
   // vibe
   const [stagedVibe, setStagedVibe] = useState(vibe)
@@ -336,6 +338,39 @@ export default function SettingsPage() {
   async function removeService(id: string) {
     setServices((prev) => prev.filter((s) => s.id !== id))
     await supabase.from('services').update({ is_active: false }).eq('id', id)
+  }
+
+  async function disconnectPlaid() {
+    setDisconnectingPlaid(true)
+    try {
+      const res = await fetch('/api/plaid/disconnect', { method: 'POST' })
+      const body = await res.json()
+      if (body.error) throw new Error(body.error)
+      setPlaidConnected(false)
+      toast.success('Bank account disconnected.')
+    } catch {
+      toast.error('Could not disconnect. Try again.')
+    } finally {
+      setDisconnectingPlaid(false)
+    }
+  }
+
+  async function disconnectDrive() {
+    if (!userId) return
+    setDisconnectingDrive(true)
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ google_drive_folder_id: null })
+        .eq('id', userId)
+      if (error) throw error
+      setDriveConnected(false)
+      toast.success('Google Drive disconnected.')
+    } catch {
+      toast.error('Could not disconnect. Try again.')
+    } finally {
+      setDisconnectingDrive(false)
+    }
   }
 
   const onPlaidSuccess = useCallback(async (publicToken: string) => {
@@ -863,9 +898,24 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Bank account sync</div>
               </div>
               {plaidConnected ? (
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
-                  Connected
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
+                    Connected
+                  </span>
+                  <button
+                    onClick={disconnectPlaid}
+                    disabled={disconnectingPlaid}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      border: 'none', background: 'transparent',
+                      color: disconnectingPlaid ? 'var(--color-muted-foreground)' : 'var(--color-danger)',
+                      cursor: disconnectingPlaid ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {disconnectingPlaid ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={fetchPlaidLinkToken}
@@ -908,9 +958,36 @@ export default function SettingsPage() {
                 <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)' }}>Receipt storage</div>
               </div>
               {driveConnected ? (
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
-                  Connected
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: 'var(--color-muted)', color: 'var(--color-profit)' }}>
+                    Connected
+                  </span>
+                  <button
+                    onClick={() => { window.location.href = '/api/auth/google-drive?from=settings' }}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      border: 'none', background: 'transparent',
+                      color: 'var(--color-primary)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    Log in again
+                  </button>
+                  <button
+                    onClick={disconnectDrive}
+                    disabled={disconnectingDrive}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                      border: 'none', background: 'transparent',
+                      color: disconnectingDrive ? 'var(--color-muted-foreground)' : 'var(--color-danger)',
+                      cursor: disconnectingDrive ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {disconnectingDrive ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => { window.location.href = '/api/auth/google-drive?from=settings' }}
