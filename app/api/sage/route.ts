@@ -61,6 +61,13 @@ Top expense categories: ${(context.topExpenses ?? []).map((e: { category: string
 Transaction count: ${context.transactionCount ?? 0}
 Write one specific observation about the expense pattern or income-to-expense ratio that would be useful for this practitioner to notice.`,
 
+    pulse_insight: `Practice: ${context.practiceName}
+Industry: ${context.industry}
+Activity logged: ${context.days} days, ${context.sessions} total sessions, ${Number(context.hours).toFixed(1)} hours worked, ${Number(context.miles).toFixed(1)} miles driven
+Period income: $${Number(context.periodIncome ?? 0).toFixed(2)}
+Average earned per session: $${Number(context.avgRevenuePerSession ?? 0).toFixed(2)}
+Give one specific observation connecting their activity volume to their income rate. Be concrete with the numbers.`,
+
     seasonality_insight: `Monthly income data for the year so far:
 ${JSON.stringify(context.monthlyIncome)}
 
@@ -71,7 +78,7 @@ Tone: warm and direct. No em dashes. No accounting terms.`,
   }
 
   const prompt = prompts[type] ?? prompts.daily_insight
-  const maxTokens = type === 'pay_yourself' ? 200 : type === 'seasonality_insight' ? 100 : 70
+  const maxTokens = type === 'pay_yourself' ? 200 : type === 'seasonality_insight' ? 100 : type === 'pulse_insight' ? 80 : 70
 
   const anthropic = new Anthropic()
 

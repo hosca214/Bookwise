@@ -140,6 +140,10 @@ export default function ReportsPage() {
   const [seasonInsight, setSeasonInsight] = useState<string | null>(null)
   const [seasonLoading, setSeasonLoading] = useState(false)
 
+  const [pulseSummary, setPulseSummary] = useState<{ sessions: number; hours: number; miles: number; days: number } | null>(null)
+  const [pulseInsight, setPulseInsight] = useState<string | null>(null)
+  const [pulseInsightLoading, setPulseInsightLoading] = useState(false)
+
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -151,13 +155,14 @@ export default function ReportsPage() {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
         const sixMonthStart = sixMonthsAgo.toISOString().slice(0, 8) + '01'
 
-        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }, { data: yearTxns }, { data: weeklyData }] = await Promise.all([
+        const [{ data: profile }, { data: txns, error: txErr }, { data: trendTxns }, { data: winsData }, { data: yearTxns }, { data: weeklyData }, { data: pulseRows }] = await Promise.all([
           supabase.from('profiles').select('industry, practice_name, pay_target').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd).order('date', { ascending: true }),
           supabase.from('transactions').select('date, amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', sixMonthStart).order('date', { ascending: true }),
           supabase.from('buckets').select('month, pay_funded, celebration_note').eq('user_id', user.id).gt('pay_funded', 0).order('month', { ascending: false }),
           supabase.from('transactions').select('date, amount').eq('user_id', user.id).eq('is_personal', false).eq('type', 'income').gte('date', THIS_YEAR).order('date', { ascending: true }),
           supabase.from('weekly_summaries').select('*').eq('user_id', user.id).order('week_start', { ascending: false }).limit(52),
+          supabase.from('daily_pulse').select('sessions_given, hours_worked, miles_driven').eq('user_id', user.id).gte('date', rangeStart).lte('date', rangeEnd),
         ])
 
         if (profile?.industry) setIndustry(profile.industry)
@@ -167,6 +172,17 @@ export default function ReportsPage() {
         setTransactions(txns ?? [])
         setWins(winsData ?? [])
         setWeeklySummaries(weeklyData ?? [])
+
+        const pSum = (pulseRows ?? []).reduce(
+          (acc, row) => ({
+            sessions: acc.sessions + (row.sessions_given ?? 0),
+            hours: acc.hours + Number(row.hours_worked ?? 0),
+            miles: acc.miles + Number(row.miles_driven ?? 0),
+            days: acc.days + 1,
+          }),
+          { sessions: 0, hours: 0, miles: 0, days: 0 }
+        )
+        setPulseSummary(pSum.days > 0 ? pSum : null)
 
         const monthMap: Record<string, { income: number; expenses: number }> = {}
         for (const tx of trendTxns ?? []) {
@@ -234,6 +250,36 @@ export default function ReportsPage() {
       .catch(() => setSeasonInsight(null))
       .finally(() => setSeasonLoading(false))
   }, [yearIncome, industry]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!pulseSummary || pulseSummary.days === 0 || !industry) return
+    const periodIncome = transactions
+      .filter(t => !t.is_personal && t.type === 'income')
+      .reduce((s, t) => s + Number(t.amount), 0)
+    setPulseInsightLoading(true)
+    setPulseInsight(null)
+    fetch('/api/sage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'pulse_insight',
+        context: {
+          practiceName,
+          industry,
+          sessions: pulseSummary.sessions,
+          hours: pulseSummary.hours,
+          miles: pulseSummary.miles,
+          days: pulseSummary.days,
+          periodIncome,
+          avgRevenuePerSession: pulseSummary.sessions > 0 ? periodIncome / pulseSummary.sessions : 0,
+        },
+      }),
+    })
+      .then(r => r.json())
+      .then(d => setPulseInsight(d.insight ?? null))
+      .catch(() => {})
+      .finally(() => setPulseInsightLoading(false))
+  }, [pulseSummary, industry]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const businessTxns = transactions.filter((tx) => !tx.is_personal)
   const grossIncome = businessTxns.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
@@ -682,6 +728,38 @@ export default function ReportsPage() {
             </div>
           )}
         </div>
+
+        {/* Activity Summary */}
+        {pulseSummary && (
+          <div style={{ background: 'var(--color-card)', borderRadius: 12, boxShadow: '0 1px 8px rgba(0,0,0,0.06)', padding: '24px', marginBottom: 16 }}>
+            <p style={{ ...sectionLabel, marginBottom: 16 }}>Your Activity</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
+              {[
+                { label: t('Sessions'), value: pulseSummary.sessions },
+                { label: t('Hours Worked'), value: pulseSummary.hours.toFixed(1) },
+                { label: t('Miles Driven'), value: pulseSummary.miles.toFixed(1) },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: 'var(--color-muted)', borderRadius: 10, padding: '12px 8px', textAlign: 'center' }}>
+                  <p className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', margin: '0 0 3px' }}>{value}</p>
+                  <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: 0, fontWeight: 500, lineHeight: 1.3 }}>{label}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '0 0 14px' }}>
+              {pulseSummary.days} {pulseSummary.days === 1 ? 'day' : 'days'} tracked this period
+            </p>
+            {pulseInsightLoading ? (
+              <>
+                <div className="skeleton" style={{ height: 13, marginBottom: 6 }} />
+                <div className="skeleton" style={{ height: 13, width: '80%' }} />
+              </>
+            ) : pulseInsight ? (
+              <p className="font-serif" style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-ink)', lineHeight: 1.65, margin: 0, paddingLeft: 12, borderLeft: '2px solid var(--color-primary)' }}>
+                {pulseInsight}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         {/* Weekly Transfer History */}
         {weeklySummaries.length > 0 && (
