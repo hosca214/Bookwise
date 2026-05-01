@@ -102,6 +102,7 @@ export default function DashboardPage() {
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
+  const [pastTransfers, setPastTransfers] = useState<Array<{ week_start: string; transferred_at: string | null }>>([])
   const [dailyStreak, setDailyStreak] = useState(0)
   const [currentWeekSummary, setCurrentWeekSummary] = useState<WeeklySummary | null>(null)
   const [showOwnerPayInfo, setShowOwnerPayInfo] = useState(false)
@@ -244,7 +245,7 @@ export default function DashboardPage() {
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', NINETY_DAYS_AGO).lte('date', today),
           supabase.from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle(),
           supabase.from('weekly_summaries').select('*').eq('user_id', user.id).eq('week_start', WEEK_START_STR).maybeSingle(),
-          supabase.from('weekly_summaries').select('week_start, transferred').eq('user_id', user.id).lt('week_start', WEEK_START_STR).order('week_start', { ascending: false }).limit(12),
+          supabase.from('weekly_summaries').select('week_start, transferred, transferred_at').eq('user_id', user.id).lt('week_start', WEEK_START_STR).order('week_start', { ascending: false }).limit(12),
         ])
 
         if (!profileData) { setLoading(false); router.push('/login'); return }
@@ -348,6 +349,7 @@ export default function DashboardPage() {
             else break
           }
           setWeekStreak(streak)
+          setPastTransfers(pastWeeks.filter(r => r.transferred).slice(0, 6))
         }
 
         const profitFrac = (profileData.profit_pct ?? 10) / 100
@@ -885,11 +887,26 @@ export default function DashboardPage() {
               Tap to track your transfer streak.
             </p>
             {weekStreak >= 2 && (
-              <p className="font-serif" style={{ textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--color-muted-foreground)', margin: '0 0 24px' }}>
+              <p className="font-serif" style={{ textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--color-muted-foreground)', margin: '0 0 12px' }}>
                 {weekStreak} weeks of consistently paying yourself.
               </p>
             )}
-            {weekStreak < 2 && <div style={{ marginBottom: 24 }} />}
+            {pastTransfers.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 24 }}>
+                {pastTransfers.map(r => {
+                  const dateStr = r.transferred_at
+                    ? new Date(r.transferred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : `Week of ${new Date(r.week_start + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  return (
+                    <div key={r.week_start} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--color-background)', borderRadius: 8 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-profit)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: 'var(--color-foreground)' }}>Transferred on {dateStr}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {weekStreak < 2 && pastTransfers.length === 0 && <div style={{ marginBottom: 24 }} />}
           </>
         )}
 
