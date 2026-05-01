@@ -17,12 +17,12 @@ BEGIN
   -- ── Profile ────────────────────────────────────────────────────────────────
   INSERT INTO profiles (
     id, practice_name, industry, vibe, daily_pulse_time, onboarding_complete,
-    profit_pct, tax_pct, pay_target, transfer_day,
+    profit_pct, tax_pct, ops_pct, pay_target, transfer_day,
     monthly_essential_cost, monthly_income_goal
   )
   VALUES (
     demo_id, 'Sage & Stone Bodywork', 'bodyworker', 'sage', '17:00', true,
-    10, 25, 1500, 'Monday',
+    10, 25, 32, 1500, 'Monday',
     800, 3500
   )
   ON CONFLICT (id) DO UPDATE SET
@@ -33,6 +33,7 @@ BEGIN
     onboarding_complete    = EXCLUDED.onboarding_complete,
     profit_pct             = EXCLUDED.profit_pct,
     tax_pct                = EXCLUDED.tax_pct,
+    ops_pct                = EXCLUDED.ops_pct,
     pay_target             = EXCLUDED.pay_target,
     transfer_day           = EXCLUDED.transfer_day,
     monthly_essential_cost = EXCLUDED.monthly_essential_cost,
