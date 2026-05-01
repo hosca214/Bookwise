@@ -54,7 +54,7 @@ export async function POST() {
     { user_id: uid, date: addDays(cur, 18), amount: 165.00, type: 'income',  category_key: 'Session Income', notes: '90-min session - S. Torres',  source: 'manual' },
     { user_id: uid, date: addDays(cur, 20), amount: 120.00, type: 'income',  category_key: 'Session Income', notes: '60-min session - R. Chen',    source: 'manual' },
     // Current month expenses
-    { user_id: uid, date: addDays(cur,  0), amount: 800.00, type: 'expense', category_key: 'Rent',      notes: 'Treatment room',       source: 'manual' },
+    { user_id: uid, date: addDays(cur,  4), amount: 800.00, type: 'expense', category_key: 'Rent',      notes: 'Treatment room',       source: 'manual' },
     { user_id: uid, date: addDays(cur,  2), amount:  35.00, type: 'expense', category_key: 'Insurance', notes: 'Liability insurance',  source: 'manual' },
     { user_id: uid, date: addDays(cur,  4), amount:  25.00, type: 'expense', category_key: 'Software',  notes: 'Booking software',     source: 'manual' },
     { user_id: uid, date: addDays(cur,  9), amount:  45.00, type: 'expense', category_key: 'Supplies',  notes: 'Linens',               source: 'manual' },
@@ -68,6 +68,11 @@ export async function POST() {
     { user_id: uid, date: addDays(prev, 14), amount: 165.00, type: 'income',  category_key: 'Session Income', notes: '90-min session - J. Kim',     source: 'manual' },
     { user_id: uid, date: addDays(prev, 18), amount: 120.00, type: 'income',  category_key: 'Session Income', notes: '60-min session - T. Brooks',  source: 'manual' },
     { user_id: uid, date: addDays(prev, 21), amount: 165.00, type: 'income',  category_key: 'Session Income', notes: '90-min session - R. Chen',    source: 'manual' },
+    // End of previous month — overlaps with current week
+    { user_id: uid, date: addDays(prev, 26), amount: 165.00, type: 'income',  category_key: 'Session Income', notes: '90-min session - T. Brooks',  source: 'manual' },
+    { user_id: uid, date: addDays(prev, 27), amount: 120.00, type: 'income',  category_key: 'Session Income', notes: '60-min session - M. Patel',   source: 'manual' },
+    { user_id: uid, date: addDays(prev, 28), amount:  20.00, type: 'income',  category_key: 'Tip Income',     notes: 'Tip from T. Brooks',          source: 'manual' },
+    { user_id: uid, date: addDays(prev, 29), amount: 165.00, type: 'income',  category_key: 'Session Income', notes: '90-min session - J. Kim',     source: 'manual' },
     // Previous month expenses
     { user_id: uid, date: addDays(prev,  0), amount: 800.00, type: 'expense', category_key: 'Rent',                 notes: 'Treatment room',           source: 'manual' },
     { user_id: uid, date: addDays(prev,  2), amount:  35.00, type: 'expense', category_key: 'Insurance',            notes: 'Liability insurance',      source: 'manual' },
@@ -86,12 +91,21 @@ export async function POST() {
   const { error: txError } = await supabase.from('transactions').insert(transactions)
   if (txError) return Response.json({ error: txError.message }, { status: 500 })
 
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = addDays(new Date(), -1)
-  await supabase.from('daily_pulse').upsert([
-    { user_id: uid, date: yesterday, sessions_given: 4, hours_worked: 5.5, miles_driven: 12.0 },
-    { user_id: uid, date: today,     sessions_given: 3, hours_worked: 4.0, miles_driven:  8.0 },
-  ], { onConflict: 'user_id,date' })
+  // Daily pulse for previous month — most working days with varied data
+  // Offsets from prev month start. Missing days (4,5,6,11) are intentional rest days.
+  const pulseOffsets = [0,1,2,3, 7,8,9,10, 13,14,15,16,17,18, 19,20,21,22,23,24,25, 26,27,28,29]
+  const pulseValues: [number, number, number][] = [
+    [4, 5.0, 8.5], [5, 6.5, 11.0], [3, 4.0, 7.0], [4, 5.5, 9.0],
+    [5, 6.5, 12.0], [4, 5.0, 8.0], [4, 5.5, 9.5], [3, 4.0, 6.0],
+    [4, 5.0, 8.5], [5, 6.5, 11.0], [4, 5.5, 9.0], [3, 4.0, 7.0], [5, 7.0, 13.0], [4, 5.5, 9.5],
+    [4, 5.0, 8.0], [4, 5.5, 9.0], [5, 7.0, 12.5], [3, 4.5, 7.5], [4, 5.0, 8.5], [5, 6.5, 11.0], [4, 5.5, 9.0],
+    [4, 5.0, 8.5], [5, 6.5, 10.5], [3, 4.0, 6.0], [4, 5.5, 9.0],
+  ]
+  const pulseRows = pulseOffsets.map((offset, i) => {
+    const [sessions, hours, miles] = pulseValues[i]
+    return { user_id: uid, date: addDays(prev, offset), sessions_given: sessions, hours_worked: hours, miles_driven: miles }
+  })
+  await supabase.from('daily_pulse').upsert(pulseRows, { onConflict: 'user_id,date' })
 
   // Upsert buckets for cur, prev, next months
   await supabase.from('buckets').upsert([
