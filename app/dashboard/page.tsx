@@ -681,7 +681,7 @@ export default function DashboardPage() {
               </button>
               {showGrowthInfo && (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0, lineHeight: 1.6 }}>
-                  Reinvest in your practice. Move this to a dedicated business savings account each month.
+                  This is your practice reinvestment fund. Each month, set this amount aside in a dedicated savings account. Use it for continuing education and training, new equipment, or saving toward bigger goals like expanding your space or adding a second location. Moving this money consistently is what separates a practice that grows from one that stays stuck.
                 </p>
               )}
             </div>

@@ -61,9 +61,19 @@ takeHome      = max(0, takeHome)                // floor at zero for display
 
 ## Dashboard Changes
 
-### Expense Coverage Tile (formerly Daily Operations)
+### Taxes Set Aside Tile
 
-- Section label: `t('Operations Bucket')` (IQ-mapped, name TBD per separate rename task)
+No calculation changes. "What is this?" copy (already in dashboard, keep as-is):
+> "Set this aside so you are never surprised at tax time. Keep it in a dedicated savings account, separate from your spending, so it is ready when your quarterly payment is due. Always confirm your payment amount with a licensed CPA."
+
+### Growth Fund Tile
+
+No calculation changes. Update "What is this?" copy (current text is too vague):
+> "This is your practice reinvestment fund. Each month, set this amount aside in a dedicated savings account. Use it for continuing education and training, new equipment, or saving toward bigger goals like expanding your space or adding a second location. Moving this money consistently is what separates a practice that grows from one that stays stuck."
+
+### Business Expenses Tile (formerly Daily Operations)
+
+- Section label: `t('Operations Bucket')` — resolves to "Business Expenses"
 - Shows `opsActual` as the primary dollar amount (Lora 28px)
 - Progress bar: `opsActual / opsTarget × 100%`
   - Under 85%: `var(--color-ops)` (green)
@@ -74,7 +84,8 @@ takeHome      = max(0, takeHome)                // floor at zero for display
   You are $X over your expense budget. Your take-home is reduced by $X.
   ```
   Shown inline beneath the progress bar in `var(--color-danger)` at 13px.
-- "What is this?" expander: explains this is a monthly expense budget based on the industry average for their practice type. Notes that actual spending above this target reduces take-home pay directly.
+- "What is this?" expander copy:
+  > "This is your monthly budget for business costs — supplies, rent, software, insurance, and anything else it takes to run your practice. Your budget is based on the typical overhead for your type of practice. When your actual spending stays within this amount, your take-home pay stays predictable. Spending above this budget comes directly out of what you pocket."
 
 ### My Take-Home Pay Tile
 
@@ -83,7 +94,8 @@ takeHome      = max(0, takeHome)                // floor at zero for display
 - Sub-label beneath amount: *"After Taxes Set Aside, expenses, and Growth Fund"*
 - Progress bar: `takeHome / pay_target × 100%` (pay_target remains as motivational income goal)
 - When `takeHome` is $0 due to expense overage: show $0 with note *"Your expenses exceeded your income this month."* in muted color
-- "What is this?" expander: explains take-home is income minus all three allocations — whatever is left is what the user pockets. Notes that keeping expenses within the budget keeps take-home predictable.
+- "What is this?" expander copy:
+  > "This is what you actually pocket — your income after Taxes Set Aside, Business Expenses, and your Growth Fund are accounted for. When your expenses stay within budget, this number is predictable. When expenses run over, this number drops. Keeping an eye on it each month is how you make sure your practice is actually paying you."
 
 ---
 
