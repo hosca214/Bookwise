@@ -5,7 +5,7 @@ import { motion, useInView, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, Shield, Camera, MessageCircle, Download,
   ChevronDown, Check, ArrowRight, Folder, Sparkles, Activity,
-  Leaf, Clock, BookOpen, X, RefreshCw, FileText, HardDrive, Zap, Bell,
+  Leaf, BookOpen, X, RefreshCw, FileText, HardDrive, Zap, Bell,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase'
@@ -648,7 +648,7 @@ export default function LandingPage() {
                 alignItems: isMobile ? 'stretch' : 'center',
                 gap: isMobile ? 10 : 12,
                 maxWidth: 560,
-                margin: '0 auto 40px',
+                margin: '0 auto',
               }}>
                 <div style={{
                   flex: 1,
@@ -689,19 +689,6 @@ export default function LandingPage() {
               </div>
             </FadeIn>
 
-            {/* habit chips */}
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 14, justifyContent: 'center' }}>
-              {[
-                { icon: <Clock size={18} />,      label: '60-second daily check-in' },
-                { icon: <TrendingUp size={18} />, label: 'Always know what you earned' },
-                { icon: <Shield size={18} />,     label: 'Never guess at taxes again' },
-              ].map((h, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 22px', borderRadius: 14, background: 'rgba(245,242,236,0.07)', border: '1px solid rgba(245,242,236,0.12)', flex: isMobile ? undefined : 1 }}>
-                  <span style={{ color: SAGE, flexShrink: 0 }}>{h.icon}</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: CREAM }}>{h.label}</span>
-                </div>
-              ))}
-            </div>
           </FadeIn>
         </div>
       </section>
