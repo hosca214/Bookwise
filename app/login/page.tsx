@@ -67,6 +67,23 @@ function LoginPageInner() {
     }
   }
 
+  async function tryDemo() {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'demo@bookwise.app',
+        password: 'Demo2025!',
+      })
+      if (error) throw error
+      router.push('/dashboard')
+      router.refresh()
+    } catch {
+      toast.error('Could not load the demo. Try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -149,6 +166,33 @@ function LoginPageInner() {
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
           <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>or</span>
           <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+        </div>
+
+        {/* Demo account */}
+        <div style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 10, background: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+          <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 10px', lineHeight: 1.5 }}>
+            Want to explore first? Try the demo practice.
+          </p>
+          <button
+            type="button"
+            onClick={tryDemo}
+            disabled={loading}
+            style={{
+              width: '100%',
+              minHeight: 42,
+              borderRadius: 8,
+              border: '1.5px solid var(--color-primary)',
+              background: 'transparent',
+              color: 'var(--color-primary)',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.6 : 1,
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {loading ? 'Loading...' : 'Open demo practice'}
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
