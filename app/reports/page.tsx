@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePersistentState } from '@/lib/hooks'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -128,8 +129,8 @@ export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [error, setError] = useState(false)
 
-  const [rangeStart, setRangeStart] = useState(THIS_MONTH)
-  const [rangeEnd, setRangeEnd] = useState(monthEnd(THIS_MONTH))
+  const [rangeStart, setRangeStart] = usePersistentState('reports.rangeStart', THIS_MONTH)
+  const [rangeEnd, setRangeEnd] = usePersistentState('reports.rangeEnd', monthEnd(THIS_MONTH))
 
   const [trendData, setTrendData] = useState<TrendMonth[]>([])
   const [wins, setWins] = useState<WinRecord[]>([])

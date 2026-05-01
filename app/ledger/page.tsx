@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useMemo } from 'react'
+import { usePersistentState } from '@/lib/hooks'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -135,10 +136,23 @@ export default function LedgerPage() {
   const [ledgerInsight, setLedgerInsight] = useState<string | null>(null)
   const [loadingLedgerInsight, setLoadingLedgerInsight] = useState(false)
 
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([])
-  const [monthFilter, setMonthFilter] = useState<string>(currentMonth)
+  const [savedSearch, setSavedSearch] = usePersistentState('ledger.search', '')
+  const [savedTypeFilter, setSavedTypeFilter] = usePersistentState<'all' | 'income' | 'expense'>('ledger.typeFilter', 'all')
+  const [savedCategoryFilter, setSavedCategoryFilter] = usePersistentState<string[]>('ledger.categoryFilter', [])
+  const [savedMonthFilter, setSavedMonthFilter] = usePersistentState('ledger.monthFilter', currentMonth)
+  const [isReset, setIsReset] = useState(false)
+
+  const search = isReset ? '' : savedSearch
+  const typeFilter: 'all' | 'income' | 'expense' = isReset ? 'all' : savedTypeFilter
+  const categoryFilter: string[] = isReset ? [] : savedCategoryFilter
+  const monthFilter = isReset ? currentMonth : savedMonthFilter
+
+  const setSearch = (val: string) => { setSavedSearch(val); setIsReset(false) }
+  const setTypeFilter = (val: 'all' | 'income' | 'expense') => { setSavedTypeFilter(val); setIsReset(false) }
+  const setCategoryFilter = (val: string[]) => { setSavedCategoryFilter(val); setIsReset(false) }
+  const setMonthFilter = (val: string) => { setSavedMonthFilter(val); setIsReset(false) }
+  const handleResetFilters = () => setIsReset(true)
+  const hasActiveFilters = search !== '' || typeFilter !== 'all' || categoryFilter.length > 0 || monthFilter !== currentMonth
 
   const filtered = useMemo(() => transactions.filter((tx) => {
     if (typeFilter !== 'all' && tx.type !== typeFilter) return false
@@ -449,7 +463,7 @@ export default function LedgerPage() {
                 return (
                   <button
                     key={cat}
-                    onClick={() => setCategoryFilter((prev) => sel ? prev.filter((c) => c !== cat) : [...prev, cat])}
+                    onClick={() => setCategoryFilter(sel ? categoryFilter.filter((c) => c !== cat) : [...categoryFilter, cat])}
                     style={{ height: 28, padding: '0 10px', borderRadius: 999, border: `1.5px solid ${sel ? activeColor : 'var(--color-border)'}`, background: sel ? `color-mix(in srgb, ${activeColor} 15%, var(--color-card))` : 'var(--color-card)', color: sel ? activeColor : 'var(--color-muted-foreground)', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const, flexShrink: 0, fontFamily: 'var(--font-sans)' }}
                   >
                     {sel ? '✓ ' : ''}{t(cat)}
@@ -476,6 +490,14 @@ export default function LedgerPage() {
               All time
             </button>
           </div>
+          {hasActiveFilters && (
+            <button
+              onClick={handleResetFilters}
+              style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0 }}
+            >
+              Reset filters
+            </button>
+          )}
         </div>
       )}
 

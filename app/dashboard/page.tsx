@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePersistentState } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
@@ -99,7 +100,7 @@ export default function DashboardPage() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [showPayModal, setShowPayModal] = useState(false)
   const [securing, setSecuring] = useState(false)
-  const [payPeriod, setPayPeriod] = useState<'week' | 'month'>('week')
+  const [payPeriod, setPayPeriod] = usePersistentState<'week' | 'month'>('dashboard.payPeriod', 'week')
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
