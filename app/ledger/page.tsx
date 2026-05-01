@@ -660,12 +660,6 @@ export default function LedgerPage() {
                       <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--color-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {t(tx.category_key)}
                       </span>
-                      {tx.date === today && !tx.pulse_matched && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toast("Today's Pulse is waiting.", { icon: undefined }) }}
-                          style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', flexShrink: 0, display: 'inline-block', border: 'none', padding: 0, cursor: 'pointer' }}
-                        />
-                      )}
                     </div>
                     {tx.notes && (
                       <div style={{ fontSize: 12, color: 'var(--color-muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
@@ -695,6 +689,7 @@ export default function LedgerPage() {
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)', flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative', opacity: rowOcrLoading === tx.id ? 0.4 : 1 }}
                     >
                       {rowOcrLoading === tx.id ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
+                      <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: 'var(--color-danger)', border: '1.5px solid var(--color-background)' }} />
                     </button>
                   )}
                 </div>
