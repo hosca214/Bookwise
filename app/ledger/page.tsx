@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { usePersistentState } from '@/lib/hooks'
+import { fmt } from '@/lib/finance'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -541,11 +542,11 @@ export default function LedgerPage() {
       {/* Totals strip */}
       {!loading && !error && transactions.length > 0 && (
         <div style={{ display: 'flex', background: 'var(--color-card)', borderBottom: '1px solid var(--color-border)', maxWidth: 480, margin: '0 auto' }}>
-          <button onClick={() => setTypeFilter(typeFilter === 'income' ? 'all' : 'income')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'income' ? 'color-mix(in srgb, var(--color-profit) 10%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'income' ? '2px solid var(--color-profit)' : '2px solid transparent' }}><div style={totalLabelStyle}>Income</div><div style={{ ...totalValueStyle, color: 'var(--color-profit)' }}>+${totalIncome.toFixed(2)}</div></button>
+          <button onClick={() => setTypeFilter(typeFilter === 'income' ? 'all' : 'income')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'income' ? 'color-mix(in srgb, var(--color-profit) 10%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'income' ? '2px solid var(--color-profit)' : '2px solid transparent' }}><div style={totalLabelStyle}>Income</div><div style={{ ...totalValueStyle, color: 'var(--color-profit)' }}>+{fmt(totalIncome)}</div></button>
           <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
-          <button onClick={() => setTypeFilter(typeFilter === 'expense' ? 'all' : 'expense')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'expense' ? 'color-mix(in srgb, var(--color-danger) 8%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'expense' ? '2px solid var(--color-danger)' : '2px solid transparent' }}><div style={totalLabelStyle}>Expenses</div><div style={{ ...totalValueStyle, color: 'var(--color-danger)' }}>-${totalExpenses.toFixed(2)}</div></button>
+          <button onClick={() => setTypeFilter(typeFilter === 'expense' ? 'all' : 'expense')} style={{ ...totalColStyle, border: 'none', cursor: 'pointer', background: typeFilter === 'expense' ? 'color-mix(in srgb, var(--color-danger) 8%, var(--color-card))' : 'transparent', borderBottom: typeFilter === 'expense' ? '2px solid var(--color-danger)' : '2px solid transparent' }}><div style={totalLabelStyle}>Expenses</div><div style={{ ...totalValueStyle, color: 'var(--color-danger)' }}>-{fmt(totalExpenses)}</div></button>
           <div style={{ width: 1, background: 'var(--color-border)', flexShrink: 0 }} />
-          <div style={totalColStyle}><div style={totalLabelStyle}>Net</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>${netTotal.toFixed(2)}</div></div>
+          <div style={totalColStyle}><div style={totalLabelStyle}>Net</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{fmt(netTotal)}</div></div>
         </div>
       )}
 
@@ -670,7 +671,7 @@ export default function LedgerPage() {
 
                   {/* amount */}
                   <div style={{ fontSize: 16, fontWeight: 600, color: tx.type === 'income' ? 'var(--color-profit)' : 'var(--color-muted-foreground)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', opacity: tx.is_personal ? 0.45 : 1 }}>
-                    {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
+                    {tx.type === 'income' ? '+' : '-'}{fmt(tx.amount)}
                   </div>
 
                   {/* receipt icon */}

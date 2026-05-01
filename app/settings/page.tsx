@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { fmt } from '@/lib/finance'
 import { useIQ } from '@/context/IQContext'
 import { useVibe, VIBES } from '@/context/VibeContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -684,7 +685,7 @@ export default function SettingsPage() {
                         </span>
                       )}
                       <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-foreground)', fontVariantNumeric: 'tabular-nums' }}>
-                        ${svc.price.toFixed(2)}
+                        {fmt(svc.price)}
                       </span>
                       {count > 0 && (
                         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', background: 'rgba(124,154,126,0.1)', borderRadius: 999, padding: '2px 8px' }}>
@@ -782,7 +783,7 @@ export default function SettingsPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: r.type === 'income' ? 'var(--color-profit)' : 'var(--color-danger)' }}>
-                      {r.type === 'income' ? '+' : '-'}${r.amount.toFixed(2)}
+                      {r.type === 'income' ? '+' : '-'}{fmt(r.amount)}
                     </span>
                     <button onClick={() => removeRecurringTemplate(r.id)} aria-label={`Remove ${r.name}`}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-muted-foreground)' }}
@@ -1014,7 +1015,7 @@ export default function SettingsPage() {
           <SectionHeader>About Bookwise</SectionHeader>
           <div style={{ background: 'var(--color-card)', borderRadius: 12, padding: '16px', border: '1px solid var(--color-border)' }}>
             <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, margin: 0 }}>
-              Bookwise organizes and presents your financial data. Sage AI shares observations, not advice. Work with a licensed CPA before filing.
+              Bookwise organizes and presents your financial data. Sage AI shares observations, not advice. Work with a licensed CPA before filing. Dollar amounts are displayed rounded up to the nearest whole dollar. Exact values are used in your CPA export.
             </p>
           </div>
         </section>

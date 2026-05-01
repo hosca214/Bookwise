@@ -1034,7 +1034,7 @@ export default function LandingPage() {
           ))}
         </div>
         <p style={{ fontSize: 12, color: MUTED, margin: '0 0 4px', lineHeight: 1.6 }}>A product of The Zen Bookkeeper.</p>
-        <p style={{ fontSize: 12, color: MUTED, margin: '0 0 6px', lineHeight: 1.6 }}>Bookwise organizes your financial data. Sage AI shares observations, not advice. Always work with a licensed CPA before filing.</p>
+        <p style={{ fontSize: 12, color: MUTED, margin: '0 0 6px', lineHeight: 1.6 }}>Bookwise organizes your financial data. Sage AI shares observations, not advice. Always work with a licensed CPA before filing. Dollar amounts are displayed rounded up to the nearest whole dollar. Exact values are used in CPA exports.</p>
         <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>&copy; {new Date().getFullYear()} Bookwise. All rights reserved.</p>
       </footer>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { fmt } from '@/lib/finance'
 import { useIQ } from '@/context/IQContext'
 import { useVibe } from '@/context/VibeContext'
 import { Confetti } from '@/components/ui/Confetti'
@@ -170,7 +171,7 @@ export default function DashboardPage() {
             buckets: { profit: profitPct, tax: taxPct, ops: opsPct },
             focus,
             expenseAlert: overBudget
-              ? `Actual expenses this month ($${expenses.toFixed(2)}) exceed the ops budget ($${opsTarget.toFixed(2)}) by $${overAmount.toFixed(2)}. This is reducing take-home pay.`
+              ? `Actual expenses this month (${fmt(expenses)}) exceed the ops budget (${fmt(opsTarget)}) by ${fmt(overAmount)}. This is reducing take-home pay.`
               : null,
           },
         }),
@@ -657,7 +658,7 @@ export default function DashboardPage() {
           {monthIncome > 0 ? (
             <>
               <p className="font-serif" style={{ fontSize: 36, fontWeight: 700, color: takeHome === 0 ? 'var(--color-muted-foreground)' : 'var(--color-pay)', margin: '4px 0 2px', lineHeight: 1 }}>
-                ${takeHome.toFixed(2)}
+                {fmt(takeHome)}
               </p>
               {takeHome === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontStyle: 'italic' }}>
@@ -669,8 +670,8 @@ export default function DashboardPage() {
                     <div style={{ height: '100%', width: `${payProgress}%`, background: 'var(--color-pay)', borderRadius: 3, transition: 'width 1.2s ease' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                    <span>${takeHome.toFixed(0)} this month</span>
-                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>${payTarget.toFixed(0)}/mo</strong></span>
+                    <span>{fmt(takeHome)} this month</span>
+                    <span>Goal: <strong style={{ color: 'var(--color-ink)' }}>{fmt(payTarget)}/mo</strong></span>
                   </div>
                 </>
               ) : null}
@@ -715,8 +716,8 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                      <span>Income ${monthIncome.toFixed(2)}</span>
-                      <span>Cost to show up ${essentialBase.toFixed(2)}</span>
+                      <span>Income {fmt(monthIncome)}</span>
+                      <span>Cost to show up {fmt(essentialBase)}</span>
                     </div>
                     <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0 }}>
                       Need to update this?{' '}
@@ -763,7 +764,7 @@ export default function DashboardPage() {
                     <div style={{ height: '100%', width: `${taxTarget > 0 ? Math.min(100, (taxFunded / taxTarget) * 100) : 0}%`, background: 'var(--color-tax)', borderRadius: 99 }} />
                   </div>
                   <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-tax)', minWidth: 56, textAlign: 'right' as const }}>
-                    ${taxFunded.toFixed(0)}
+                    {fmt(taxFunded)}
                   </span>
                 </div>
               </div>
@@ -803,7 +804,7 @@ export default function DashboardPage() {
                     <div style={{ height: '100%', width: `${opsTarget > 0 ? Math.min(100, (opsActual / opsTarget) * 100) : 0}%`, background: overBudget ? 'var(--color-danger)' : opsActual >= opsTarget * 0.85 ? '#C4A882' : 'var(--color-ops)', borderRadius: 99 }} />
                   </div>
                   <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: overBudget ? 'var(--color-danger)' : 'var(--color-ops)', minWidth: 56, textAlign: 'right' as const }}>
-                    ${opsActual.toFixed(0)}
+                    {fmt(opsActual)}
                   </span>
                 </div>
               </div>
@@ -811,11 +812,11 @@ export default function DashboardPage() {
                 <div style={{ fontSize: 13, color: 'var(--color-muted-foreground)', lineHeight: 1.6, marginTop: 4 }}>
                   {overBudget && (
                     <p style={{ color: 'var(--color-danger)', margin: '0 0 6px', fontWeight: 600 }}>
-                      Over budget by ${overAmount.toFixed(2)}, which is coming directly out of your take-home.
+                      Over budget by {fmt(overAmount)}, which is coming directly out of your take-home.
                     </p>
                   )}
                   <p style={{ margin: 0 }}>
-                    This is your monthly budget for business costs. Budget: ${opsTarget.toFixed(0)} ({Math.round(opsFrac * 100)}% of income). When your actual spending stays within this amount, your take-home pay stays predictable.
+                    This is your monthly budget for business costs. Budget: {fmt(opsTarget)} ({Math.round(opsFrac * 100)}% of income). When your actual spending stays within this amount, your take-home pay stays predictable.
                   </p>
                 </div>
               )}
@@ -835,7 +836,7 @@ export default function DashboardPage() {
                     <div style={{ height: '100%', width: `${profitTarget > 0 ? Math.min(100, (profitFunded / profitTarget) * 100) : 0}%`, background: 'var(--color-profit)', borderRadius: 99 }} />
                   </div>
                   <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-profit)', minWidth: 56, textAlign: 'right' as const }}>
-                    ${profitFunded.toFixed(0)}
+                    {fmt(profitFunded)}
                   </span>
                 </div>
               </div>
@@ -995,7 +996,7 @@ export default function DashboardPage() {
                           {tx.notes ? ` · ${tx.notes}` : ''}
                         </span>
                         <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-serif)', color: tx.type === 'expense' ? 'var(--color-danger)' : 'var(--color-profit)' }}>
-                          {tx.type === 'expense' ? '-' : '+'}${tx.amount.toFixed(2)}
+                          {tx.type === 'expense' ? '-' : '+'}{fmt(tx.amount)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1188,7 +1189,7 @@ export default function DashboardPage() {
                         <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>
                           {amount <= 0
                             ? <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>$0.00</span>
-                            : `$${amount.toFixed(2)}`}
+                            : `${fmt(amount)}`}
                         </span>
                       </div>
                     ))}

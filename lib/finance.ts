@@ -211,3 +211,12 @@ function round2(n: number): number {
 function clamp(n: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, n));
 }
+
+// ---------------------------------------------------------------------------
+// Display helpers
+// ---------------------------------------------------------------------------
+
+/** Format a dollar amount for display. Always rounds up to the nearest dollar. */
+export function fmt(amount: number): string {
+  return `$${Math.ceil(amount)}`;
+}

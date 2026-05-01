@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePersistentState } from '@/lib/hooks'
+import { fmt } from '@/lib/finance'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -112,7 +113,7 @@ function CategoryRows({ groups }: { groups: [string, number][] }) {
               </span>
             )}
           </span>
-          <span>${amt.toFixed(2)}</span>
+          <span>{fmt(amt)}</span>
         </div>
       ))}
     </>
@@ -435,7 +436,7 @@ export default function ReportsPage() {
               <div style={{ marginBottom: 8 }}>
                 <div style={{ ...lineRow, fontWeight: 600, color: 'var(--color-foreground)', borderBottom: 'none', paddingBottom: 4 }}>
                   <span>{t('Gross Income')}</span>
-                  <span style={{ color: 'var(--color-profit)' }}>${grossIncome.toFixed(2)}</span>
+                  <span style={{ color: 'var(--color-profit)' }}>{fmt(grossIncome)}</span>
                 </div>
                 <CategoryRows groups={incomeGroups} />
               </div>
@@ -447,7 +448,7 @@ export default function ReportsPage() {
               <div style={{ marginBottom: 8 }}>
                 <div style={{ ...lineRow, fontWeight: 600, color: 'var(--color-foreground)', borderBottom: 'none', paddingBottom: 4 }}>
                   <span>{t('Total Expenses')}</span>
-                  <span style={{ color: 'var(--color-muted-foreground)' }}>${totalExpenses.toFixed(2)}</span>
+                  <span style={{ color: 'var(--color-muted-foreground)' }}>{fmt(totalExpenses)}</span>
                 </div>
                 <CategoryRows groups={expenseGroups} />
               </div>
@@ -465,7 +466,7 @@ export default function ReportsPage() {
                   fontWeight: 700,
                   color: netProfit >= 0 ? 'var(--color-primary)' : 'var(--color-danger)',
                 }}>
-                  ${netProfit.toFixed(2)}
+                  {fmt(netProfit)}
                 </span>
               </div>
               {netProfit < 0 && (
@@ -486,7 +487,7 @@ export default function ReportsPage() {
                     {t('Tax Set-Aside Estimate')}
                   </span>
                   <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)', fontVariantNumeric: 'tabular-nums' }}>
-                    ${taxEstimate.toFixed(2)}
+                    {fmt(taxEstimate)}
                   </span>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0 }}>
@@ -545,7 +546,7 @@ export default function ReportsPage() {
                     width={40}
                   />
                   <Tooltip
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, t('Income')]}
+                    formatter={(value) => [`${fmt(Number(value))}`, t('Income')]}
                     contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12, color: 'var(--color-foreground)' }}
                     cursor={{ fill: 'var(--color-muted)' }}
                   />
@@ -650,11 +651,11 @@ export default function ReportsPage() {
                   <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
                     <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>{label}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>${p.toFixed(0)}</span>
+                      <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>{fmt(p)}</span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: isGood ? 'var(--color-profit)' : 'var(--color-danger)' }}>
-                        {delta >= 0 ? '↑' : '↓'} ${Math.abs(delta).toFixed(0)}
+                        {delta >= 0 ? '↑' : '↓'} {fmt(Math.abs(delta))}
                       </span>
-                      <span className="font-serif" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)' }}>${c.toFixed(0)}</span>
+                      <span className="font-serif" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)' }}>{fmt(c)}</span>
                     </div>
                   </div>
                 )
@@ -713,7 +714,7 @@ export default function ReportsPage() {
                   <div key={win.month} style={{ background: 'var(--color-card)', borderRadius: 12, border: '1px solid var(--color-border)', padding: '14px 16px', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', borderLeft: `3px solid ${isGoalReached ? 'var(--color-pay)' : 'var(--color-accent)'}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                       <span className="font-serif" style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-ink)' }}>{monthLabel}</span>
-                      <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-pay)' }}>${win.pay_funded.toFixed(2)}</span>
+                      <span className="font-serif" style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-pay)' }}>{fmt(win.pay_funded)}</span>
                     </div>
                     {win.celebration_note && (
                       <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontStyle: 'italic', margin: '0 0 8px', lineHeight: 1.4 }}>
@@ -788,7 +789,7 @@ export default function ReportsPage() {
                       {formatWeekRange(new Date(w.week_start + 'T12:00:00'))}
                     </p>
                     <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: 0 }}>
-                      Income ${w.income.toFixed(2)} &middot; Pay Myself ${w.pay_amount.toFixed(2)}
+                      Income {fmt(w.income)} &middot; Pay Myself {fmt(w.pay_amount)}
                     </p>
                   </div>
                   <span style={{
