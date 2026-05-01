@@ -1213,9 +1213,14 @@ export default function DashboardPage() {
                       {modalPayPeriod === 'week' ? 'Expenses exceeded income this week.' : 'Expenses exceeded income this month.'} Nothing to pay yourself.
                     </p>
                   )}
-                  <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 8, lineHeight: 1.5 }}>
                     Suggested amounts based on {modalPayPeriod === 'week' ? 'this week\'s' : 'this month\'s'} income. These numbers are already saved in Reports.
                   </p>
+                  {modalPayPeriod === 'week' && (
+                    <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.6, fontStyle: 'italic' }}>
+                      Weekly totals accumulate from Monday through Sunday. Tapping "I did it" logs your transfer streak and resets the weekly count. A new week starts fresh every Monday.
+                    </p>
+                  )}
                 </>
               )
             })()}
