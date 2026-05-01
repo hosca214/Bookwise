@@ -84,11 +84,12 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (user.email !== DEMO_EMAIL) return NextResponse.json({ error: 'Demo account only.' }, { status: 403 })
+    const userId = user.id
 
     const { data: profile } = await supabase
       .from('profiles')
       .select('google_drive_folder_id, google_drive_access_token, google_drive_refresh_token')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     if (!profile?.google_drive_folder_id || !profile?.google_drive_refresh_token) {
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
         return await uploadToDrive(accessToken, folderId, fileName, buffer)
       } catch {
         accessToken = await refreshToken(refreshTok)
-        await supabase.from('profiles').update({ google_drive_access_token: accessToken }).eq('id', user.id)
+        await supabase.from('profiles').update({ google_drive_access_token: accessToken }).eq('id', userId)
         return await uploadToDrive(accessToken, folderId, fileName, buffer)
       }
     }
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
     const { data: expenseTxs } = await supabase
       .from('transactions')
       .select('id, date, type, category_key, notes')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('type', 'expense')
       .not('receipt_url', 'is', null)
       .order('date')
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
           receipt_url: `https://drive.google.com/file/d/${fileId}/view`,
           receipt_filename: fileName,
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('date', inv.date)
         .eq('notes', inv.notes)
       uploaded.push(fileName)
