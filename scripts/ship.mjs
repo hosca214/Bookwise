@@ -61,7 +61,27 @@ if (buildState !== 'READY') {
   process.exit(1)
 }
 
-console.log('Build READY. Running QA suite...\n')
+console.log('Build READY. Seeding demo account...')
+try {
+  const seedSecret = process.env.SEED_DEMO_SECRET
+  if (seedSecret) {
+    const seedRes = await fetch(`${deployUrl}/api/seed-demo`, {
+      method: 'POST',
+      headers: { 'x-seed-secret': seedSecret, 'Content-Type': 'application/json' },
+    })
+    const seedBody = await seedRes.json().catch(() => ({}))
+    if (seedRes.ok) {
+      console.log(`Demo seed OK — ${seedBody.transactions ?? '?'} transactions written.`)
+    } else {
+      console.warn(`Demo seed returned ${seedRes.status}: ${JSON.stringify(seedBody)} — continuing anyway.`)
+    }
+  } else {
+    console.warn('SEED_DEMO_SECRET not set — skipping demo seed.')
+  }
+} catch (e) {
+  console.warn('Demo seed request failed:', e.message, '— continuing anyway.')
+}
+console.log('\nRunning QA suite...\n')
 
 // ── 3. Run QA suite ───────────────────────────────────────────────────────────
 let qaOk = true

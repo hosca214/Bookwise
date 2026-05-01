@@ -7,6 +7,7 @@ DECLARE
   demo_id uuid;
   cur_month date := date_trunc('month', CURRENT_DATE)::date;
   prev_month date := (date_trunc('month', CURRENT_DATE) - interval '1 month')::date;
+  next_month date := (date_trunc('month', CURRENT_DATE) + interval '1 month')::date;
 BEGIN
   SELECT id INTO demo_id FROM auth.users WHERE email = 'demo@bookwise.app';
 
@@ -97,6 +98,13 @@ BEGIN
     (demo_id, prev_month + 14,  45.00, 'expense', 'Marketing',            'Business cards reprint',   'manual'),
     (demo_id, prev_month + 19,  75.00, 'expense', 'Professional Services','Accountant consultation',  'manual');
 
+  -- Next month: a few early sessions (ensures data visible when UTC rolls over)
+  INSERT INTO transactions (user_id, date, amount, type, category_key, notes, source) VALUES
+    (demo_id, next_month + 1, 120.00, 'income', 'Session Income', '60-min session - R. Chen',   'manual'),
+    (demo_id, next_month + 2, 165.00, 'income', 'Session Income', '90-min session - T. Brooks', 'manual'),
+    (demo_id, next_month + 3,  30.00, 'income', 'Tip Income',     'Tip from T. Brooks',         'manual'),
+    (demo_id, next_month + 1,  25.00, 'expense', 'Software',      'Booking software',           'manual');
+
   -- ── Daily Pulse ────────────────────────────────────────────────────────────
   INSERT INTO daily_pulse (user_id, date, sessions_given, hours_worked, miles_driven)
   VALUES
@@ -147,6 +155,31 @@ BEGIN
     328.75, 328.75,
     855.75, 855.75,
     1500.00, 1500.00
+  )
+  ON CONFLICT (user_id, month) DO UPDATE SET
+    profit_target  = EXCLUDED.profit_target,
+    profit_funded  = EXCLUDED.profit_funded,
+    tax_target     = EXCLUDED.tax_target,
+    tax_funded     = EXCLUDED.tax_funded,
+    ops_target     = EXCLUDED.ops_target,
+    ops_funded     = EXCLUDED.ops_funded,
+    pay_target     = EXCLUDED.pay_target,
+    pay_funded     = EXCLUDED.pay_funded;
+
+  -- Next month bucket (minimal, so tiles render when UTC rolls over)
+  INSERT INTO buckets (
+    user_id, month,
+    profit_target, profit_funded,
+    tax_target, tax_funded,
+    ops_target, ops_funded,
+    pay_target, pay_funded
+  )
+  VALUES (
+    demo_id, next_month,
+    31.50, 0.00,
+    78.75, 0.00,
+    200.00, 25.00,
+    1500.00, 0.00
   )
   ON CONFLICT (user_id, month) DO UPDATE SET
     profit_target  = EXCLUDED.profit_target,

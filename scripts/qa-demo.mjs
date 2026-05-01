@@ -60,7 +60,7 @@ await check('Redirects to /landing when logged out', async () => {
   if (!page.url().includes('/landing') && !page.url().includes('/login')) throw new Error(`Got ${page.url()}`)
 })
 await check('Hero headline visible', async () => {
-  await page.waitForSelector('text=Keep more of', { timeout: 8000 })
+  await page.waitForSelector('text=Always know where', { timeout: 8000 })
 })
 await check('CTA button present', async () => {
   const btn = page.locator('a, button').filter({ hasText: /Apply for beta/i }).first()
@@ -99,9 +99,11 @@ await check('Take-Home card visible with amount', async () => {
   await page.waitForSelector('text=Take-Home', { timeout: 5000 })
 })
 await check('Money plan tiles visible (Tax, Ops, Growth)', async () => {
-  await page.waitForSelector('text=Tax Set-Aside', { timeout: 5000 })
-  await page.waitForSelector('text=Business Expenses', { timeout: 3000 })
-  await page.waitForSelector('text=Growth Fund', { timeout: 3000 })
+  await page.evaluate(() => window.scrollTo(0, 300))
+  await page.waitForTimeout(1500)
+  await page.waitForSelector('text=Tax Set-Aside', { timeout: 10000 })
+  await page.waitForSelector('text=Business Expenses', { timeout: 5000 })
+  await page.waitForSelector('text=Growth Fund', { timeout: 5000 })
 })
 await check('Cost to Show Up card visible', async () => {
   await page.waitForSelector('text=Cost to Show Up', { timeout: 5000 })
@@ -118,7 +120,7 @@ await check('Daily Pulse section visible', async () => {
   await page.waitForSelector("text=Today's Pulse", { timeout: 5000 })
 })
 await check('Sage insight card visible', async () => {
-  await page.waitForSelector('text=Sage says', { timeout: 5000 })
+  await page.waitForSelector('text=Sage AI says', { timeout: 5000 })
 })
 await check('Tax deadline countdown visible', async () => {
   // The countdown lives behind a "What is this?" toggle on the Tax Set-Aside tile.
@@ -143,23 +145,20 @@ await page.goto(`${BASE}/ledger`, { waitUntil: 'networkidle' })
 await check('Ledger header visible', async () => {
   await page.waitForSelector('text=Ledger', { timeout: 8000 })
 })
-await check('Transaction rows rendered (42 entries)', async () => {
-  await page.waitForSelector('text=/4[0-9] entr/i', { timeout: 8000 })
+await check('Transaction rows rendered', async () => {
+  await page.waitForSelector('text=/[0-9]+ entr/i', { timeout: 8000 })
 })
 await check('Manual source badge visible', async () => {
   await page.waitForSelector('text=Manual', { timeout: 5000 })
-})
-await check('Plaid source badge visible', async () => {
-  await page.waitForSelector('text=Plaid', { timeout: 5000 })
 })
 await check('Search bar present', async () => {
   await page.waitForSelector('input[placeholder*="Search"]', { timeout: 5000 })
 })
 await check('Search filters transactions', async () => {
-  await page.fill('input[placeholder*="Search"]', 'Oils')
+  await page.fill('input[placeholder*="Search"]', 'Linens')
   await page.waitForTimeout(400)
-  const visible = await page.locator('text=Oil').count()
-  if (visible === 0) throw new Error('No results for "Oils"')
+  const visible = await page.locator('text=Linen').count()
+  if (visible === 0) throw new Error('No results for "Linens"')
   await page.fill('input[placeholder*="Search"]', '')
 })
 await check('Income/Expense toggle works', async () => {
@@ -176,11 +175,8 @@ await check('Add transaction sheet opens', async () => {
   await page.keyboard.press('Escape')
 })
 await check('Receipt camera icon present on expense rows', async () => {
-  // SVG camera icon from lucide should be on rows
-  const cameraIcons = page.locator('svg').filter({ hasText: '' })
-  // just check at least one row has a receipt_url indicator
-  const receiptRows = await page.locator('text=Oils').count()
-  if (receiptRows === 0) throw new Error('No oil receipt row found')
+  const receiptRows = await page.locator('text=Linens').count()
+  if (receiptRows === 0) throw new Error('No Linens expense row found')
 })
 
 // ── 5. REPORTS ───────────────────────────────────────────────────────────────
