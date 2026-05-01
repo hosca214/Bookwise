@@ -99,6 +99,21 @@ No calculation changes. Update "What is this?" copy (current text is too vague):
 
 ---
 
+## Cost to Show Up — Break-Even Bar Color Zones
+
+The progress bar and status label both reflect coverage level with color:
+
+| Coverage | Bar + Label Color | Status Label |
+|---|---|---|
+| 0–49% | `var(--color-danger)` red | "Your income covers X% of what it costs to show up." |
+| 50–84% | `#C4A882` amber | "Getting closer — X% covered this month." |
+| 85–99% | `var(--color-primary)` green | "Almost there — X% of your costs are covered." |
+| 100%+ | `var(--color-profit)` bright green | "Your practice is paying for itself this month." |
+
+Bar width is capped at 100% — coverage above 100% is communicated through color and the label, not by overflowing the bar.
+
+---
+
 ## Sage AI Auto-Alert
 
 When `opsActual > opsTarget`, inject into the daily insight system prompt context:

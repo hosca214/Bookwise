@@ -715,20 +715,38 @@ export default function DashboardPage() {
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-ink)', margin: '0 0 12px' }}>
-                {essentialCoverage >= 100
+              {(() => {
+                const breakEvenColor = essentialCoverage >= 100
+                  ? 'var(--color-profit)'
+                  : essentialCoverage >= 85
+                    ? 'var(--color-primary)'
+                    : essentialCoverage >= 50
+                      ? '#C4A882'
+                      : 'var(--color-danger)'
+                const breakEvenLabel = essentialCoverage >= 100
                   ? 'Your practice is paying for itself this month.'
-                  : `Your costs are ${essentialCoverage}% covered this month.`}
-              </p>
-              <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${essentialCoverage}%`,
-                  background: 'var(--color-primary)',
-                  borderRadius: 99,
-                  transition: 'width 0.8s ease-out',
-                }} />
-              </div>
+                  : essentialCoverage >= 85
+                    ? `Almost there — ${essentialCoverage}% of your costs are covered.`
+                    : essentialCoverage >= 50
+                      ? `Getting closer — ${essentialCoverage}% covered this month.`
+                      : `Your income covers ${essentialCoverage}% of what it costs to show up.`
+                return (
+                  <>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: breakEvenColor, margin: '0 0 12px' }}>
+                      {breakEvenLabel}
+                    </p>
+                    <div style={{ height: 10, borderRadius: 99, background: 'var(--color-muted)', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${Math.min(100, essentialCoverage)}%`,
+                        background: breakEvenColor,
+                        borderRadius: 99,
+                        transition: 'width 0.8s ease-out',
+                      }} />
+                    </div>
+                  </>
+                )
+              })()}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
                   Income ${monthIncome.toFixed(2)}
