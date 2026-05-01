@@ -5,7 +5,7 @@ import { motion, useInView, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, Shield, Camera, MessageCircle, Download,
   ChevronDown, Check, ArrowRight, Folder, Sparkles, Activity,
-  Leaf, Clock, BookOpen, X, RefreshCw, FileText, HardDrive, Zap,
+  Leaf, Clock, BookOpen, X, RefreshCw, FileText, HardDrive, Zap, Bell,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase'
