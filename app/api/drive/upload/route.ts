@@ -125,10 +125,6 @@ export async function POST(request: Request) {
     const txDate = (formData.get('txDate') as string | null) ?? new Date().toISOString().split('T')[0]
     const category = formData.get('category') as string | null
 
-    const [year, month] = txDate.split('-')
-    const monthLabel = new Date(parseInt(year), parseInt(month) - 1, 1)
-      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-
     const fileName = buildFileName(category, txDate, file.name)
     const fileBuffer = await file.arrayBuffer()
     const mimeType = file.type || 'image/jpeg'
@@ -137,8 +133,7 @@ export async function POST(request: Request) {
     let didRefresh = false
 
     const run = async (token: string) => {
-      const monthFolderId = await getOrCreateMonthFolder(token, profile.google_drive_folder_id, monthLabel)
-      return uploadFile(token, monthFolderId, fileName, fileBuffer, mimeType)
+      return uploadFile(token, profile.google_drive_folder_id, fileName, fileBuffer, mimeType)
     }
 
     let fileId: string
