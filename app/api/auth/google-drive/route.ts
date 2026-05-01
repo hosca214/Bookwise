@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const redirectUri = `${origin}/api/auth/google-drive/callback`
 
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_DRIVE_CLIENT_ID!,
+    client_id: process.env.GOOGLE_CLIENT_ID!,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'https://www.googleapis.com/auth/drive.file',
