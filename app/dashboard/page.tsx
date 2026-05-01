@@ -75,6 +75,9 @@ const FOCUS_AREAS = ['take-home', 'expense-pace', 'bucket-health', 'coverage'] a
 
 const today = new Date().toISOString().slice(0, 10)
 const currentMonth = today.slice(0, 8) + '01'
+const _ninetyDaysAgo = new Date()
+_ninetyDaysAgo.setDate(_ninetyDaysAgo.getDate() - 90)
+const NINETY_DAYS_AGO = _ninetyDaysAgo.toISOString().slice(0, 10)
 const _weekStart = getWeekStart(new Date())
 const _weekEnd = getWeekEnd(_weekStart)
 const WEEK_START_STR = toDateStr(_weekStart)
@@ -100,6 +103,7 @@ export default function DashboardPage() {
   const [weekIncome, setWeekIncome] = useState(0)
   const [weekExpenses, setWeekExpenses] = useState(0)
   const [weekStreak, setWeekStreak] = useState(0)
+  const [dailyStreak, setDailyStreak] = useState(0)
   const [currentWeekSummary, setCurrentWeekSummary] = useState<WeeklySummary | null>(null)
   const [showOwnerPayInfo, setShowOwnerPayInfo] = useState(false)
   const [showGrowthInfo, setShowGrowthInfo] = useState(false)
@@ -236,7 +240,7 @@ export default function DashboardPage() {
           supabase.from('transactions').select('amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
           supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', WEEK_START_STR).lte('date', WEEK_END_STR),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
-          supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', currentMonth).lte('date', today),
+          supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', NINETY_DAYS_AGO).lte('date', today),
           supabase.from('buckets').select('*').eq('user_id', user.id).eq('month', currentMonth).maybeSingle(),
           supabase.from('weekly_summaries').select('*').eq('user_id', user.id).eq('week_start', WEEK_START_STR).maybeSingle(),
           supabase.from('weekly_summaries').select('week_start, transferred').eq('user_id', user.id).lt('week_start', WEEK_START_STR).order('week_start', { ascending: false }).limit(12),
@@ -322,6 +326,18 @@ export default function DashboardPage() {
         const log: Record<string, boolean> = {}
         for (const row of monthPulse ?? []) log[row.date] = true
         setPulseLog(log)
+
+        const yest = new Date()
+        yest.setDate(yest.getDate() - 1)
+        let dStreak = 0
+        const streakCheck = new Date(yest)
+        while (true) {
+          const ds = streakCheck.toISOString().slice(0, 10)
+          if (!log[ds]) break
+          dStreak++
+          streakCheck.setDate(streakCheck.getDate() - 1)
+        }
+        setDailyStreak(dStreak)
 
         if (pastWeeks && pastWeeks.length > 0) {
           let streak = 0
@@ -1016,6 +1032,11 @@ export default function DashboardPage() {
           >
             {savingPulse ? 'Saving...' : 'Save Pulse'}
           </button>
+          {dailyStreak >= 2 && (
+            <p className="font-serif" style={{ textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--color-muted-foreground)', margin: '12px 0 0' }}>
+              {dailyStreak} days of tracking your pulse in a row.
+            </p>
+          )}
         </section>
 
         {/* Sage */}
