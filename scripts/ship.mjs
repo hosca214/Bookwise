@@ -75,9 +75,10 @@ if (buildState !== 'READY') {
   process.exit(1)
 }
 
+const PROD_URL = 'https://bookwise-coral.vercel.app'
 console.log('Build READY. Seeding demo account...')
 try {
-  const seedRes = await fetch(`${deployUrl}/api/seed-demo`, { method: 'POST' })
+  const seedRes = await fetch(`${PROD_URL}/api/seed-demo`, { method: 'POST' })
   const seedBody = await seedRes.json().catch(() => ({}))
   if (seedRes.ok) {
     console.log(`Demo seed OK — ${seedBody.transactions ?? '?'} transactions written.`)
