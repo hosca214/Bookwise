@@ -636,14 +636,8 @@ export default function LandingPage() {
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 32 : 50, fontWeight: 700, color: CREAM, margin: '0 0 28px', lineHeight: 1.18, letterSpacing: '-0.02em' }}>
               Knowing your numbers is good for your nervous system.
             </h2>
-            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 16px' }}>
-              Most wellness practitioners spend more energy avoiding their numbers than understanding them. That avoidance carries a quiet cost. The low-grade anxiety of not knowing what you earned, what you owe, or whether your practice is working for you is a weight you do not have to carry.
-            </p>
-            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 32px' }}>
-              Bookwise is designed as a daily check-in, not a quarterly scramble. A gentle reminder arrives at 5pm every day. You log your sessions. Your income updates. Your set-asides are clear. When you know your numbers, your nervous system can relax.
-            </p>
-            <p style={{ fontSize: isMobile ? 15 : 17, lineHeight: 1.7, color: 'rgba(245,242,236,0.55)', margin: '0 0 52px', fontStyle: 'italic' }}>
-              The whole check-in takes sixty seconds.
+            <p style={{ fontSize: isMobile ? 16 : 18, lineHeight: 1.75, color: 'rgba(245,242,236,0.7)', margin: '0 0 52px' }}>
+              Most wellness practitioners spend more energy avoiding their numbers than understanding them. That avoidance has a quiet cost. Bookwise is a 60-second daily check-in, not a quarterly scramble. Log your sessions. See your income update. Know exactly what is set aside. When you know your numbers, your nervous system can relax.
             </p>
 
             {/* habit chips */}
