@@ -919,7 +919,7 @@ export default function DashboardPage() {
                               <div style={{ width: 3, background: 'var(--color-card)', flexShrink: 0 }} />
                               <div style={{
                                 width: `${surplusFill}%`,
-                                background: 'var(--color-accent)',
+                                background: '#22c55e',
                                 transition: 'width 0.8s ease-out',
                                 flexShrink: 0,
                               }} />
