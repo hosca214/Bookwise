@@ -6,9 +6,23 @@
  * Exit 0 = all clear. Exit 1 = failure (output is structured for Claude to diagnose).
  */
 
-import { execSync } from 'child_process'
+import { execSync, spawnSync } from 'child_process'
+import { readFileSync } from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
+// Load .env.local so SEED_DEMO_SECRET is available when running locally
+try {
+  const envLocal = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.env.local'), 'utf8')
+  for (const line of envLocal.split('\n')) {
+    const eq = line.indexOf('=')
+    if (eq > 0) {
+      const k = line.slice(0, eq).trim()
+      const v = line.slice(eq + 1).trim()
+      if (k && !process.env[k]) process.env[k] = v
+    }
+  }
+} catch { /* no .env.local — fine */ }
 
 const __dir = path.dirname(fileURLToPath(import.meta.url))
 const DEPLOY_TIMEOUT_MS = 8 * 60 * 1000

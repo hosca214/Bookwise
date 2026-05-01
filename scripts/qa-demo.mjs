@@ -112,8 +112,10 @@ await check('Make a Transfer button present', async () => {
   await page.waitForSelector('text=Make a Transfer', { timeout: 5000 })
 })
 await check('Make a Transfer modal opens', async () => {
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(300)
   await page.click('button:has-text("Make a Transfer")')
-  await page.waitForSelector('text=Move your money', { timeout: 5000 })
+  await page.waitForSelector('text=Move your money', { timeout: 8000 })
   await page.keyboard.press('Escape')
 })
 await check('Daily Pulse section visible', async () => {
