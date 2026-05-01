@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 import { RefreshCw, SendHorizonal, X } from 'lucide-react'
 import { PulseCalendar } from '@/components/dashboard/PulseCalendar'
 import type { Profile, Bucket, WeeklySummary } from '@/lib/supabase'
-import { getWeekStart, getWeekEnd, toDateStr, formatWeekRange, formatMonthLabel } from '@/lib/weekUtils'
+import { getWeekStart, getWeekEnd, toDateStr, formatMonthLabel } from '@/lib/weekUtils'
 
 const supabase = createClient()
 const MS_PER_DAY = 86_400_000
@@ -82,7 +82,6 @@ const _weekStart = getWeekStart(new Date())
 const _weekEnd = getWeekEnd(_weekStart)
 const WEEK_START_STR = toDateStr(_weekStart)
 const WEEK_END_STR = toDateStr(_weekEnd)
-const WEEK_RANGE_LABEL = formatWeekRange(_weekStart)
 const MONTH_LABEL = formatMonthLabel(currentMonth)
 
 export default function DashboardPage() {
@@ -322,9 +321,6 @@ export default function DashboardPage() {
 
         if (pulseData) {
           setPulseId(pulseData.id)
-          setSessionsToday(pulseData.sessions_given ?? 0)
-          setHoursToday(Number(pulseData.hours_worked) ?? 0)
-          setMilesToday(Number(pulseData.miles_driven) ?? 0)
         }
 
         const log: Record<string, boolean> = {}
@@ -520,6 +516,9 @@ export default function DashboardPage() {
         if (data) setPulseId(data.id)
       }
       toast.success('Pulse saved.')
+      setSessionsToday(0)
+      setHoursToday(0)
+      setMilesToday(0)
       setPulseLog(prev => ({ ...prev, [selectedDate]: true }))
       setConfettiTrigger(n => n + 1)
       setSelectedDate('')
@@ -854,7 +853,7 @@ export default function DashboardPage() {
         {monthIncome > 0 && (
           <>
             <button
-              onClick={() => setShowPayModal(true)}
+              onClick={() => { setModalPayPeriod('week'); setShowPayModal(true) }}
               style={{
                 width: '100%', minHeight: 52,
                 background: 'var(--color-primary)',
@@ -898,9 +897,23 @@ export default function DashboardPage() {
             </p>
           )}
 
-          <div style={{ width: '100%', maxWidth: 380, marginBottom: 20 }}>
-            <PulseCalendar log={pulseLog} selected={selectedDate} onSelect={onSelectDate} startDate={profile?.created_at?.slice(0, 10)} />
-          </div>
+          <button
+            onClick={() => setPulseCalendarOpen(v => !v)}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              fontSize: 13, color: 'var(--color-primary)',
+              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              marginBottom: pulseCalendarOpen ? 12 : 20,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            {pulseCalendarOpen ? '▲ Hide calendar' : '▼ Show calendar'}
+          </button>
+          {pulseCalendarOpen && (
+            <div style={{ width: '100%', maxWidth: 380, marginBottom: 20 }}>
+              <PulseCalendar log={pulseLog} selected={selectedDate} onSelect={onSelectDate} startDate={profile?.created_at?.slice(0, 10)} />
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
@@ -1125,37 +1138,72 @@ export default function DashboardPage() {
           <div style={{ background: 'var(--color-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 360, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 4, marginTop: 0 }}>
-              This week's transfers
+            <h3 id="pay-modal-title" className="font-serif" style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 16, marginTop: 0 }}>
+              Make a Transfer
             </h3>
-            <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
-              {WEEK_RANGE_LABEL} — these amounts will reset when you tap &ldquo;I did it.&rdquo;
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {[
-                { label: 'Pay Myself',            amount: weekTakeHome,     color: 'var(--color-pay)' },
-                { label: t('Tax Bucket'),         amount: weekTaxAmount,    color: 'var(--color-tax)' },
-                { label: t('Profit Bucket'),      amount: weekProfitAmount, color: 'var(--color-profit)' },
-                { label: t('Operations Bucket'), amount: weekOpsActual,    color: 'var(--color-ops)' },
-              ].map(({ label, amount, color }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-background)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
-                  <span style={{ fontSize: 15, color: 'var(--color-foreground)' }}>{label}</span>
-                  <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>
-                    {amount <= 0
-                      ? <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>$0.00</span>
-                      : `$${amount.toFixed(2)}`}
-                  </span>
-                </div>
+            <div style={{ display: 'flex', background: 'var(--color-background)', borderRadius: 999, padding: 3, marginBottom: 20, border: '1px solid var(--color-border)' }}>
+              {(['week', 'month'] as const).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setModalPayPeriod(p)}
+                  style={{
+                    flex: 1, minHeight: 36, border: 'none', borderRadius: 999,
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    background: modalPayPeriod === p ? 'var(--color-card)' : 'transparent',
+                    color: modalPayPeriod === p ? 'var(--color-ink)' : 'var(--color-muted-foreground)',
+                    boxShadow: modalPayPeriod === p ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {p === 'week' ? 'This Week' : 'This Month'}
+                </button>
               ))}
             </div>
-            {weekTakeHome === 0 && (
-              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.5, fontStyle: 'italic' }}>
-                Expenses exceeded income this week. Nothing to pay yourself.
-              </p>
-            )}
-            <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
-              We have already saved these numbers. You can find them in Reports.
-            </p>
+            {(() => {
+              const wTakeHome = Math.max(0, weekIncome * (1 - taxFrac - profitFrac) - weekExpenses)
+              const wTax = weekIncome * taxFrac
+              const wProfit = weekIncome * profitFrac
+              const wOps = weekExpenses
+              const buckets = modalPayPeriod === 'week'
+                ? [
+                    { label: 'Pay Myself',            amount: wTakeHome, color: 'var(--color-pay)' },
+                    { label: t('Tax Bucket'),         amount: wTax,      color: 'var(--color-tax)' },
+                    { label: t('Profit Bucket'),      amount: wProfit,   color: 'var(--color-profit)' },
+                    { label: t('Operations Bucket'), amount: wOps,      color: 'var(--color-ops)' },
+                  ]
+                : [
+                    { label: 'Pay Myself',            amount: takeHome,     color: 'var(--color-pay)' },
+                    { label: t('Tax Bucket'),         amount: taxFunded,    color: 'var(--color-tax)' },
+                    { label: t('Profit Bucket'),      amount: profitFunded, color: 'var(--color-profit)' },
+                    { label: t('Operations Bucket'), amount: opsActual,    color: 'var(--color-ops)' },
+                  ]
+              const noIncome = modalPayPeriod === 'week' ? wTakeHome === 0 : takeHome === 0
+              return (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                    {buckets.map(({ label, amount, color }) => (
+                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--color-background)', borderRadius: 10, border: '1px solid var(--color-border)' }}>
+                        <span style={{ fontSize: 15, color: 'var(--color-foreground)' }}>{label}</span>
+                        <span className="font-serif" style={{ fontSize: 20, fontWeight: 700, color }}>
+                          {amount <= 0
+                            ? <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-sans)', fontWeight: 400 }}>$0.00</span>
+                            : `$${amount.toFixed(2)}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {noIncome && (
+                    <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 16, lineHeight: 1.5, fontStyle: 'italic' }}>
+                      {modalPayPeriod === 'week' ? 'Expenses exceeded income this week.' : 'Expenses exceeded income this month.'} Nothing to pay yourself.
+                    </p>
+                  )}
+                  <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', marginBottom: 20, lineHeight: 1.5 }}>
+                    Suggested amounts based on {modalPayPeriod === 'week' ? 'this week\'s' : 'this month\'s'} income. These numbers are already saved in Reports.
+                  </p>
+                </>
+              )
+            })()}
             <button onClick={handleSecurePay} disabled={securing}
               style={{ width: '100%', minHeight: 52, background: securing ? 'var(--color-muted)' : 'var(--color-primary)', color: 'var(--color-primary-foreground)', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: securing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)' }}
             >
