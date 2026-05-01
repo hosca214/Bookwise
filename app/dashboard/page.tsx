@@ -790,23 +790,27 @@ export default function DashboardPage() {
         </section>
 
         {/* Transfer Done */}
-        <button
-          onClick={() => setShowPayModal(true)}
-          style={{
-            width: '100%', minHeight: 52,
-            background: 'var(--color-primary)',
-            color: 'var(--color-primary-foreground)',
-            border: 'none', borderRadius: 12,
-            fontSize: 18, fontWeight: 700,
-            cursor: 'pointer', marginBottom: 8,
-            fontFamily: 'var(--font-serif)',
-          }}
-        >
-          Make a Transfer
-        </button>
-        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 32, lineHeight: 1.5 }}>
-          Every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong>, open your bank app and move each amount to its own account. Tap when you are done.
-        </p>
+        {monthIncome > 0 && (
+          <>
+            <button
+              onClick={() => setShowPayModal(true)}
+              style={{
+                width: '100%', minHeight: 52,
+                background: 'var(--color-primary)',
+                color: 'var(--color-primary-foreground)',
+                border: 'none', borderRadius: 12,
+                fontSize: 18, fontWeight: 700,
+                cursor: 'pointer', marginBottom: 8,
+                fontFamily: 'var(--font-serif)',
+              }}
+            >
+              Make a Transfer
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-muted-foreground)', marginBottom: 32, lineHeight: 1.5 }}>
+              Every <strong style={{ color: 'var(--color-ink)' }}>{profile?.transfer_day ?? 'Monday'}</strong>, open your bank app and move each amount to its own account. Tap when you are done.
+            </p>
+          </>
+        )}
 
         {/* Daily Pulse */}
         <section style={{ ...cardStyle, padding: '24px', marginBottom: 24 }}>

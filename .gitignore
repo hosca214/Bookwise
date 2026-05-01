@@ -6,3 +6,5 @@ out/
 *.log
 .DS_Store
 .playwright-mcp/
+.vercel
+.env*.local
