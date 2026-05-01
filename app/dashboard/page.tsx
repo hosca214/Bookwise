@@ -157,7 +157,8 @@ export default function DashboardPage() {
       const overBudget = opsTarget > 0 && expenses > opsTarget
       const overAmount = Math.max(0, expenses - opsTarget)
 
-      const focus = FOCUS_AREAS[Math.floor(Math.random() * FOCUS_AREAS.length)]
+      const focus = overBudget ? 'expense-pace' : FOCUS_AREAS[Math.floor(Math.random() * FOCUS_AREAS.length)]
+      const expenseRatioPct = income > 0 ? Math.round((expenses / income) * 100) : 0
       const res = await fetch('/api/sage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,7 +172,7 @@ export default function DashboardPage() {
             buckets: { profit: profitPct, tax: taxPct, ops: opsPct },
             focus,
             expenseAlert: overBudget
-              ? `Actual expenses this month (${fmt(expenses)}) exceed the ops budget (${fmt(opsTarget)}) by ${fmt(overAmount)}. This is reducing take-home pay.`
+              ? `Business expenses this month are ${expenseRatioPct}% of income. The ops budget for this practice is ${p.ops_pct ?? 27}%, and the typical range for this business type is 27-35%. Expenses exceed the budget by ${fmt(overAmount)}, which is coming directly out of take-home pay.`
               : null,
           },
         }),
@@ -675,6 +676,11 @@ export default function DashboardPage() {
                   </div>
                 </>
               ) : null}
+              {takeHome > 0 && (
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '6px 0 0', fontStyle: 'italic' }}>
+                  Your practice is paying you. You are moving in the right direction.
+                </p>
+              )}
               {essentialBase > 0 && (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: essentialCoverage >= 100 ? '#22c55e' : 'var(--color-danger)', flexShrink: 0 }} />
@@ -716,8 +722,8 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--color-muted-foreground)' }}>
-                      <span>Income {fmt(monthIncome)}</span>
                       <span>Cost to show up {fmt(essentialBase)}</span>
+                      <span>Income {fmt(monthIncome)}</span>
                     </div>
                     <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', marginTop: 8, marginBottom: 0 }}>
                       Need to update this?{' '}
@@ -784,7 +790,15 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: '8px 0 0', fontStyle: 'italic' }}>
-                    Always confirm your payment with a licensed CPA before filing.
+                    Always confirm your payment with a licensed CPA before filing.{' '}
+                    <a
+                      href="https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+                    >
+                      Learn more about quarterly estimates.
+                    </a>
                   </p>
                 </div>
               )}
