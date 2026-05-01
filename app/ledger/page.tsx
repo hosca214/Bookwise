@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useIQ } from '@/context/IQContext'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { Camera, X, RefreshCw, ExternalLink } from 'lucide-react'
+import { Camera, X, RefreshCw, ExternalLink, FolderOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Transaction, Service } from '@/lib/supabase'
 
@@ -129,6 +129,7 @@ export default function LedgerPage() {
   const [personalHintDismissed, setPersonalHintDismissed] = useState(true)
   const [practiceName, setPracticeName] = useState<string | null>(null)
   const [profileIndustry, setProfileIndustry] = useState<string | null>(null)
+  const [driveFolderId, setDriveFolderId] = useState<string | null>(null)
   const [ledgerInsight, setLedgerInsight] = useState<string | null>(null)
   const [loadingLedgerInsight, setLoadingLedgerInsight] = useState(false)
 
@@ -161,7 +162,7 @@ export default function LedgerPage() {
         setUserId(user.id)
 
         const [{ data: profile }, { data, error: err }, { data: svcData }] = await Promise.all([
-          supabase.from('profiles').select('industry, practice_name').eq('id', user.id).single(),
+          supabase.from('profiles').select('industry, practice_name, google_drive_folder_id').eq('id', user.id).single(),
           supabase.from('transactions').select('*').eq('user_id', user.id)
             .order('date', { ascending: false }).order('created_at', { ascending: false }),
           supabase.from('services').select('*').eq('user_id', user.id).eq('is_active', true),
@@ -169,6 +170,7 @@ export default function LedgerPage() {
 
         if (profile?.industry) { setIndustry(profile.industry); setProfileIndustry(profile.industry) }
         if (profile?.practice_name) setPracticeName(profile.practice_name)
+        if (profile?.google_drive_folder_id) setDriveFolderId(profile.google_drive_folder_id)
         if (err) throw err
         setTransactions(data ?? [])
         setServices(svcData ?? [])
@@ -392,9 +394,22 @@ export default function LedgerPage() {
         maxWidth: 480,
         margin: '0 auto',
       }}>
-        <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 2 }}>
-          Ledger
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1 className="font-serif" style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-ink)', marginBottom: 2 }}>
+            Ledger
+          </h1>
+          {driveFolderId && (
+            <a
+              href={`https://drive.google.com/drive/folders/${driveFolderId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}
+            >
+              <FolderOpen size={14} />
+              Receipts
+            </a>
+          )}
+        </div>
         <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)' }}>
           {transactions.length > 0
             ? filtered.length < transactions.length
