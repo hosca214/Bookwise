@@ -118,6 +118,8 @@ export default function LedgerPage() {
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [receiptThumbUrl, setReceiptThumbUrl] = useState<string | null>(null)
+  const [receiptFileName, setReceiptFileName] = useState<string | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
 
   const rowFileRef = useRef<HTMLInputElement>(null)
@@ -240,6 +242,8 @@ export default function LedgerPage() {
     setTxNotes('')
     setTxPersonal(false)
     setReceiptUrl(null)
+    setReceiptThumbUrl(null)
+    setReceiptFileName(null)
     setSelectedServiceId(null)
     setSheetOpen(true)
   }
@@ -270,6 +274,7 @@ export default function LedgerPage() {
           is_personal: txPersonal,
           source: 'manual',
           receipt_url: receiptUrl,
+          receipt_filename: receiptFileName,
           pulse_matched: false,
           service_id: selectedServiceId,
         })
@@ -293,41 +298,29 @@ export default function LedgerPage() {
     await supabase.from('transactions').update({ is_personal: next }).eq('id', tx.id)
   }
 
-  async function uploadToDrive(file: File) {
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      await fetch('/api/drive/upload', { method: 'POST', body: fd })
-    } catch {
-      // Drive upload failure is non-blocking — receipt is already in Supabase
-    }
-  }
-
   async function handleReceiptCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !userId) return
     setOcrLoading(true)
     try {
-      const month = txDate.slice(0, 7)
-      const path = `receipts/${userId}/${month}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-      const { error: uploadErr } = await supabase.storage
-        .from('receipts')
-        .upload(path, file, { upsert: false })
-      if (uploadErr) throw uploadErr
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('txDate', txDate)
+      fd.append('category', txCategory)
 
-      const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
-      const url = urlData.publicUrl
-      setReceiptUrl(url)
+      const driveRes = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (!driveRes.ok) throw new Error('Drive upload failed')
+      const { viewUrl, thumbnailUrl, fileName } = await driveRes.json()
 
-      const [ocrRes] = await Promise.all([
-        fetch('/api/ocr', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: url }),
-        }),
-        uploadToDrive(file),
-      ])
+      setReceiptUrl(viewUrl)
+      setReceiptThumbUrl(thumbnailUrl)
+      setReceiptFileName(fileName)
 
+      const ocrRes = await fetch('/api/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: thumbnailUrl }),
+      })
       const ocr = await ocrRes.json()
       if (ocr.amount && ocr.amount > 0) setTxAmount(String(ocr.amount))
       if (ocr.date && /^\d{4}-\d{2}-\d{2}$/.test(ocr.date)) setTxDate(ocr.date)
@@ -349,25 +342,26 @@ export default function LedgerPage() {
     try {
       const tx = transactions.find(t => t.id === txId)
       if (!tx) return
-      const month = tx.date.slice(0, 7)
-      const path = `receipts/${userId}/${month}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`
-      const { error: uploadErr } = await supabase.storage.from('receipts').upload(path, file, { upsert: false })
-      if (uploadErr) throw uploadErr
 
-      const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(path)
-      const url = urlData.publicUrl
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('txDate', tx.date)
+      fd.append('category', tx.category_key)
+
+      const driveRes = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (!driveRes.ok) throw new Error('Drive upload failed')
+      const { viewUrl, thumbnailUrl, fileName } = await driveRes.json()
 
       const [ocrRes] = await Promise.all([
         fetch('/api/ocr', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: url }),
+          body: JSON.stringify({ imageUrl: thumbnailUrl }),
         }),
-        supabase.from('transactions').update({ receipt_url: url }).eq('id', txId),
-        uploadToDrive(file),
+        supabase.from('transactions').update({ receipt_url: viewUrl, receipt_filename: fileName }).eq('id', txId),
       ])
 
-      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, receipt_url: url } : t))
+      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, receipt_url: viewUrl, receipt_filename: fileName } : t))
 
       const ocr = await ocrRes.json()
       if (ocr.vendor && !tx.notes) {
@@ -929,10 +923,10 @@ export default function LedgerPage() {
               style={{ display: 'none' }}
               onChange={handleRowReceiptCapture}
             />
-            {receiptUrl && (
+            {receiptThumbUrl && (
               <div style={{ marginBottom: 8, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={receiptUrl} alt="Receipt" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
+                <img src={receiptThumbUrl!} alt="Receipt" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
               </div>
             )}
             <input
