@@ -96,7 +96,8 @@ export async function POST(request: Request) {
     }
 
     let accessToken = profile.google_drive_access_token as string
-    const folderId = profile.google_drive_folder_id
+    const folderId = profile.google_drive_folder_id as string
+    const refreshTok = profile.google_drive_refresh_token as string
     const baseUrl = new URL(request.url).origin
 
     async function getImage(url: string): Promise<ArrayBuffer> {
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
       try {
         return await uploadToDrive(accessToken, folderId, fileName, buffer)
       } catch {
-        accessToken = await refreshToken(profile.google_drive_refresh_token)
+        accessToken = await refreshToken(refreshTok)
         await supabase.from('profiles').update({ google_drive_access_token: accessToken }).eq('id', user.id)
         return await uploadToDrive(accessToken, folderId, fileName, buffer)
       }
