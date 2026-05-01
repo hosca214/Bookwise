@@ -155,6 +155,8 @@ export default function LedgerPage() {
   const totalIncome = businessFiltered.filter((tx) => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
   const totalExpenses = businessFiltered.filter((tx) => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
   const netTotal = totalIncome - totalExpenses
+  const expenseCount = businessFiltered.filter(tx => tx.type === 'expense').length
+  const receiptedCount = businessFiltered.filter(tx => tx.type === 'expense' && tx.receipt_url).length
 
   useEffect(() => {
     async function load() {
@@ -497,6 +499,26 @@ export default function LedgerPage() {
               <div style={totalColStyle}><div style={totalLabelStyle}>Entries</div><div style={{ ...totalValueStyle, color: 'var(--color-ink)' }}>{businessFiltered.length}</div></div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Receipt progress */}
+      {expenseCount > 0 && (
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '8px 20px 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--color-border)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${expenseCount > 0 ? Math.round(receiptedCount / expenseCount * 100) : 0}%`,
+                background: receiptedCount === expenseCount ? 'var(--color-primary)' : 'var(--color-accent)',
+                borderRadius: 3,
+                transition: 'width 0.3s',
+              }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', color: receiptedCount === expenseCount ? 'var(--color-primary)' : 'var(--color-muted-foreground)' }}>
+              {receiptedCount === expenseCount ? 'All receipts attached' : `${receiptedCount}/${expenseCount} receipts`}
+            </span>
+          </div>
         </div>
       )}
 

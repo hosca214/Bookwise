@@ -133,7 +133,8 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const [monthlyGoal, setMonthlyGoal] = useState(0)
-  const [recentTransactions, setRecentTransactions] = useState<Array<{ date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
+  const [recentTransactions, setRecentTransactions] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
+  const [needsReviewTxs, setNeedsReviewTxs] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
 
   const [showSageChat, setShowSageChat] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'sage'; text: string }>>([])
@@ -237,7 +238,7 @@ export default function DashboardPage() {
           { data: pastWeeks },
         ] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
-          supabase.from('transactions').select('amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
+          supabase.from('transactions').select('id, amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
           supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', WEEK_START_STR).lte('date', WEEK_END_STR),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', NINETY_DAYS_AGO).lte('date', today),
@@ -273,12 +274,17 @@ export default function DashboardPage() {
         setWeekExpenses(wExpenses)
 
         setRecentTransactions((txns ?? []).slice(0, 10).map(tx => ({
+          id: tx.id,
           date: tx.date,
           amount: Number(tx.amount),
           type: tx.type,
           category_key: tx.category_key,
           notes: tx.notes,
         })))
+        setNeedsReviewTxs((txns ?? [])
+          .filter(tx => tx.category_key === 'Other Expense' || tx.category_key === 'Other Income')
+          .map(tx => ({ id: tx.id, date: tx.date, amount: Number(tx.amount), type: tx.type, category_key: tx.category_key, notes: tx.notes }))
+        )
 
         // Auto-insert recurring entries for current month
         const { data: templates } = await supabase
@@ -1053,6 +1059,58 @@ export default function DashboardPage() {
             <p className="font-serif" style={{ textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--color-muted-foreground)', margin: '12px 0 0' }}>
               {dailyStreak} days of tracking your pulse in a row.
             </p>
+          )}
+
+          {needsReviewTxs.length > 0 && (
+            <div style={{ marginTop: 24, borderTop: '1px solid var(--color-border)', paddingTop: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Needs a category
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                Sage could not confidently categorize these. Tap the right category so your numbers stay accurate.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {needsReviewTxs.map(tx => {
+                  const cats = tx.type === 'expense'
+                    ? ['Supplies', 'Software', 'Rent', 'Insurance', 'Marketing', 'Mileage', 'Meals', 'Professional Services', 'Continuing Education']
+                    : ['Session Income', 'Package Income', 'Tip Income']
+                  return (
+                    <div key={tx.id} style={{ background: 'var(--color-background)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--color-border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+                          {new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {tx.notes ? ` · ${tx.notes}` : ''}
+                        </span>
+                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-serif)', color: tx.type === 'expense' ? 'var(--color-danger)' : 'var(--color-profit)' }}>
+                          {tx.type === 'expense' ? '-' : '+'}${tx.amount.toFixed(2)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {cats.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={async () => {
+                              await supabase.from('transactions').update({ category_key: cat }).eq('id', tx.id)
+                              setNeedsReviewTxs(prev => prev.filter(t => t.id !== tx.id))
+                            }}
+                            style={{
+                              fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999,
+                              border: '1.5px solid var(--color-border)', background: 'var(--color-card)',
+                              color: 'var(--color-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           )}
         </section>
 
