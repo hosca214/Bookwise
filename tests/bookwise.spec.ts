@@ -69,7 +69,7 @@ test.describe('Dashboard', () => {
 
   test('three bucket tiles visible', async ({ page }) => {
     await expect(page.getByText('Tax Set-Aside')).toBeVisible()
-    await expect(page.getByText('Daily Operations')).toBeVisible()
+    await expect(page.getByText('Business Expenses')).toBeVisible()
     await expect(page.getByText('Growth Fund')).toBeVisible()
   })
 

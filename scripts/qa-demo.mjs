@@ -100,7 +100,7 @@ await check('Take-Home card visible with amount', async () => {
 })
 await check('Money plan tiles visible (Tax, Ops, Growth)', async () => {
   await page.waitForSelector('text=Tax Set-Aside', { timeout: 5000 })
-  await page.waitForSelector('text=Daily Operations', { timeout: 3000 })
+  await page.waitForSelector('text=Business Expenses', { timeout: 3000 })
   await page.waitForSelector('text=Growth Fund', { timeout: 3000 })
 })
 await check('Cost to Show Up card visible', async () => {

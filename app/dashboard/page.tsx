@@ -551,7 +551,7 @@ export default function DashboardPage() {
                 ${(payPeriod === 'weekly' ? takeHome / 4.33 : takeHome).toFixed(2)}
               </p>
               <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', margin: '0 0 8px', lineHeight: 1.4 }}>
-                After Taxes Set Aside, expenses, and Growth Fund
+                After Taxes Set Aside, Business Expenses, and Growth Fund
               </p>
               {takeHome === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 4px', fontStyle: 'italic' }}>
@@ -675,7 +675,7 @@ export default function DashboardPage() {
               </div>
               {overBudget && (
                 <p style={{ fontSize: 13, color: 'var(--color-danger)', margin: '0 0 6px', lineHeight: 1.5 }}>
-                  You are ${overAmount.toFixed(2)} over your expense budget. Your take-home is reduced by ${overAmount.toFixed(2)}.
+                  Over budget by $${overAmount.toFixed(2)}, which is coming directly out of your take-home.
                 </p>
               )}
               <button onClick={() => setShowOpsInfo(v => !v)} style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--color-primary)', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted', fontFamily: 'var(--font-sans)' }}>
