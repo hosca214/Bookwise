@@ -347,15 +347,77 @@ function subscriptionReceipt() {
   )
 }
 
+function clientInvoiceReceipt(client: string, service: string, amount: string, date: string, category: string) {
+  const invoiceNum = `HHM-${date.replace(/-/g, '')}-${Math.floor(Math.random() * 900 + 100)}`
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  const scheduleC = category === 'Package Income' ? 'Gross Receipts — Schedule C Line 1' : 'Gross Receipts — Schedule C Line 1'
+  return new ImageResponse(
+    (
+      <div style={{ width: W, background: 'white', display: 'flex', flexDirection: 'column', fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ background: '#4E6E52', padding: '22px 28px 16px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ color: '#c8e6c9', fontSize: 10, letterSpacing: 2, fontWeight: 700, textTransform: 'uppercase' }}>Hands & Heart Massage</span>
+              <span style={{ color: 'white', fontSize: 22, fontWeight: 800, marginTop: 4 }}>Receipt</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <span style={{ color: '#a8d5a2', fontSize: 10 }}>Invoice</span>
+              <span style={{ color: 'white', fontSize: 11, fontFamily: 'monospace', marginTop: 2 }}>{invoiceNum}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ color: '#888', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Billed To</span>
+              <span style={{ color: '#222', fontWeight: 700, fontSize: 14 }}>{client}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+              <span style={{ color: '#888', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Date</span>
+              <span style={{ color: '#222', fontSize: 12 }}>{formattedDate}</span>
+            </div>
+          </div>
+          <div style={{ background: '#f7faf7', borderRadius: 8, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ color: '#222', fontWeight: 700, fontSize: 13 }}>{service}</span>
+              <span style={{ color: '#4E6E52', fontSize: 11 }}>1 session</span>
+            </div>
+            <span style={{ color: '#222', fontWeight: 800, fontSize: 18 }}>${amount}</span>
+          </div>
+          <div style={{ borderTop: '1px solid #e8e8e8', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: '#888', fontSize: 12 }}>Total Paid</span>
+            <span style={{ color: '#4E6E52', fontWeight: 900, fontSize: 22 }}>${amount}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#aaa' }}>
+            <span>Payment method: Cash / Card on file</span>
+          </div>
+        </div>
+        <div style={{ margin: '0 28px 20px', background: '#f0f4f0', borderRadius: 6, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#7C9A7E', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <span>Income · {category}</span>
+          <span>{scheduleC}</span>
+          <span>{date}</span>
+        </div>
+      </div>
+    ),
+    { width: W, height: 420 }
+  )
+}
+
 export async function GET(req: NextRequest) {
   const type = req.nextUrl.searchParams.get('type') ?? 'target'
+  const client = req.nextUrl.searchParams.get('client') ?? 'Client'
+  const service = req.nextUrl.searchParams.get('service') ?? 'Session'
+  const amount = req.nextUrl.searchParams.get('amount') ?? '0'
+  const date = req.nextUrl.searchParams.get('date') ?? new Date().toISOString().slice(0, 10)
+  const category = req.nextUrl.searchParams.get('category') ?? 'Session Income'
   switch (type) {
-    case 'target':    return targetReceipt()
-    case 'online':    return onlineOrderReceipt()
-    case 'invoice':   return invoiceReceipt()
-    case 'training':  return trainingReceipt()
-    case 'insurance': return insuranceReceipt()
-    case 'subscription': return subscriptionReceipt()
-    default:          return targetReceipt()
+    case 'target':         return targetReceipt()
+    case 'online':         return onlineOrderReceipt()
+    case 'invoice':        return invoiceReceipt()
+    case 'training':       return trainingReceipt()
+    case 'insurance':      return insuranceReceipt()
+    case 'subscription':   return subscriptionReceipt()
+    case 'client-invoice': return clientInvoiceReceipt(client, service, amount, date, category)
+    default:               return targetReceipt()
   }
 }
