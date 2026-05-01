@@ -7,10 +7,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
   }
 
-  const res = await fetch(`https://drive.google.com/uc?export=download&id=${id}`, {
+  // Try Google's image CDN first (most reliable for publicly shared images)
+  let res = await fetch(`https://lh3.googleusercontent.com/d/${id}`, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Bookwise/1.0)' },
     redirect: 'follow',
   })
+
+  // Fall back to uc?export=download if CDN fails
+  if (!res.ok || !res.headers.get('Content-Type')?.startsWith('image/')) {
+    res = await fetch(`https://drive.google.com/uc?export=download&id=${id}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Bookwise/1.0)' },
+      redirect: 'follow',
+    })
+  }
 
   if (!res.ok) return NextResponse.json({ error: 'Could not load image' }, { status: 502 })
 
