@@ -17,6 +17,10 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return access_token
 }
 
+class DriveUploadError extends Error {
+  constructor(public status: number) { super('Drive upload failed') }
+}
+
 async function uploadToDrive(
   accessToken: string,
   folderId: string,
@@ -57,7 +61,7 @@ async function uploadToDrive(
     }
   )
 
-  if (!uploadRes.ok) throw new Error('Drive upload failed')
+  if (!uploadRes.ok) throw new DriveUploadError(uploadRes.status)
 }
 
 export async function POST(request: Request) {
@@ -83,22 +87,29 @@ export async function POST(request: Request) {
     const fileBuffer = await file.arrayBuffer()
     const fileName = `${new Date().toISOString().split('T')[0]}-${file.name}`
 
-    // Always refresh the token to avoid expiry issues
-    const accessToken = await refreshAccessToken(profile.google_drive_refresh_token)
+    let accessToken = profile.google_drive_access_token as string | null
+    let didRefresh = false
 
-    // Save the refreshed token for next time
-    await supabase
-      .from('profiles')
-      .update({ google_drive_access_token: accessToken })
-      .eq('id', user.id)
+    if (!accessToken) {
+      accessToken = await refreshAccessToken(profile.google_drive_refresh_token)
+      didRefresh = true
+    }
 
-    await uploadToDrive(
-      accessToken,
-      profile.google_drive_folder_id,
-      fileName,
-      fileBuffer,
-      file.type || 'image/jpeg'
-    )
+    try {
+      await uploadToDrive(accessToken, profile.google_drive_folder_id, fileName, fileBuffer, file.type || 'image/jpeg')
+    } catch (e) {
+      if (e instanceof DriveUploadError && (e.status === 401 || e.status === 403)) {
+        accessToken = await refreshAccessToken(profile.google_drive_refresh_token)
+        didRefresh = true
+        await uploadToDrive(accessToken, profile.google_drive_folder_id, fileName, fileBuffer, file.type || 'image/jpeg')
+      } else {
+        throw e
+      }
+    }
+
+    if (didRefresh) {
+      await supabase.from('profiles').update({ google_drive_access_token: accessToken }).eq('id', user.id)
+    }
 
     return NextResponse.json({ success: true })
   } catch {
