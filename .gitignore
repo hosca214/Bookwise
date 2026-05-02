@@ -8,3 +8,5 @@ out/
 .playwright-mcp/
 .vercel
 .env*.local
+
+.superpowers/
