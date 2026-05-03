@@ -77,6 +77,11 @@ BEGIN
     (demo_id, cur_month +  9,  45.00, 'expense', 'Supplies',  'Linens',               'manual'),
     (demo_id, cur_month + 19,  30.00, 'expense', 'Supplies',  'Massage cream refill', 'manual');
 
+  -- Current month: ambiguous transactions needing review (2 transactions)
+  INSERT INTO transactions (user_id, date, amount, type, category_key, notes, source, ai_suggested_category, ai_suggestion_reason) VALUES
+    (demo_id, cur_month + 10, 130.00, 'income',  'Other Income',  'VENMO PAYMENT D MORRISON',      'manual', 'Session Income', 'Looks like a client payment. If this was for an appointment, mark it as Appointment Income.'),
+    (demo_id, cur_month + 12,  89.47, 'expense', 'Other Expense', 'AMZN MKTP US*BT7R4 SEATTLE WA', 'manual', 'Supplies',       'Looks like an online product purchase. Linens, oils, and tools often come through here.');
+
   -- Previous month income (8 transactions, total $1,315)
   INSERT INTO transactions (user_id, date, amount, type, category_key, notes, source) VALUES
     (demo_id, prev_month +  2, 120.00, 'income', 'Session Income', '60-min session - T. Brooks',  'manual'),

@@ -53,6 +53,8 @@ export type Transaction = {
   receipt_url: string | null
   receipt_filename: string | null
   pulse_matched: boolean
+  ai_suggested_category: string | null
+  ai_suggestion_reason: string | null
   created_at: string
   service_id: string | null
 }

@@ -134,7 +134,21 @@ export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   const [recentTransactions, setRecentTransactions] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
-  const [needsReviewTxs, setNeedsReviewTxs] = useState<Array<{ id: string; date: string; amount: number; type: string; category_key: string; notes: string | null }>>([])
+  const [needsReviewTxs, setNeedsReviewTxs] = useState<Array<{
+    id: string
+    date: string
+    amount: number
+    type: string
+    category_key: string
+    notes: string | null
+    ai_suggested_category: string | null
+    ai_suggestion_reason: string | null
+  }>>([])
+  const [txSelected, setTxSelected] = useState<Record<string, string>>({})
+  const [txShowReason, setTxShowReason] = useState<Record<string, boolean>>({})
+  const [txEditOpen, setTxEditOpen] = useState<Record<string, boolean>>({})
+  const [txEditText, setTxEditText] = useState<Record<string, string>>({})
+  const [txAsking, setTxAsking] = useState<Record<string, boolean>>({})
 
   const [showSageChat, setShowSageChat] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'sage'; text: string }>>([])
@@ -239,7 +253,7 @@ export default function DashboardPage() {
           { data: pastWeeks },
         ] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
-          supabase.from('transactions').select('id, amount, type, category_key, notes, date, external_id').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
+          supabase.from('transactions').select('id, amount, type, category_key, notes, date, external_id, ai_suggested_category, ai_suggestion_reason').eq('user_id', user.id).eq('is_personal', false).gte('date', currentMonth).order('date', { ascending: false }),
           supabase.from('transactions').select('amount, type').eq('user_id', user.id).eq('is_personal', false).gte('date', WEEK_START_STR).lte('date', WEEK_END_STR),
           supabase.from('daily_pulse').select('*').eq('user_id', user.id).eq('date', today).maybeSingle(),
           supabase.from('daily_pulse').select('date').eq('user_id', user.id).gte('date', NINETY_DAYS_AGO).lte('date', today),
@@ -281,10 +295,24 @@ export default function DashboardPage() {
           category_key: tx.category_key,
           notes: tx.notes,
         })))
-        setNeedsReviewTxs((txns ?? [])
+        const reviewTxs = (txns ?? [])
           .filter(tx => tx.category_key === 'Other Expense' || tx.category_key === 'Other Income')
-          .map(tx => ({ id: tx.id, date: tx.date, amount: Number(tx.amount), type: tx.type, category_key: tx.category_key, notes: tx.notes }))
-        )
+          .map(tx => ({
+            id: tx.id,
+            date: tx.date,
+            amount: Number(tx.amount),
+            type: tx.type,
+            category_key: tx.category_key,
+            notes: tx.notes,
+            ai_suggested_category: tx.ai_suggested_category ?? null,
+            ai_suggestion_reason: tx.ai_suggestion_reason ?? null,
+          }))
+        setNeedsReviewTxs(reviewTxs)
+        const initialSel: Record<string, string> = {}
+        for (const tx of reviewTxs) {
+          if (tx.ai_suggested_category) initialSel[tx.id] = tx.ai_suggested_category
+        }
+        setTxSelected(initialSel)
 
         // Auto-insert recurring entries for current month
         const { data: templates } = await supabase
@@ -530,6 +558,44 @@ export default function DashboardPage() {
       toast.error('Could not save pulse. Try again.')
     } finally {
       setSavingPulse(false)
+    }
+  }
+
+  async function confirmCategory(txId: string, fallback: string) {
+    const cat = txSelected[txId] ?? fallback
+    if (!cat) return
+    await supabase.from('transactions').update({ category_key: cat }).eq('id', txId)
+    setNeedsReviewTxs(prev => prev.filter(t => t.id !== txId))
+  }
+
+  async function askSageCategory(txId: string, rawNote: string, txType: string) {
+    const description = txEditText[txId] ?? ''
+    if (!description.trim() || !profile) return
+    setTxAsking(prev => ({ ...prev, [txId]: true }))
+    try {
+      const res = await fetch('/api/sage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'categorize',
+          context: {
+            industry: profile.industry,
+            rawNote,
+            userDescription: description,
+            transactionType: txType,
+          },
+        }),
+      })
+      if (!res.ok) throw new Error('Sage unavailable')
+      const data = await res.json()
+      if (data.category_key) {
+        await supabase.from('transactions').update({ category_key: data.category_key }).eq('id', txId)
+        setNeedsReviewTxs(prev => prev.filter(t => t.id !== txId))
+      }
+    } catch {
+      toast.error('Sage could not read that. Try a category above.')
+    } finally {
+      setTxAsking(prev => ({ ...prev, [txId]: false }))
     }
   }
 
@@ -792,7 +858,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', margin: '8px 0 0', fontStyle: 'italic' }}>
-                    Always confirm your payment with a licensed CPA before filing.{' '}
+                    Always confirm your payment with a licensed CPA before filing.
+                    <br />
                     <a
                       href="https://www.irs.gov/businesses/small-businesses-self-employed/estimated-taxes"
                       target="_blank"
@@ -1007,47 +1074,160 @@ export default function DashboardPage() {
             <div style={{ marginTop: 24, borderTop: '1px solid var(--color-border)', paddingTop: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-danger)', display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Needs a category
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                  Sage Has a Question
                 </span>
               </div>
-              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 14px', lineHeight: 1.5 }}>
-                Sage could not confidently categorize these. Tap the right category so your numbers stay accurate.
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                Help Sage learn. Confirming these keeps your numbers accurate.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {needsReviewTxs.map(tx => {
                   const cats = tx.type === 'expense'
                     ? ['Supplies', 'Software', 'Rent', 'Insurance', 'Marketing', 'Mileage', 'Meals', 'Professional Services', 'Continuing Education']
                     : ['Session Income', 'Package Income', 'Tip Income']
+                  const selectedCat = txSelected[tx.id]
+                  const isAsking = txAsking[tx.id] ?? false
+                  const editOpen = txEditOpen[tx.id] ?? false
+                  const showReason = txShowReason[tx.id] ?? false
+
                   return (
                     <div key={tx.id} style={{ background: 'var(--color-background)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--color-border)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
-                          {new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          {tx.notes ? ` · ${tx.notes}` : ''}
-                        </span>
-                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-serif)', color: tx.type === 'expense' ? 'var(--color-danger)' : 'var(--color-profit)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, gap: 8, alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-muted-foreground)', marginBottom: 2 }}>
+                            {new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'monospace' }}>
+                            {tx.notes}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-serif)', color: tx.type === 'expense' ? 'var(--color-danger)' : 'var(--color-profit)', whiteSpace: 'nowrap' as const }}>
                           {tx.type === 'expense' ? '-' : '+'}{fmt(tx.amount)}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+
+                      {tx.ai_suggested_category && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--color-muted-foreground)', flexShrink: 0 }}>
+                            Sage thinks:
+                          </span>
+                          <button
+                            onClick={() => setTxSelected(prev => ({ ...prev, [tx.id]: tx.ai_suggested_category! }))}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '5px 12px', borderRadius: 999,
+                              background: selectedCat === tx.ai_suggested_category
+                                ? 'color-mix(in srgb, var(--color-primary) 15%, var(--color-card))'
+                                : 'var(--color-card)',
+                              border: `1.5px solid ${selectedCat === tx.ai_suggested_category ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                              color: 'var(--color-primary-dark)',
+                              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                              fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            <span>&#10003;</span> {t(tx.ai_suggested_category)}
+                          </button>
+                          <button
+                            onClick={() => setTxShowReason(prev => ({ ...prev, [tx.id]: !prev[tx.id] }))}
+                            style={{
+                              width: 18, height: 18, borderRadius: '50%',
+                              border: '1.5px solid var(--color-border)', background: 'none',
+                              fontSize: 10, color: 'var(--color-muted-foreground)',
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontFamily: 'var(--font-sans)', flexShrink: 0, padding: 0,
+                            }}
+                          >
+                            i
+                          </button>
+                        </div>
+                      )}
+
+                      {showReason && tx.ai_suggestion_reason && (
+                        <div style={{ background: 'color-mix(in srgb, var(--color-primary) 8%, var(--color-card))', borderRadius: 8, padding: '8px 12px', marginBottom: 10, borderLeft: '2px solid var(--color-primary)' }}>
+                          <p style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--color-muted-foreground)', lineHeight: 1.5, margin: 0 }}>
+                            {tx.ai_suggestion_reason}
+                          </p>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                         {cats.map(cat => (
                           <button
                             key={cat}
-                            onClick={async () => {
-                              await supabase.from('transactions').update({ category_key: cat }).eq('id', tx.id)
-                              setNeedsReviewTxs(prev => prev.filter(t => t.id !== tx.id))
-                            }}
+                            onClick={() => setTxSelected(prev => ({ ...prev, [tx.id]: cat }))}
                             style={{
                               fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 999,
-                              border: '1.5px solid var(--color-border)', background: 'var(--color-card)',
+                              border: `1.5px solid ${selectedCat === cat ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                              background: selectedCat === cat
+                                ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-card))'
+                                : 'var(--color-card)',
                               color: 'var(--color-foreground)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                             }}
                           >
-                            {cat}
+                            {t(cat)}
                           </button>
                         ))}
                       </div>
+
+                      {!editOpen ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontStyle: 'italic' }}>
+                            Or tell Sage what this is...
+                          </span>
+                          <button
+                            onClick={() => setTxEditOpen(prev => ({ ...prev, [tx.id]: true }))}
+                            style={{ background: 'none', border: 'none', fontSize: 12, fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-sans)' }}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ marginBottom: 12 }}>
+                          <textarea
+                            value={txEditText[tx.id] ?? ''}
+                            onChange={e => setTxEditText(prev => ({ ...prev, [tx.id]: e.target.value }))}
+                            placeholder="Describe this transaction..."
+                            rows={2}
+                            style={{
+                              width: '100%', borderRadius: 8, border: '1.5px solid var(--color-border)',
+                              background: 'var(--color-card)', color: 'var(--color-ink)',
+                              fontSize: 14, padding: '10px 12px', fontFamily: 'var(--font-sans)',
+                              resize: 'none' as const, outline: 'none', marginBottom: 8, boxSizing: 'border-box' as const,
+                            }}
+                          />
+                          <button
+                            onClick={() => askSageCategory(tx.id, tx.notes ?? '', tx.type)}
+                            disabled={isAsking || !(txEditText[tx.id] ?? '').trim()}
+                            style={{
+                              width: '100%', minHeight: 40,
+                              background: isAsking || !(txEditText[tx.id] ?? '').trim() ? 'var(--color-muted)' : 'var(--color-primary)',
+                              color: 'var(--color-primary-foreground)',
+                              border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
+                              cursor: isAsking || !(txEditText[tx.id] ?? '').trim() ? 'not-allowed' : 'pointer',
+                              fontFamily: 'var(--font-sans)',
+                            }}
+                          >
+                            {isAsking ? 'Thinking...' : 'Ask Sage'}
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => confirmCategory(tx.id, tx.ai_suggested_category ?? '')}
+                        disabled={!selectedCat}
+                        style={{
+                          width: '100%', minHeight: 48,
+                          background: selectedCat ? 'var(--color-primary)' : 'var(--color-muted)',
+                          color: 'var(--color-primary-foreground)',
+                          border: 'none', borderRadius: 10,
+                          fontSize: 16, fontWeight: 700,
+                          cursor: selectedCat ? 'pointer' : 'not-allowed',
+                          fontFamily: 'var(--font-serif)',
+                        }}
+                      >
+                        Confirm
+                      </button>
                     </div>
                   )
                 })}

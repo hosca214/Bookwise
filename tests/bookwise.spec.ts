@@ -97,6 +97,18 @@ test.describe('Dashboard', () => {
     await page.goto('/dashboard')
     await expect(page.getByText('My Dash')).toBeVisible({ timeout: 5_000 })
   })
+
+  test('sage has a question section visible with demo data', async ({ page }) => {
+    await page.goto('/dashboard')
+    await expect(page.getByText('SAGE HAS A QUESTION', { exact: false })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Help Sage learn', { exact: false })).toBeVisible()
+  })
+
+  test('sage question card shows suggestion pill and confirm button', async ({ page }) => {
+    await page.goto('/dashboard')
+    await expect(page.getByText('Sage thinks:', { exact: false }).first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Confirm/i }).first()).toBeVisible()
+  })
 })
 
 // ── Ledger ────────────────────────────────────────────────────────────────────

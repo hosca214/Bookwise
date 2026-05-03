@@ -40,6 +40,8 @@ create table transactions (
   receipt_url text,
   receipt_filename text,
   pulse_matched boolean default false,
+  ai_suggested_category text,
+  ai_suggestion_reason text,
   created_at timestamptz default now()
 );
 

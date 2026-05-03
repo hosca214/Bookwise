@@ -11,6 +11,41 @@ export async function POST(req: Request) {
 
   const vocab = IQ_MAPS[context.industry as Industry] ?? IQ_MAPS.coach
 
+  if (type === 'categorize') {
+    const expenseKeys = ['Supplies', 'Equipment', 'Software', 'Rent', 'Insurance', 'Marketing', 'Mileage', 'Meals', 'Professional Services', 'Continuing Education', 'Other Expense']
+    const incomeKeys = ['Session Income', 'Package Income', 'Tip Income', 'Other Income']
+    const validKeys = context.transactionType === 'income' ? incomeKeys : expenseKeys
+
+    const categorizePrompt = `You are categorizing a financial transaction for a solo wellness practitioner.
+Raw bank note: "${context.rawNote}"
+User description: "${context.userDescription}"
+Transaction type: ${context.transactionType}
+
+Return ONLY a JSON object with one key. Choose the single best match from this list:
+${validKeys.join(', ')}
+
+Example: {"category_key": "Supplies"}
+No other text.`
+
+    const anthropic = new Anthropic()
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 60,
+        system: 'You are a financial categorization assistant. Return JSON only. No explanation.',
+        messages: [{ role: 'user', content: categorizePrompt }],
+      })
+      const text = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
+      const parsed = JSON.parse(text)
+      if (validKeys.includes(parsed.category_key)) {
+        return Response.json({ category_key: parsed.category_key })
+      }
+      return Response.json({ category_key: context.transactionType === 'income' ? 'Other Income' : 'Other Expense' })
+    } catch {
+      return Response.json({ category_key: context.transactionType === 'income' ? 'Other Income' : 'Other Expense' })
+    }
+  }
+
   const system = `You are Sage AI, the financial mentor inside Bookwise. You speak to solo wellness practitioners who run their own practices.
 You use these exact terms for this user's industry: ${JSON.stringify(vocab)}
 Never use: revenue, COGS, accounts receivable, accounts payable, net income, gross margin.
