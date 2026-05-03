@@ -125,7 +125,7 @@ export async function POST(request: Request) {
       .select('id, date, type, category_key, notes')
       .eq('user_id', userId)
       .eq('type', 'expense')
-      .not('receipt_url', 'is', null)
+      .in('category_key', Object.keys(RECEIPT_TYPE))
       .order('date')
 
     for (const tx of expenseTxs ?? []) {
