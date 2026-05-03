@@ -34,11 +34,11 @@ function useIsMobile() {
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-function FadeIn({ children, delay = 0, up = 24 }: { children: React.ReactNode; delay?: number; up?: number }) {
+function FadeIn({ children, delay = 0, up = 24, style }: { children: React.ReactNode; delay?: number; up?: number; style?: React.CSSProperties }) {
   const ref = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
   return (
-    <motion.div ref={ref}
+    <motion.div ref={ref} style={style}
       initial={{ opacity: 0, y: up }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
@@ -313,7 +313,6 @@ const FEATURES = [
   { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Taxes Set Aside, Business Expenses, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
   { icon: <Shield size={22} />,     title: 'Taxes Set Aside',  body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
   { icon: <MessageCircle size={22} />, title: 'Sage AI Insights', aiPowered: true, body: 'Sage AI reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
-  { icon: <Languages size={22} />,  title: 'Your Language, Not Ours', aiPowered: true, body: 'Bookwise replaces accounting jargon with words from your world. Coaches see Coaching Income and Client Attraction. Trainers see Training Income and Gym Expenses. Bodyworkers see Appointment Income and Treatment Supplies. No translation required.' },
   { icon: <Camera size={22} />,     title: 'Receipt Scanning', aiPowered: true, body: 'Snap a photo of any receipt. Sage AI reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
   { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder. Your records are always backed up and ready for your CPA.' },
   { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line. Dated, categorized, and noted. Your CPA starts from it instead of starting over.' },
@@ -474,7 +473,7 @@ export default function LandingPage() {
           }} />
         </div>
 
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 80 : 96, width: '100%', display: 'flex', alignItems: 'center', gap: 64, justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 80 : 96, width: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 0 : 64, justifyContent: 'space-between' }}>
 
           {/* LEFT: text */}
           <motion.div
@@ -488,11 +487,44 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: 999, background: 'rgba(44,53,40,0.07)', border: `1px solid rgba(44,53,40,0.12)`, fontSize: 13, fontWeight: 600, color: INK, marginBottom: 28 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 16px', borderRadius: 999, background: 'rgba(44,53,40,0.07)', border: `1px solid rgba(44,53,40,0.12)`, fontSize: 13, fontWeight: 600, color: INK, marginBottom: isMobile ? 0 : 28 }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: SAGE, display: 'inline-block' }} />
               A financial clarity app for coaches, trainers, and bodyworkers
             </motion.div>
+
+            {/* phone mockup — mobile only, sits under the eyebrow pill */}
+            {isMobile && (
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                style={{ display: 'flex', justifyContent: 'center', marginTop: 28, marginBottom: 36, filter: 'drop-shadow(0 20px 40px rgba(44,53,40,0.20))' }}
+              >
+                <PhoneFrame>
+                  <div style={{ padding: '0 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
+                      <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
+                    </div>
+                    <div style={{ background: CARD, borderRadius: 12, padding: '14px 14px 12px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginBottom: 4 }}>My Take-Home Pay</div>
+                      <div style={{ fontSize: 32, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif', lineHeight: 1 }}>$2,376</div>
+                      <div style={{ fontSize: 9, color: MUTED, marginTop: 3, marginBottom: 8 }}>After Taxes Set Aside, expenses, and Growth Fund</div>
+                      <div style={{ height: 5, background: BORDER, borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: '68%', background: SAGE, borderRadius: 99 }} />
+                      </div>
+                      <div style={{ fontSize: 9, color: MUTED, marginTop: 4 }}>68% of $3,500 goal</div>
+                    </div>
+                    <BucketRow label="Taxes Set Aside" amount="$460"  pct={73} color={GOLD} sub="25%" />
+                    <BucketRow label="Growth Fund"     amount="$264"  pct={42} color={SAGE} sub="10%" />
+                    <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
+                    </div>
+                  </div>
+                </PhoneFrame>
+              </motion.div>
+            )}
 
             {/* headline */}
             <motion.h1
@@ -559,40 +591,6 @@ export default function LandingPage() {
             </motion.p>
           </motion.div>
 
-          {/* MOBILE: app mockup below CTAs */}
-          {isMobile && (
-            <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-              style={{ display: 'flex', justifyContent: 'center', marginTop: 40, filter: 'drop-shadow(0 24px 48px rgba(44,53,40,0.22))' }}
-            >
-              <PhoneFrame>
-                <div style={{ padding: '0 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif' }}>My Dash</div>
-                    <div style={{ fontSize: 11, color: MUTED }}>Hands and Heart Massage</div>
-                  </div>
-                  {/* Take-Home Pay card */}
-                  <div style={{ background: CARD, borderRadius: 12, padding: '14px 14px 12px', boxShadow: '0 1px 6px rgba(0,0,0,0.06)' }}>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: MUTED, textTransform: 'uppercase' as const, letterSpacing: '0.07em', marginBottom: 4 }}>My Take-Home Pay</div>
-                    <div style={{ fontSize: 32, fontWeight: 700, color: INK, fontFamily: '"Lora", Georgia, serif', lineHeight: 1 }}>$2,376</div>
-                    <div style={{ fontSize: 9, color: MUTED, marginTop: 3, marginBottom: 8 }}>After Taxes Set Aside, expenses, and Growth Fund</div>
-                    <div style={{ height: 5, background: BORDER, borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: '68%', background: SAGE, borderRadius: 99 }} />
-                    </div>
-                    <div style={{ fontSize: 9, color: MUTED, marginTop: 4 }}>68% of $3,500 goal</div>
-                  </div>
-                  <BucketRow label="Taxes Set Aside" amount="$460"  pct={73} color={GOLD}      sub="25%" />
-                  <BucketRow label="Growth Fund"     amount="$264"  pct={42} color={SAGE}      sub="10%" />
-                  <div style={{ background: SAGE, borderRadius: 10, padding: '11px 14px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Make a Transfer</span>
-                  </div>
-                </div>
-              </PhoneFrame>
-            </motion.div>
-          )}
-
           {/* RIGHT: app mockup (desktop only) */}
           {!isMobile && (
             <motion.div
@@ -640,8 +638,8 @@ export default function LandingPage() {
           </FadeIn>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
             {WHO.map((w, i) => (
-              <FadeIn key={i} delay={i * 0.1}>
-                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
+              <FadeIn key={i} delay={i * 0.1} style={{ height: '100%' }}>
+                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)', height: '100%', boxSizing: 'border-box' }}>
                   <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 18px' }}>
                     {w.icon}
                   </div>
@@ -808,6 +806,18 @@ export default function LandingPage() {
             <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', margin: '0 auto 44px', maxWidth: 380 }}>
               Tap any feature to see it inside the app.
             </p>
+          </FadeIn>
+          <FadeIn>
+            <div style={{ background: INK, borderRadius: 16, padding: isMobile ? '24px' : '28px 36px', marginBottom: 14, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 16 : 28, alignItems: isMobile ? 'flex-start' : 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: CREAM, flexShrink: 0 }}>
+                <Languages size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ display: 'inline-block', fontSize: 10, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: CREAM, background: 'rgba(255,255,255,0.14)', padding: '3px 8px', borderRadius: 999, marginBottom: 8 }}>AI-powered</span>
+                <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 20 : 24, fontWeight: 700, color: CREAM, margin: '0 0 8px' }}>Your Language, Not Ours</h3>
+                <p style={{ fontSize: 15, color: 'rgba(245,242,236,0.72)', margin: 0, lineHeight: 1.65 }}>Bookwise replaces accounting jargon with words from your world. Coaches see Coaching Income and Client Attraction. Trainers see Training Income and Gym Expenses. Bodyworkers see Appointment Income and Treatment Supplies. No translation required.</p>
+              </div>
+            </div>
           </FadeIn>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
             {FEATURES.map((f, i) => (
