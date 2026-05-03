@@ -473,7 +473,7 @@ export default function LandingPage() {
           }} />
         </div>
 
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 48 : 96, width: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 0 : 64, justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 48 : 96, width: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 0 : 80, justifyContent: 'center' }}>
 
           {/* LEFT: text */}
           <motion.div
