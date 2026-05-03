@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp, Shield, Camera, MessageCircle, Download,
-  ChevronDown, Check, ArrowRight, Folder, Sparkles, Activity,
-  Leaf, BookOpen, X, RefreshCw, FileText, HardDrive, Zap, Bell,
+  ChevronDown, Check, ArrowRight, Folder, Activity, Briefcase,
+  Leaf, BookOpen, X, RefreshCw, FileText, HardDrive, Zap, Bell, Languages,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase'
@@ -312,8 +312,9 @@ const ACCORDION = [
 const FEATURES = [
   { icon: <TrendingUp size={22} />, title: 'Money Buckets',    body: 'Every dollar you earn flows into Taxes Set Aside, Business Expenses, and Growth Fund automatically. You always know at a glance whether your practice is working for you.' },
   { icon: <Shield size={22} />,     title: 'Taxes Set Aside',  body: 'Based on your monthly income, Bookwise shows exactly how much to set aside using a 25% safety rate. You always know what to put away before each deadline.' },
-  { icon: <MessageCircle size={22} />, title: 'Sage AI Insights', body: 'Sage AI reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
-  { icon: <Camera size={22} />,     title: 'Receipt Scanning', body: 'Snap a photo of any receipt. Sage AI reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
+  { icon: <MessageCircle size={22} />, title: 'Sage AI Insights', aiPowered: true, body: 'Sage AI reads your numbers each day and tells you what it sees. Income patterns. Changes in what you are spending. Observations in plain language.' },
+  { icon: <Languages size={22} />,  title: 'Your Language, Not Ours', aiPowered: true, body: 'Bookwise replaces accounting jargon with words from your world. Coaches see Coaching Income and Client Attraction. Trainers see Training Income and Gym Expenses. Bodyworkers see Appointment Income and Treatment Supplies. No translation required.' },
+  { icon: <Camera size={22} />,     title: 'Receipt Scanning', aiPowered: true, body: 'Snap a photo of any receipt. Sage AI reads the amount, date, and category and files it automatically into your Google Drive. You will never lose a receipt at tax time.' },
   { icon: <Folder size={22} />,     title: 'Google Drive Sync', body: 'Receipts and exports are automatically organized in a dedicated Google Drive folder. Your records are always backed up and ready for your CPA.' },
   { icon: <Download size={22} />,   title: 'CPA Export',       body: 'One tap generates a clean export organized by Schedule C line. Dated, categorized, and noted. Your CPA starts from it instead of starting over.' },
 ]
@@ -327,7 +328,7 @@ const STEPS = [
   },
   {
     n: '02',
-    icon: <Sparkles size={24} />,
+    icon: <Zap size={24} />,
     title: 'Sage AI sorts everything',
     body: 'Your income flows into Taxes Set Aside, Business Expenses, and Growth Fund. Each bucket updates automatically so you always know where you stand.',
   },
@@ -340,7 +341,7 @@ const STEPS = [
 ]
 
 const WHO = [
-  { icon: <Sparkles size={24} />, title: 'Coaches',     lines: ['Life coaches', 'Business coaches', 'Wellness coaches'],           value: 'Track packages, retainers, and sessions without a spreadsheet.' },
+  { icon: <Briefcase size={24} />, title: 'Coaches',     lines: ['Life coaches', 'Business coaches', 'Wellness coaches'],           value: 'Track packages, retainers, and sessions without a spreadsheet.' },
   { icon: <Activity size={24} />, title: 'Trainers',    lines: ['Personal trainers', 'Fitness instructors', 'Group fitness instructors'], value: 'See your most profitable sessions and track every gym-related expense.' },
   { icon: <Leaf size={24} />,     title: 'Bodyworkers', lines: ['Massage therapists', 'Acupuncturists', 'Somatic practitioners'],   value: 'Know your table income, supply costs, and take-home every month.' },
 ]
@@ -440,7 +441,18 @@ export default function LandingPage() {
       }}>
         <span style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 21, fontWeight: 700, color: INK, letterSpacing: '-0.02em' }}>Bookwise</span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <a href="/login" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Sign In</a>
+          {!isMobile && (
+            <>
+              <a href="#how-it-works" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', fontSize: 14, color: MUTED, textDecoration: 'none', padding: '0 6px' }}>How It Works</a>
+              <a href="#features"     style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', fontSize: 14, color: MUTED, textDecoration: 'none', padding: '0 6px' }}>Features</a>
+              <a href="#pricing"      style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', fontSize: 14, color: MUTED, textDecoration: 'none', padding: '0 6px' }}>Pricing</a>
+              <a href="#faq"          style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', fontSize: 14, color: MUTED, textDecoration: 'none', padding: '0 6px' }}>FAQ</a>
+            </>
+          )}
+          <a href="#beta" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Apply for Beta</a>
+          {!isMobile && (
+            <a href="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 40, borderRadius: 999, background: CARD, border: `1.5px solid ${BORDER}`, color: INK, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>Sign In</a>
+          )}
         </div>
       </nav>
 
@@ -451,16 +463,18 @@ export default function LandingPage() {
         paddingTop: isMobile ? 110 : 0,
         paddingBottom: 0,
         background: `linear-gradient(160deg, #B8D1BC 0%, #C5D9C7 18%, #D9EAD9 36%, ${CREAM} 80%)`,
-        position: 'relative', overflow: 'hidden',
+        position: 'relative',
       }}>
-        {/* background circle */}
-        <div aria-hidden style={{
-          position: 'absolute', width: 600, height: 600, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(124,154,126,0.22) 0%, transparent 70%)',
-          top: '-120px', right: isMobile ? '-200px' : '-80px', pointerEvents: 'none',
-        }} />
+        {/* background circle clipped to its own layer so the section overflow stays visible */}
+        <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div style={{
+            position: 'absolute', width: 600, height: 600, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(124,154,126,0.22) 0%, transparent 70%)',
+            top: '-120px', right: isMobile ? '-200px' : '-80px',
+          }} />
+        </div>
 
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 60 : 96, width: '100%', display: 'flex', alignItems: 'center', gap: 64, justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 80 : 96, width: '100%', display: 'flex', alignItems: 'center', gap: 64, justifyContent: 'space-between' }}>
 
           {/* LEFT: text */}
           <motion.div
@@ -616,6 +630,33 @@ export default function LandingPage() {
       </section>
 
 
+      {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
+      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+        <div style={{ maxWidth: 860, margin: '0 auto' }}>
+          <FadeIn>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
+              Made for practitioners, not accountants.
+            </h2>
+          </FadeIn>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
+            {WHO.map((w, i) => (
+              <FadeIn key={i} delay={i * 0.1}>
+                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 18px' }}>
+                    {w.icon}
+                  </div>
+                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{w.title}</h3>
+                  {w.lines.map((ln, j) => (
+                    <p key={j} style={{ fontSize: 15, color: MUTED, margin: '4px 0', lineHeight: 1.5 }}>{ln}</p>
+                  ))}
+                  <p style={{ fontSize: 14, color: SAGE, margin: '16px 0 0', lineHeight: 1.55, fontWeight: 500 }}>{w.value}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── NERVOUS SYSTEM (dark) ───────────────────────────────────────── */}
       <section style={{ background: INK, padding: `${isMobile ? 64 : 96}px 24px` }}>
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
@@ -684,6 +725,38 @@ export default function LandingPage() {
       </section>
 
 
+      {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <FadeIn>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>How it works</p>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 56px', letterSpacing: '-0.02em' }}>
+              Three steps to knowing your numbers.
+            </h2>
+          </FadeIn>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 0 }}>
+            {STEPS.map((step, i) => (
+              <FadeIn key={i} delay={i * 0.14}>
+                <div style={{
+                  padding: isMobile ? '32px 0' : '0 40px',
+                  borderLeft: !isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
+                  borderTop: isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 12, fontWeight: 700, color: SAGE, letterSpacing: '0.14em', marginBottom: 20 }}>{step.n}</div>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 22px' }}>
+                    {step.icon}
+                  </div>
+                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{step.title}</h3>
+                  <p style={{ fontSize: 15, color: MUTED, margin: 0, lineHeight: 1.75 }}>{step.body}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── STORIES ─────────────────────────────────────────────────────── */}
       <section style={{ background: CREAM, padding: `${isMobile ? 64 : 96}px 24px` }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -725,67 +798,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
-        <div style={{ maxWidth: 860, margin: '0 auto' }}>
-          <FadeIn>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
-              Made for practitioners, not accountants.
-            </h2>
-          </FadeIn>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
-            {WHO.map((w, i) => (
-              <FadeIn key={i} delay={i * 0.1}>
-                <div style={{ background: CARD, borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 18px' }}>
-                    {w.icon}
-                  </div>
-                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{w.title}</h3>
-                  {w.lines.map((ln, j) => (
-                    <p key={j} style={{ fontSize: 15, color: MUTED, margin: '4px 0', lineHeight: 1.5 }}>{ln}</p>
-                  ))}
-                  <p style={{ fontSize: 14, color: SAGE, margin: '16px 0 0', lineHeight: 1.55, fontWeight: 500 }}>{w.value}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <FadeIn>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>How it works</p>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 56px', letterSpacing: '-0.02em' }}>
-              Three steps to knowing your numbers.
-            </h2>
-          </FadeIn>
-
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 0 }}>
-            {STEPS.map((step, i) => (
-              <FadeIn key={i} delay={i * 0.14}>
-                <div style={{
-                  padding: isMobile ? '32px 0' : '0 40px',
-                  borderLeft: !isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
-                  borderTop: isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
-                  textAlign: 'center',
-                }}>
-                  <div style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 12, fontWeight: 700, color: SAGE, letterSpacing: '0.14em', marginBottom: 20 }}>{step.n}</div>
-                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(124,154,126,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SAGE, margin: '0 auto 22px' }}>
-                    {step.icon}
-                  </div>
-                  <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 20, fontWeight: 700, color: INK, margin: '0 0 12px' }}>{step.title}</h3>
-                  <p style={{ fontSize: 15, color: MUTED, margin: 0, lineHeight: 1.75 }}>{step.body}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── FEATURES ────────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: SEC }}>
+      <section id="features" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: SEC }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <FadeIn>
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 12px', letterSpacing: '-0.02em' }}>
@@ -806,6 +820,9 @@ export default function LandingPage() {
                 >
                   <div style={{ ...iconBox }}>{f.icon}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
+                    {f.aiPowered && (
+                      <span style={{ display: 'inline-block', fontSize: 10, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: SAGE, background: 'rgba(124,154,126,0.10)', padding: '3px 8px', borderRadius: 999, marginBottom: 6 }}>AI-powered</span>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
                       <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: 18, fontWeight: 700, color: INK, margin: 0 }}>{f.title}</h3>
                       <span style={{ fontSize: 11, fontWeight: 600, color: SAGE, flexShrink: 0, marginLeft: 8, background: 'rgba(124,154,126,0.10)', padding: '3px 9px', borderRadius: 99 }}>Preview</span>
@@ -847,42 +864,6 @@ export default function LandingPage() {
           </FadeIn>
         </div>
       </section>
-
-      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
-        <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <FadeIn>
-            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
-              Questions.
-            </h2>
-          </FadeIn>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {ACCORDION.map((item, i) => (
-              <FadeIn key={i} delay={i * 0.05}>
-                <div style={{ background: CARD, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
-                  >
-                    <span style={{ fontSize: 16, fontWeight: 600, color: INK }}>{item.q}</span>
-                    <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, marginLeft: 16 }}>
-                      <ChevronDown size={18} color={MUTED} />
-                    </motion.div>
-                  </button>
-                  <AnimatePresence>
-                    {openFaq === i && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} style={{ overflow: 'hidden' }}>
-                        <p style={{ fontSize: 15, color: MUTED, padding: '0 24px 20px', margin: 0, lineHeight: 1.7 }}>{item.a}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-        </div>
-      </section>
-
 
       {/* ── PRICING ─────────────────────────────────────────────────────── */}
       <section id="pricing" style={{ background: SEC, padding: `${isMobile ? 64 : 96}px 24px` }}>
@@ -948,6 +929,42 @@ export default function LandingPage() {
               Beta testers in our founding 50 receive Practice Pro free for life.
             </p>
           </FadeIn>
+        </div>
+      </section>
+
+
+      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
+      <section id="faq" style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <FadeIn>
+            <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
+              Questions.
+            </h2>
+          </FadeIn>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {ACCORDION.map((item, i) => (
+              <FadeIn key={i} delay={i * 0.05}>
+                <div style={{ background: CARD, borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 6px rgba(44,53,40,0.05)' }}>
+                  <button
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <span style={{ fontSize: 16, fontWeight: 600, color: INK }}>{item.q}</span>
+                    <motion.div animate={{ rotate: openFaq === i ? 180 : 0 }} transition={{ duration: 0.2 }} style={{ flexShrink: 0, marginLeft: 16 }}>
+                      <ChevronDown size={18} color={MUTED} />
+                    </motion.div>
+                  </button>
+                  <AnimatePresence>
+                    {openFaq === i && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} style={{ overflow: 'hidden' }}>
+                        <p style={{ fontSize: 15, color: MUTED, padding: '0 24px 20px', margin: 0, lineHeight: 1.7 }}>{item.a}</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
         </div>
       </section>
 

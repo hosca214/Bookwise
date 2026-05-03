@@ -50,9 +50,9 @@ Nav → Hero → Nervous System → How It Works → Stories → Features → Wh
 **New desktop nav:** Logo | How It Works | Features | Pricing | FAQ | Apply for Beta | Sign In
 
 - Section links are plain text anchors (`<a href="#how-it-works">`, `#features`, `#pricing`, `#faq`, `#beta`). No active state needed — this is a landing page.
-- Links are styled: Plus Jakarta Sans 14px, `color: MUTED`, hover `color: INK`. No underline.
+- Links are styled: Plus Jakarta Sans 14px, `color: var(--color-muted-foreground)`, hover `color: var(--color-ink)`. No underline.
 - "Apply for Beta" is styled as the active pill (same as current "Sign In" button) to draw the eye to the CTA.
-- "Sign In" becomes a ghost pill: white bg with border, no fill.
+- "Sign In" becomes a ghost pill: `background: var(--color-card)`, `border: 1.5px solid var(--color-border)`, no fill.
 
 **Mobile nav:** Logo + "Apply for Beta" pill only. Section links are hidden on mobile (width < 768px). Mobile users are already in a scroll context and the page is short enough that they will encounter every section naturally.
 
@@ -78,7 +78,7 @@ Nav → Hero → Nervous System → How It Works → Stories → Features → Wh
 Add a 7th card to the `FEATURES` array:
 
 ```
-icon: <Languages size={22} />  (or Sparkles if Languages is not imported)
+icon: <Languages size={22} />
 title: "Your Language, Not Ours"
 body: "Bookwise replaces accounting jargon with words from your world.
        Coaches see 'Coaching Income' and 'Client Attraction.' Trainers see
@@ -104,7 +104,7 @@ In the feature card render loop, when `f.aiPowered === true`, render a small bad
 
 ```
 "AI-powered"  — 10px, Plus Jakarta Sans, uppercase, 0.08em tracking
-color: SAGE, background: rgba(124,154,126,0.10), padding: 3px 8px, borderRadius: 999
+color: var(--color-primary), background: color-mix(in srgb, var(--color-primary) 10%, transparent), padding: 3px 8px, borderRadius: 999
 ```
 
 This visually groups the AI capabilities without changing the card layout.
@@ -230,7 +230,47 @@ Replace the existing basic `SoftwareApplication` JSON-LD in `app/layout.tsx` wit
 ```
 
 **Block 2 — FAQPage (enables Google FAQ rich result and AI overview inclusion):**
-Mirrors the 6 FAQ accordion questions and answers as structured data. This is the highest-leverage GEO change — AI search engines (Perplexity, ChatGPT, Google AI Overview) prefer pages with structured FAQ data when surfacing answers about a product.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is this real bookkeeping?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Bookwise organizes your income and expenses with clarity. For tax filing, we always recommend working with a licensed CPA. We make their job easier and your bill smaller." }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to know accounting?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Not at all. Every label in Bookwise is written in plain language for your profession. No spreadsheets. No jargon. Just your numbers." }
+    },
+    {
+      "@type": "Question",
+      "name": "What about my existing data?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Connect your bank through Plaid. Import from Stripe if you take card payments. You can also add entries manually anytime." }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my data safe?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Your records are private and encrypted. Only you can see them. We never sell your data, ever." }
+    },
+    {
+      "@type": "Question",
+      "name": "What does it cost?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Bookwise starts with a free 30-day trial. No credit card required. After that, the Practitioner plan is $19 per month and Practice Pro is $49 per month. Beta testers in our founding 50 receive Practice Pro free for life." }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the beta program?",
+      "acceptedAnswer": { "@type": "Answer", "text": "We are opening Bookwise to 50 founding practitioners before we launch publicly. Beta testers get Practice Pro free for life, early access to new features, and a direct line to us as we build. We review every application and reach out within 5 business days." }
+    }
+  ]
+}
+```
+
+This is the highest-leverage GEO change — AI search engines (Perplexity, ChatGPT, Google AI Overview) prefer pages with structured FAQ data when surfacing answers about a product.
 
 Both blocks go in `<head>` via `dangerouslySetInnerHTML` in `app/layout.tsx`.
 
