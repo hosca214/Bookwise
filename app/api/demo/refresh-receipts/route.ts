@@ -70,11 +70,12 @@ async function uploadToDrive(accessToken: string, folderId: string, fileName: st
   })
   if (!res.ok) throw new Error(`Upload failed: ${await res.text()}`)
   const { id } = await res.json()
-  await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`, {
+  const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: 'reader', type: 'anyone' }),
   })
+  if (!permRes.ok) throw new Error(`Permission failed for ${id}: ${permRes.status}`)
   return id
 }
 
