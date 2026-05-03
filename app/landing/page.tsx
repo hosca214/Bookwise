@@ -473,7 +473,7 @@ export default function LandingPage() {
           }} />
         </div>
 
-        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 80 : 96, width: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 0 : 64, justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', padding: `0 ${isMobile ? 24 : 64}px`, paddingBottom: isMobile ? 48 : 96, width: '100%', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 0 : 64, justifyContent: 'space-between' }}>
 
           {/* LEFT: text */}
           <motion.div
@@ -629,7 +629,7 @@ export default function LandingPage() {
 
 
       {/* ── WHO IT'S FOR ────────────────────────────────────────────────── */}
-      <section style={{ padding: `${isMobile ? 64 : 96}px 24px`, background: CREAM }}>
+      <section style={{ padding: `${isMobile ? 40 : 72}px 24px`, background: CREAM }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <FadeIn>
             <h2 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 30 : 44, fontWeight: 700, color: INK, textAlign: 'center', margin: '0 0 44px', letterSpacing: '-0.02em' }}>
@@ -696,10 +696,6 @@ export default function LandingPage() {
                   </p>
                 </div>
 
-                {!isMobile && (
-                  <ArrowRight size={16} color='rgba(245,242,236,0.3)' style={{ flexShrink: 0 }} />
-                )}
-
                 <div style={{
                   flex: 1,
                   background: 'rgba(245,242,236,0.07)',
@@ -737,7 +733,7 @@ export default function LandingPage() {
             {STEPS.map((step, i) => (
               <FadeIn key={i} delay={i * 0.14}>
                 <div style={{
-                  padding: isMobile ? '32px 0' : '0 40px',
+                  padding: isMobile ? '28px 0' : '0 24px',
                   borderLeft: !isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
                   borderTop: isMobile && i > 0 ? `1px solid ${BORDER}` : 'none',
                   textAlign: 'center',
@@ -765,24 +761,24 @@ export default function LandingPage() {
             </h2>
           </FadeIn>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
-            <FadeIn delay={0.05}>
-              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%' }}>
+            <FadeIn delay={0.05} style={{ height: '100%' }}>
+              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 16, margin: '0 0 16px' }}>The March scramble.</p>
                 <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 18 : 21, fontWeight: 600, color: INK, lineHeight: 1.5, margin: '0 0 18px' }}>
                   Receipts in the glovebox, a shoebox under the desk, and a stack of screenshots on your phone.
                 </p>
-                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0 }}>
+                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0, flexGrow: 1 }}>
                   You spend ten hours pulling a year's worth of records together before your CPA appointment. That's ten sessions you didn't take, plus whatever the CPA charges to sort through the pile. And the worst part: you did this last year too.
                 </p>
               </div>
             </FadeIn>
-            <FadeIn delay={0.12}>
-              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%' }}>
+            <FadeIn delay={0.12} style={{ height: '100%' }}>
+              <div style={{ background: CARD, borderRadius: 20, padding: isMobile ? 28 : 36, boxShadow: '0 2px 16px rgba(44,53,40,0.07)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, margin: '0 0 16px' }}>The April surprise.</p>
                 <p style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 18 : 21, fontWeight: 600, color: INK, lineHeight: 1.5, margin: '0 0 18px' }}>
                   Your biggest quarter ever. Then April arrives.
                 </p>
-                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0 }}>
+                <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.75, margin: 0, flexGrow: 1 }}>
                   You had no idea quarterly estimated payments were a thing, so you didn't make them. The IRS charges 8% annually on what you missed, and it accrues from the day you were supposed to pay. The money was there. You just didn't know to set it aside.
                 </p>
               </div>
@@ -815,7 +811,7 @@ export default function LandingPage() {
               <div style={{ flex: 1 }}>
                 <span style={{ display: 'inline-block', fontSize: 10, fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: CREAM, background: 'rgba(255,255,255,0.14)', padding: '3px 8px', borderRadius: 999, marginBottom: 8 }}>AI-powered</span>
                 <h3 style={{ fontFamily: '"Lora", Georgia, serif', fontSize: isMobile ? 20 : 24, fontWeight: 700, color: CREAM, margin: '0 0 8px' }}>Your Language, Not Ours</h3>
-                <p style={{ fontSize: 15, color: 'rgba(245,242,236,0.72)', margin: 0, lineHeight: 1.65 }}>Bookwise replaces accounting jargon with words from your world. Coaches see Coaching Income and Client Attraction. Trainers see Training Income and Gym Expenses. Bodyworkers see Appointment Income and Treatment Supplies. No translation required.</p>
+                <p style={{ fontSize: 15, color: 'rgba(245,242,236,0.72)', margin: 0, lineHeight: 1.65 }}>Bookwise replaces accounting jargon with words from your world. Coaches see coaching income and client attraction. Trainers see training income and gym expenses. Bodyworkers see appointment income and treatment supplies. No translation required.</p>
               </div>
             </div>
           </FadeIn>
@@ -876,7 +872,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── PRICING ─────────────────────────────────────────────────────── */}
-      <section id="pricing" style={{ background: SEC, padding: `${isMobile ? 64 : 96}px 24px` }}>
+      <section id="pricing" style={{ background: SEC, padding: `${isMobile ? 36 : 52}px 24px ${isMobile ? 64 : 96}px` }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <FadeIn>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 12, textAlign: 'center' }}>Pricing</p>
