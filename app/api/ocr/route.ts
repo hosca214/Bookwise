@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 200,
       messages: [
         {
@@ -35,7 +35,8 @@ If you cannot determine a value, use null.`,
       ],
     })
 
-    const text = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+    const raw = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
     const parsed = JSON.parse(text)
     return Response.json(parsed)
   } catch {

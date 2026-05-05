@@ -41,25 +41,6 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return access_token
 }
 
-async function getOrCreateMonthFolder(accessToken: string, parentId: string, monthLabel: string): Promise<string> {
-  const q = `name='${monthLabel}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
-  const searchRes = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  )
-  const { files } = await searchRes.json()
-  if (files?.length > 0) return files[0].id
-
-  const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: monthLabel, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] }),
-  })
-  const folder = await createRes.json()
-  if (!folder.id) throw new Error('Folder creation failed')
-  return folder.id
-}
-
 async function uploadFile(
   accessToken: string,
   folderId: string,
@@ -154,7 +135,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       fileId,
       viewUrl: `https://drive.google.com/file/d/${fileId}/view`,
-      thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1500`,
+      thumbnailUrl: `https://lh3.googleusercontent.com/d/${fileId}`,
       fileName,
     })
   } catch {

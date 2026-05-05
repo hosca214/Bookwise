@@ -135,6 +135,7 @@ export default function LedgerPage() {
   const [rowReceiptTarget, setRowReceiptTarget] = useState<string | null>(null)
   const [rowOcrLoading, setRowOcrLoading] = useState<string | null>(null)
   const [receiptModalTx, setReceiptModalTx] = useState<Transaction | null>(null)
+  const [receiptImgError, setReceiptImgError] = useState(false)
   const [cameraMenuTxId, setCameraMenuTxId] = useState<string | null>(null)
 
   const [services, setServices] = useState<Service[]>([])
@@ -264,6 +265,8 @@ export default function LedgerPage() {
     }
   }, [loading, monthFilter, profileIndustry])
 
+  useEffect(() => { setReceiptImgError(false) }, [receiptModalTx])
+
   function openSheet() {
     setTxDate(today)
     setTxType('income')
@@ -285,6 +288,9 @@ export default function LedgerPage() {
     setTxAmount(String(tx.amount))
     setTxNotes(tx.notes ?? '')
     setTxPersonal(tx.is_personal)
+    setReceiptUrl(null)
+    setReceiptThumbUrl(null)
+    setReceiptFileName(null)
     setEditingTx(tx)
     setExpandedTxId(null)
     setSheetOpen(true)
@@ -362,22 +368,26 @@ export default function LedgerPage() {
 
       const driveRes = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       if (!driveRes.ok) throw new Error('Drive upload failed')
-      const { viewUrl, thumbnailUrl, fileName } = await driveRes.json()
+      const { fileId, viewUrl, fileName } = await driveRes.json()
 
       setReceiptUrl(viewUrl)
-      setReceiptThumbUrl(thumbnailUrl)
+      setReceiptThumbUrl(`/api/drive/image?id=${fileId}`)
       setReceiptFileName(fileName)
 
       const ocrRes = await fetch('/api/ocr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl: thumbnailUrl }),
+        body: JSON.stringify({ imageUrl: `https://lh3.googleusercontent.com/d/${fileId}` }),
       })
-      const ocr = await ocrRes.json()
-      if (ocr.amount && ocr.amount > 0) setTxAmount(String(ocr.amount))
-      if (ocr.date && /^\d{4}-\d{2}-\d{2}$/.test(ocr.date)) setTxDate(ocr.date)
-      if (ocr.vendor) setTxNotes(ocr.vendor)
-      toast.success('Receipt scanned.')
+      if (ocrRes.ok) {
+        const ocr = await ocrRes.json()
+        if (ocr.amount && ocr.amount > 0) setTxAmount(String(ocr.amount))
+        if (ocr.date && /^\d{4}-\d{2}-\d{2}$/.test(ocr.date)) setTxDate(ocr.date)
+        if (ocr.vendor) setTxNotes(ocr.vendor)
+        toast.success('Receipt scanned.')
+      } else {
+        toast.success('Receipt saved. Fill in the details manually.')
+      }
     } catch {
       toast.error('Could not read receipt. Fill in manually.')
     } finally {
@@ -402,23 +412,26 @@ export default function LedgerPage() {
 
       const driveRes = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       if (!driveRes.ok) throw new Error('Drive upload failed')
-      const { viewUrl, thumbnailUrl, fileName } = await driveRes.json()
+      const { fileId, viewUrl, fileName } = await driveRes.json()
 
-      const [ocrRes] = await Promise.all([
+      const [ocrRes, { error: updateError }] = await Promise.all([
         fetch('/api/ocr', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl: thumbnailUrl }),
+          body: JSON.stringify({ imageUrl: `https://lh3.googleusercontent.com/d/${fileId}` }),
         }),
         supabase.from('transactions').update({ receipt_url: viewUrl, receipt_filename: fileName }).eq('id', txId),
       ])
+      if (updateError) throw updateError
 
       setTransactions(prev => prev.map(t => t.id === txId ? { ...t, receipt_url: viewUrl, receipt_filename: fileName } : t))
 
-      const ocr = await ocrRes.json()
-      if (ocr.vendor && !tx.notes) {
-        await supabase.from('transactions').update({ notes: ocr.vendor }).eq('id', txId)
-        setTransactions(prev => prev.map(t => t.id === txId ? { ...t, notes: ocr.vendor } : t))
+      if (ocrRes.ok) {
+        const ocr = await ocrRes.json()
+        if (ocr.vendor && !tx.notes) {
+          await supabase.from('transactions').update({ notes: ocr.vendor }).eq('id', txId)
+          setTransactions(prev => prev.map(t => t.id === txId ? { ...t, notes: ocr.vendor } : t))
+        }
       }
       toast.success('Receipt saved.')
     } catch {
@@ -1105,11 +1118,18 @@ export default function LedgerPage() {
                   </div>
                 </div>
                 <div style={{ overflowY: 'auto', flex: 1, padding: 12 }}>
-                  <img
-                    src={getReceiptPreviewUrl(receiptModalTx.receipt_url!)}
-                    alt="Receipt"
-                    style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
-                  />
+                  {receiptImgError ? (
+                    <p style={{ textAlign: 'center', color: 'var(--color-muted-foreground)', fontSize: 14, padding: '40px 0', fontFamily: 'var(--font-sans)' }}>
+                      Could not load receipt. Use the Download button above to open it directly.
+                    </p>
+                  ) : (
+                    <img
+                      src={getReceiptPreviewUrl(receiptModalTx.receipt_url!)}
+                      alt="Receipt"
+                      onError={() => setReceiptImgError(true)}
+                      style={{ width: '100%', height: 'auto', borderRadius: 8, display: 'block' }}
+                    />
+                  )}
                 </div>
                 {driveFolderId && (
                   <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-border)', flexShrink: 0, textAlign: 'center' }}>

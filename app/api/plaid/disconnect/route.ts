@@ -37,10 +37,11 @@ export async function POST(): Promise<NextResponse> {
       }
     }
 
-    await supabase
+    const { error: clearError } = await supabase
       .from('profiles')
       .update({ plaid_access_token: null, plaid_item_id: null })
       .eq('id', user.id)
+    if (clearError) throw clearError
 
     return NextResponse.json({ success: true })
   } catch {

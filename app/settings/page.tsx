@@ -397,7 +397,7 @@ export default function SettingsPage() {
   }, [])
 
   const { open: openPlaidLink, ready: plaidReady } = usePlaidLink({
-    token: plaidLinkToken ?? '',
+    token: plaidLinkToken,
     onSuccess: onPlaidSuccess,
     onExit: () => { setPlaidLinking(false); setPlaidLinkToken(null) },
   })

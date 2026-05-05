@@ -76,12 +76,17 @@ export async function POST(request: Request) {
     const exchangeRes = await plaid.itemPublicTokenExchange({ public_token })
     const { access_token, item_id } = exchangeRes.data
 
-    await supabase
+    const { error: profileError } = await supabase
       .from('profiles')
       .update({ plaid_access_token: access_token, plaid_item_id: item_id })
       .eq('id', user.id)
+    if (profileError) throw profileError
 
-    await syncTransactions(supabase, user.id, access_token, plaid)
+    try {
+      await syncTransactions(supabase, user.id, access_token, plaid)
+    } catch {
+      // Sync failure does not break the connection — token is saved and sync will retry on next load
+    }
 
     return NextResponse.json({ success: true })
   } catch {
@@ -122,9 +127,20 @@ async function syncTransactions(
     })
     .filter((r): r is NonNullable<typeof r> => r !== null)
   if (validRows.length > 0) {
-    await supabase
+    const { data: existing } = await supabase
       .from('transactions')
+      .select('external_id')
+      .eq('user_id', userId)
+      .eq('source', 'plaid')
+      .not('external_id', 'is', null)
+
+    const knownIds = new Set((existing ?? []).map((r: { external_id: string | null }) => r.external_id).filter(Boolean))
+    const newRows = validRows.filter(r => !knownIds.has(r.external_id))
+
+    if (newRows.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert(validRows as any, { onConflict: 'user_id,external_id', ignoreDuplicates: true })
+      const { error } = await supabase.from('transactions').insert(newRows as any)
+      if (error) throw error
+    }
   }
 }
