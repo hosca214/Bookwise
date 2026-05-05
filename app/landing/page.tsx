@@ -449,9 +449,7 @@ export default function LandingPage() {
             </>
           )}
           <a href="#beta" style={{ ...pill(true), display: 'inline-flex', alignItems: 'center', textDecoration: 'none', fontSize: 14 }}>Apply for Beta</a>
-          {!isMobile && (
-            <a href="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 40, borderRadius: 999, background: CARD, border: `1.5px solid ${BORDER}`, color: INK, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>Sign In</a>
-          )}
+          <a href="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '0 18px', height: 40, borderRadius: 999, background: CARD, border: `1.5px solid ${BORDER}`, color: INK, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>Sign In</a>
         </div>
       </nav>
 
